@@ -1,0 +1,40 @@
+        FILE DEFINITION LISTING FOR FILE #5
+*************************************************** 
+        FILE ROOT NAME     = DEFENDNT
+        USER DISPLAY NAME  = HC Defendant File
+        DATAFLEX FILE NAME = DEFENDNT
+*************************************************** 
+        RECORD LENGTH = 384  (USED = 313)
+        MAX NUMBER OF RECORDS = 10000  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       5   NUMERIC   0    1     0     0     IDNO
+   2       6      30   ASCII          2     0     0     NAME
+   3      36      30   ASCII          0     0     0     ADDR
+   4      66      26   ASCII          0     0     0     CITY
+   5      92       2   ASCII          0     0     0     ST
+   6      94      10   ASCII          0     0     0     ZIP
+   7     104       1   ASCII          0     0     0     PHYS
+   8     105      10   ASCII          3     0     0     LIC
+   9     115       9   ASCII          0     0     0     SOCSEC
+  10     124      70   ASCII          0     0     0     OTHER
+  11     194       1   ASCII          0     0     0     SEX
+  12     195       1   ASCII          0     0     0     RACE
+  13     196       3   DATE           0     0     0     AGE
+  14     199       1   NUMERIC   0    0     0     0     FT
+  15     200       1   NUMERIC   0    0     0     0     IN
+  16     201       3   ASCII          0     0     0     LBS
+  17     204       4   NUMERIC   2    0     0     0     CREDIT
+  18     208      30   ASCII          0     0     0     ADDR2
+  19     238      70   ASCII          0     0     0     OTHER2
+  20     308       2   NUMERIC   0    0     0     0     LAST_CTRL#
+  21     310       4   NUMERIC   2    0     0     0     BAL
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   
+INDEX 2:  FIELD SEGMENTS:  <2>   <1>   
+INDEX 3:  FIELD SEGMENTS:  <8>   <2>   <1>   
+

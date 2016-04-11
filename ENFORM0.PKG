@@ -1,0 +1,3 @@
+use entryfrm
+define Entry_Form0 for Entry_Form
+define U_Entry_Form0 for U_Entry_Form

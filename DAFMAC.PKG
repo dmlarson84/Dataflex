@@ -1,0 +1,115 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//
+// ***** THIS PACKAGE IS PROVIDED SOLELY FOR COMPATIBILITY *****
+// ***** WITH DAF VERSION 1.1.                             *****
+//
+
+Use UI
+Use Func
+
+#COMMAND SUB R "TO""FROM" R
+  SUBTRACT !1 FROM !3
+#ENDCOMMAND
+
+#COMMAND ShowXY R R    // ShowXY [row] [col] "text"
+  GotoXY !1 !2
+  #IF !0>2
+    Show !3 !4 !5 !6 !7 !8 !9
+  #ENDIF
+#ENDCOMMAND
+
+Function Pause GLOBAL Returns String
+   Local String St
+   Inkey St
+   Function_return St
+End_Function
+
+#COMMAND Pause     // pause {Row Col "text"}
+  #IF !0>0
+    ShowXY !1 !2 !3 !4 !5 !6 !7 !8 !9
+  #ENDIF
+  Send Get_Pause TO DESKTOP
+#ENDCOMMAND
+
+#COMMAND Ind R // indicate command that DEMANDS indicator to be defined
+  #IFSAME !1 ~
+    #CHECK !2 _UX
+  #ELSE
+    #CHECK !1 _UX
+  #ENDIF
+  Indicate !1 !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+//define Incr for Increment
+#COMMAND INCR #ELCRUG .  // general purpose increment integers, numbers dates etc
+  Increment !1
+#ENDCOMMAND
+
+//define Decr for Decrement
+
+#COMMAND DECR #ELCRUG .  // general purpose decrement integers, numbers dates etc
+    Decrement !1
+#ENDCOMMAND
+
+Procedure Inactivate GLOBAL Integer File# Integer Keep_Fg
+   Local Integer Int#
+   Move File# to FileNumber
+   Move 0 to FieldIndex  // 11/21/94 - JJT was FieldNumber (whoops)
+   Move Indirect_File.RecNum to Int#
+   //Clear Indirect_File // wrong 1.0 code
+   Move 0 to Indirect_File.recnum // improved 1.1 code
+   If Keep_Fg Move Int# to Indirect_File.RecNum
+End_Procedure
+
+#COMMAND Inactivate  // inactivates a record by putting 0 in the buffer
+                     // Inactivate Df_File {KEEP}
+                     // if {KEEP} then we put the original rec back in buffer
+   #IF !0>1
+     #CHECK !2 "KEEP"
+     Send Inactivate to DESKTOP !1.File_Number 1
+   #ELSE
+     Send Inactivate to DESKTOP !1.File_Number 0
+   #ENDIF
+#ENDCOMMAND
+
+
+//--------------------------------------------------------------
+// Name_Items {Item ##|NEXT} Name1 Name2 ....NameN
+//
+//     Name_Items name1 name2 name3
+//     Name_Items ITEM 3 Name4
+//     Name_Items ITEM NEXT Name5 name6
+//---------------------------------------------------------------
+#COMMAND Name_Items
+  #IFSAME !1 ITEM      // if ITEM
+    #IFSAME !2 NEXT    // if ITEM NEXT then process 3rd param
+      // debug code
+      //#REM !3 named as item !e
+      #REPLACE !3 !e
+      #SET E$ !E
+      #IF (!0>3)
+        NAME_ITEMS ITEM NEXT !4 !5 !6 !7 !8 !9
+      #ENDIF
+    #ELSE
+      #SET E$ !2       // if ITEM # set to that number
+      #IF (!0>2)
+        NAME_ITEMS ITEM NEXT !3 !4 !5 !6 !7 !8 !9
+      #ENDIF
+    #ENDIF
+  #ELSE            // if no ITEM as first param we are starting
+    #SET E$ 0      // with the first named item...item 0
+    NAME_ITEMS ITEM NEXT !1 !2 !3 !4 !5 !6 !7 !8 !9
+  #ENDIF
+#ENDCOMMAND
+
+procedure dflt_date for desktop integer item#
+        send Default_Date item#
+end_procedure

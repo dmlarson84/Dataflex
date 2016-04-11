@@ -1,0 +1,29 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1994 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\msdos\doscmds.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: doscmds.pkg,v $
+//
+//Revision 1.1  91/10/23  10:21:48  elsa
+//Initial revision
+//
+//************************************************************************/
+
+
+#COMMAND SET_VIDEO_MODE "TO" _RUSD#
+  !A [] $150 !2
+#ENDCOMMAND
+
+#COMMAND GET_VIDEO_MODE "TO" _RUSD#
+  !A [] $14F !2
+#ENDCOMMAND

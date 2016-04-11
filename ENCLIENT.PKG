@@ -1,0 +1,603 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\enclient.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: enclient.pkg,v $
+//Revision 2.1  1993/08/25  17:47:35  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:04  james
+//Initial revision
+//
+//Revision 1.8  92/06/27  09:33:16  lee
+//changed child_wrapping to use new clientRecurse flag in inquire msgs.
+//
+//Revision 1.7  92/06/03  15:09:25  steve-l
+//altered child_wrapping to pass origin-object ID to wrap-destination
+//
+//Revision 1.6  92/05/29  14:06:22  lee
+//removed end_construct_* messages from mixins; now, classes that use the mixin
+//send the message that used to be sent by the end_construct_* message (for
+//efficiency).
+//
+//Revision 1.5  92/05/14  17:06:02  SWM
+//Updated Copyright slug.
+//
+//Revision 1.4  92/04/20  18:02:31  lee
+//added image argument error checking
+//
+//Revision 1.3  92/03/29  18:44:54  lee
+//added MSG_END_CONSTRUCT_OBJECT, moved ENDMAC macro stuff into END_CONSTRUCT-
+//OBJECT procedures (in .pkgs). moved Flag_ITems to list.pkg after generalizing
+//it based on PROTOTYPE_OBJECT instead of Whether or not it is a table-oriented
+//object. Moved define_access_keys mechanism completely into actionbr.pkg.
+//fixed two typos: import_class_protocol used !# instead of !3, and register-
+//procedure used !1 instead of !2.
+//
+//Revision 1.2  92/03/09  19:01:18  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of
+//compiler.
+//
+//Revision 1.1  91/10/23  10:20:19  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: EnClient.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: July 1, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Entry_Client class definition.
+//************************************************************************/
+
+//************************************************************************
+// Version: 1.0
+//  12-01-1992 : Created
+//
+// Author: John J. Tuohy
+//
+//  1. Adds Stop_UI_State Support
+//  2. Adds Should_Save Property
+//  3. Adds Auto_Locate_State Support
+//  4. Adds movable object support (used to be at view_client0 level)
+//  5. Added dep_item broadcast support (LS)
+//
+//  Class Entry_View_Client0     is an Entry_Client0
+//
+//  1. Sets Scope_State, Attach_Parent_State, Ring_State to TRUE
+//  2. Define string property called view_name (for future enhancements).
+//  3. add dependant_item support ver 1.1
+//
+//  Class Selection_List_CLient0 is an Entry_View_Client0
+//
+//  Must be used when selection list's need a client.
+//  1. Sets Attach_Parent_State to FALSE
+//  2. If Popup, Sets Move_Value_Out_State of Selection list to TRUE
+//
+// Sun  03-28-1993 - modified Selection_list_Client. Activate now sets
+//                   move_value_out_State if activate succeeded.
+// 05-09-1993  Add Auto_Locate_State support
+// 08-15-1993  Took movable client support out of client and moved it into
+//             the view sub-class. Otherwise an entry_Client0 inside a view
+//             would have it's own move logic (and could block the view's
+//             move logic).
+// 10-07-1993  Add include file with new exit_function procedure. DAC bug
+// 03/11/94    add dependent item support
+// 03/17/94    Add movable item supprt at the client level!!
+// 03/21/94    (LS) v1.1 Changed order of sends in end_construct_object.
+//             Added non_dep_item_mixin to entry_client0.
+// 04/08/94    (LS) v1.1 Added deo delegation (also adds other DEO
+//             behaviors).
+// 04/30/94    Changed move_value_out setting in sel-list-client so that this
+//             property gets set the first time.
+// 09/02/94    JJT Added should_save to forward get changed_state
+//                 Added Should_save to  return changed_state
+//             (LS) undid this mod.
+//************************************************************************/
+
+//************************************************************************/
+// 12/22/94 JJT Merge Changes
+//              Merged the 0 class into classes
+//              Added the DEO request_ messages directly into the
+//              class along with their should_delegate logic. The
+//              request_find (and super) now do nothing in clients.
+//              Activating in entry_client must duplicate and replace
+//              some code in actionbr. (yuck)
+// 05/22/95 JJT Added object_Item_validation to focus support in
+//              request_clear and request_clear_all (also see deodlgmx.pkg)
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+//************************************************************************/
+
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+use NESTING       //include DEO nesting standard support module
+use NAVIGATE      //include DEO navigation standard support module
+use SERVER        //include Server support module
+use VERIFY        //include Verification support module
+use ACTIONBR      //include action-bar support module
+Use AutoLcMx   // Auto locate of popup mixin
+Use ClMoveMx   // Move client support
+Use Dep_item   // ver 1.1
+Use DEODlgMx   // v1.1 DEO delegation support
+
+//
+//Class: _Entry_Client
+//
+//SuperClass: CLIENT
+//
+//Description: This class implements a data-entry object grouping agent
+//
+Class Entry_Client is a CLIENT STARTMAC ECstart
+  //
+  //Operation: CONSTRUCT_OBJECT
+  //
+  //Assumption(s): MyImg identifies an image for the client area
+  //
+  //Goal(s): define an instance of client with a properties appropriate to
+  //  this specialization.
+  //
+  //Algorithm: augmented to define and initialize properties
+  //
+  //Usage: used internally
+  //
+  procedure construct_object integer myImg
+    forward send construct_object myImg
+    set Ring_State to false
+    Property integer Changed_State PRIVATE 0
+
+    // We need this property to fully emulate a DEO
+    // (Actually, entry_clients should realy support ALL the DEO messages!)
+    Property integer auto_clear_deo_state PUBLIC true
+
+    send define_nesting      //invoke DEO nesting standard support constructor
+    send define_navigation   //invoke DEO navigation standard support constructor
+    send define_server       //invoke Server support constructor
+    send define_action_bar   //invoke action-bar support constructor
+    send define_verify       //invoke Verification support constructor
+    Send define_Auto_Locate
+    Send define_Movable_Client_Support
+    Send define_DEO_Delegate // v1.1
+    Send Define_Auto_Locate
+    Send define_Movable_Client_Support
+
+  end_procedure
+
+  IMPORT_CLASS_PROTOCOL NESTING_Mixin
+  IMPORT_CLASS_PROTOCOL NAVIGATE_Mixin
+  IMPORT_CLASS_PROTOCOL SERVER_Mixin
+  IMPORT_CLASS_PROTOCOL VERIFY_Mixin
+  IMPORT_CLASS_PROTOCOL ACTION_BAR_Mixin
+  IMPORT_CLASS_PROTOCOL Movable_Client_Mixin
+  IMPORT_CLASS_PROTOCOL Auto_Locate_Mixin
+  IMPORT_CLASS_PROTOCOL Non_Dependent_Item_Mixin // ver 1.1
+  IMPORT_CLASS_PROTOCOL Deo_Delegate_Mixin // ver 1.1
+
+
+  //
+  // created for Navigation support
+  //
+  procedure Top_of_Panel
+    local integer firstChild curFoc#
+    get focus of desktop to curFoc#
+    if (Has_Components_State(current_object)) begin
+      get find_first_deo to firstChild
+      if firstChild ne 0 send Top_Of_Panel to firstChild
+      else if current_object ne curFoc# send activate
+    end
+    else if current_object ne curFoc# send activate
+  end_procedure
+
+  //
+  // created for Navigation support
+  //
+  procedure Bottom_of_Panel
+    local integer lastChild curfoc#
+    get focus of desktop to curFoc#
+    if (Has_Components_State(current_object)) begin
+      get Find_Last_DEO to lastChild
+      if lastChild ne 0 begin
+        send Bottom_Of_Panel to lastChild
+        procedure_return
+      end
+    end
+    if current_object ne curFoc# send activate
+  end_procedure
+
+  //
+  // created for Navigation support
+  //
+  procedure Child_Wrapping integer direction integer ignoreThisID
+    local integer ChildID curfoc# origID
+
+    get focus of desktop to curFoc#
+    if direction eq 0 begin             //wrapping backward, first to last
+      set Last_DEO to 0
+      broadcast_focus send inquire_last_deo current_object FALSE  //sets last_DEO prop.
+      get Last_DEO to ChildID
+      if ChildID ne 0 begin
+        set First_DEO to 0
+        broadcast_focus send inquire_first_deo current_object TRUE //sets first_DEO prop.
+        get First_DEO to origID
+        if origID eq 0 move ChildID to origID
+        send child_wrapping to ChildID direction origID  //pass origin iff DEO or dest
+      end
+      else if current_object ne curFoc# send activate
+    end
+    else begin                          //wrapping forward, last to first
+      set First_DEO to 0
+      broadcast_focus send inquire_first_deo current_object FALSE //sets first_DEO prop.
+      get First_DEO to ChildID
+      if ChildID ne 0 begin
+        set Last_DEO to 0
+        broadcast_focus send inquire_last_deo current_object TRUE  //sets last_DEO prop.
+        get Last_DEO to origID
+        if origID eq 0 move ChildID to origID
+        send child_wrapping to ChildID direction origID  //pass origin iff DEO or dest
+      end
+      else if current_object ne curFoc# send activate
+    end
+    procedure_return 1
+  end_procedure
+
+  //
+  // created for Server support
+  //
+  procedure display
+    broadcast send display
+  end_procedure
+
+  //
+  // created for Server support
+  //
+  procedure clear
+    broadcast send clear
+  end_procedure
+
+  //
+  // created for Server support
+  //
+  procedure clear_set
+    broadcast send clear_set
+  end_procedure
+
+  //
+  // created for property support
+  //
+  function Changed_State returns integer
+    local integer retval
+    get Entry_Client.Changed_State to retval
+    function_Return retval
+  end_function
+
+  //
+  // cancelled from Server mixin
+  //
+  procedure SET Changed_State integer newVal
+  end_procedure
+
+  //
+  // created for EntItem convenience
+  //
+  procedure Entry_Clear integer file#
+    if (Has_Components_State(current_object)) ;
+        broadcast send Entry_Clear file#
+  end_procedure
+
+  //
+  // created for EntItem convenience
+  //
+  procedure Entry_Clear_All integer file#
+    if (Has_Components_State(current_object)) ;
+        broadcast send Entry_Clear_All file#
+  end_procedure
+
+  //
+  // created for EntItem convenience
+  //
+  procedure Entry_Display integer file# integer flag
+    if (Has_Components_State(current_object)) ;
+        broadcast send Entry_Display file# flag
+  end_procedure
+
+  //
+  // created for EntItem convenience
+  //
+  procedure Entry_Update integer file# integer flag
+    if (Has_Components_State(current_object)) ;
+        broadcast send Entry_Update file# flag
+  end_procedure
+
+  procedure End_Construct_Object
+    send Mark_Components      // nesting
+    send Define_Access_Keys 0 // action_bar_keys
+    forward send End_Construct_Object
+  end_procedure
+
+  //************* JJT ************
+  // Added for deo delegate support
+
+  procedure request_clear
+      local integer obj# retval foc
+      if (should_delegate_clear(current_object)) ;
+          delegate send request_clear
+      else begin
+          get Locate_Server to obj# // locate needed in case this is a DSO
+          if (should_save(current_object) AND ;
+              (Verify_Data_Loss(current_object) <> 0)) ;
+            procedure_return
+
+          Get Focus to Foc
+          get Object_Item_Validation of Foc to retval
+          set Object_Item_Validation of Foc to false
+
+          if obj# ne 0 send clear to obj#
+          else         send entry_clear 0
+          if (Auto_Top_Panel_State(current_object)) send beginning_of_panel
+          set Object_Item_Validation of Foc to retval
+      end
+  end_procedure
+
+  procedure request_clear_all
+      local integer obj# retval foc
+      if (should_delegate_clear(current_object)) ;
+         delegate send request_clear_all
+      else begin
+          get Locate_Server to obj#
+          if (Should_Save(Current_Object) AND ;
+              (Verify_Data_Loss(current_object) <> 0)) ;
+            procedure_return
+
+          Get Focus to Foc
+          get Object_Item_Validation of Foc to retval
+          set Object_Item_Validation of Foc to false
+
+          if obj# ne 0 send clear_all to obj#
+          else         send entry_clear_all 0
+          if (Auto_Top_Panel_State(current_object)) send beginning_of_panel
+          set Object_Item_Validation of Foc to retval
+      end
+  end_procedure
+
+  procedure request_delete
+      local integer obj#
+
+      if (should_delegate_delete(current_object)) ;
+         delegate send request_delete
+      else begin
+          indicate err false
+          get Locate_Server to obj#
+          if (obj# <> 0 AND can_delete(obj#) <> 0) begin
+            if (Verify_Delete(current_object) <> 0) procedure_return
+            set changed_State to false
+            if (Deferred_State(current_object)) ;
+                send Request_Assign to obj# 0  //0 means main_file of Server
+            send Request_Delete to obj#
+            [not err] if (Auto_Clear_DEO_State(current_object)) send Request_Clear
+          end
+      end
+  end_procedure
+
+  procedure request_find integer mode integer flag
+      if (should_delegate_find(current_object)) ;
+         delegate send request_find mode flag
+      else begin // for now don't support any default find behavior
+                 // in clients
+          Procedure_return
+      End
+  end_procedure
+
+  procedure request_save
+      local integer obj# retval
+
+      if (should_delegate_save(current_object)) ;
+         delegate send request_save
+      else begin
+          get Locate_Server to obj#
+
+          if (obj# <> 0 AND not(Read_Only_State(obj#))) begin
+            indicate err false
+
+            if (Should_Save(current_object)) begin
+              get Request_Validate of obj# to retval
+              if retval ne 0 procedure_Return
+              //
+              // modification for Verify support
+              //
+              if (Verify_Save(current_object) <> 0) procedure_return
+              //
+              // modification for Save support
+              //
+              if (Deferred_State(current_object)) ;
+                  send Request_Assign to obj# 0  //0 means main_file of server
+
+              send Request_Save to obj#
+            end
+            //
+            [not err] if (Auto_Clear_DEO_State(current_object)) send Request_Clear
+          end
+      end
+  end_procedure
+
+  // this allows us to save a record without it clearing regardless of
+  // the Auto_Clear_DEO_State value
+  //
+  Procedure Request_Save_No_Clear
+    Local integer oldclr
+    if (should_delegate_save(current_object)) ;
+       delegate send request_save_no_clear
+    else Begin
+       Get Auto_Clear_DEO_State to OldClr  // whatever it was
+       Set Auto_Clear_DEO_State to False   // it is no NO!
+       send request_save                   // do your magic
+       Set Auto_Clear_DEO_State to OldClr  // back to whatever it was
+    End
+  End_procedure
+
+  procedure request_superfind integer mode
+      local integer ser# datafile
+
+      if (should_delegate_find(current_object)) ;
+          delegate send request_superfind mode
+      else begin
+          Procedure_return
+      end
+  end_procedure
+
+  //  Augment to Support AutoLocate.
+  //  This replaces (not augments) the procedure in actionbr. We need
+  //  to look into this (activating is very risky to augment activating
+  //  in mixins).
+  Procedure Activating Returns Integer
+    local integer InvokingId RVal
+    Get Focus to InvokingId
+    //
+    forward get MSG_activating to rVal   //  This is the standard
+    If rVal Procedure_Return rVal        //  actionbr activating
+    Send Add_action_bar                  //  logic
+    If (Auto_Locate_State(Current_Object) ) ;
+       Send Auto_Locate InvokingId
+  End_Procedure
+
+end_class
+
+
+//
+//  Entry_View_Client
+//
+//
+Class Entry_View_Client is an Entry_Client
+  Procedure construct_object integer img#
+    forward send construct_object img#
+    Property String View_Name Public ''  // default name...could be useful
+    set scope_State to TRUE         // defaults to a Scope
+    set Attach_Parent_State to TRUE // default...controls parentage better
+    Set Ring_State to TRUE          // default to Ring...makes sense
+    Send Define_View_dependent_item   // ver 1.1
+  End_Procedure
+
+  IMPORT_CLASS_PROTOCOL View_Dependent_Item_Mixin  // ver 1.1
+
+  //
+  // Augment exit_application_check. If a change
+  // is detected activate the changed view. This way the user sees what
+  // has been changed.
+  //
+  Function Exit_Application_Check Returns Integer
+    Local Integer rVal Obj
+
+    Get Should_Save to Rval // changes in this object???
+    If rVal eq 0 BroadCast Get Exit_Application_Check to Rval // check w/ kids
+
+    If Rval ne 0 Begin  // ok a change exist...activate changed view.
+       //
+       // before activating the changed view make sure that we are not
+       // trying to activate this on top of a modal object. Check the current
+       // focus and all of its parent record up to (but not including) the
+       // desktop. If any of these object are modal (have block_mouse_state
+       // set to true) then do not display the changed view.
+       //
+       get Focus to Obj
+       While Obj Gt DESKTOP
+          If (Block_Mouse_State(Obj)) Function_Return rVal // if modal..exit
+          Get Parent of Obj to Obj
+       Loop
+       Send Activate
+    End
+    Function_return rVal
+  End_Function
+
+  // augment for dependent_item view support v.1.1
+  Procedure End_Construct_Object
+     Forward Send End_Construct_Object
+     Send Construct_Item_groups // must send after fwd: constr_itm_grps uses
+          // component_state stuff initialized in superclass' end_constr_obj
+  End_Procedure // End_Construct_Object
+End_Class
+
+//
+//  Client for Selection Lists.
+//
+//  Selection_lists and Pick_lists need to know if they should
+//  move their values out. With simple sel/pick lists it figures this
+//  out if the list is a popup object. (POPUP sets the property
+//  move_value_out_state to TRUE. If the sel\pick list needs to be
+//  encapulsated by a client the actual list object is no longer a
+//  popup (the client is). We need this special client to set the
+//  move_value_out_state of the list. It does this by broadcasting
+//  this to all objects. This only works if the sel/pick list object is
+//  a direct child of the client (which it always will be).
+//
+//  Also note that this class supports movable objects
+
+register_procedure Set Move_Value_Out_State integer State
+
+Class Selection_List_Client is an Entry_View_Client
+  Procedure construct_object integer img
+    Forward send construct_object img
+    // Attach_parent_state must be false or the focus will not properly
+    // return to the previous (invoking) object during deactivation.
+    Set Attach_parent_state to FALSE
+  End_procedure
+
+  // Activate is Augmented so that
+  //   if popup_state is true
+  //      set all child object's move_value_out_state to TRUE
+  //      set block_mouse_state to True
+  //
+  Procedure Activate Returns Integer
+    Local Integer rVal
+    // If activation is ok and we've got a popup try to set all child
+    // object's Move_value_out_state to True. Hopefully we will hit the
+    // real selection_list/pick_list objet this way. If child objects do not
+    // understand this message nothing happens.
+    if (rVal=0 and popup_state(Current_Object)) Begin
+       Set Block_Mouse_state to TRUE // this makes the object modal
+       Broadcast Set Move_Value_Out_State to TRUE
+    End
+    // 04/30/94 - Move this below so this move_value_out gets set first.
+    Forward Get MSG_Activate to rVal // do normal activation
+  End_Procedure
+End_Class
+
+//
+//Support Commands
+//
+
+//
+// ECstart <className> <ImageName> {ACTION_BAR <ActionBar#>} {POP_UP}
+//     {RING} {USING <DataSetID>}
+//
+// this macro handles the creation-statement syntax for Entry_Clients
+//
+#COMMAND ECstart R
+  #IFDEF !2
+  #ELSE
+    #IFDEF !2.N
+    #ELSE
+      #ERROR 100 IMAGE ARGUMENT MISSING IN OBJECT STATEMENT
+    #ENDIF
+  #ENDIF
+  FORWARD_BEGIN_CONSTRUCT !1 !2 !3 !4 !5 !6 !7 !8 !9
+  bind_using !2 !3 !4 !5 !6 !7 !8 !9
+  bind_action_bar !2 !3 !4 !5 !6 !7 !8 !9
+  bind_pop_up !2 !3 !4 !5 !6 !7 !8 !9
+  bind_ring !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND

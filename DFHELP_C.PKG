@@ -1,0 +1,87 @@
+// dfhelp_c.pkg (secondary help maintenance program [C]) header package
+// July 2, 1991
+// LS
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+inherit_screen // use current screen (from parent .flx) as background
+
+//////////////////////////////////
+////////////////////////////////// macro commmands
+//////////////////////////////////
+
+#COMMAND USE_FILE R // declares fields in a database file without opening it
+  #IFDEF !1.RECNUM
+  #ELSE
+    #INCLUDE !1.FD
+  #ENDIF
+
+  #IFDEF !1.FILE_NUMBER
+  #ELSE
+    #SET Q$ !1.RECNUM
+    #REPLACE !1.FILE_NUMBER |CI!q
+  #ENDIF
+
+  #IF (!0>1)
+    USE_FILE !2 !3 !4 !5 !6 !7 !8 !9
+  #ENDIF
+#ENDCOMMAND
+
+//////////////////////////////////
+////////////////////////////////// symbol definitions
+//////////////////////////////////
+
+DEFINE VALID_OPTIONS      FOR 'CLR' // passed command line options values
+DEFINE CTX_MAINT_OPTION   FOR 'C'
+DEFINE CLN_MAINT_OPTION   FOR 'L'
+DEFINE REORD_MAINT_OPTION FOR 'R'
+
+DEFINE SUCCESS_REPLY      FOR 'Y'
+DEFINE FAIL_REPLY         FOR 'N'
+DEFINE ABORT_REPLY        FOR 'A'
+
+DEFINE MAX_LINES_ALLOWED  FOR 32767
+
+DEFINE EMPTY_STRING       FOR ('')
+DEFINE EMPTY_REPL_STRING  FOR ('@')
+
+DEFINE F1_HELP_TEXT       FOR ('<F1=Help>')
+DEFINE F2_OK_TEXT         FOR ('<F2=OK>')
+DEFINE ESC_CANCEL_TEXT    FOR ('<Esc=Cancel>')
+DEFINE ESC_CLOSE_TEXT     FOR ('<Esc=Close>')
+DEFINE DEL_EXT_TEXT       FOR ('.DEL')
+
+DEFINE OLD_APP_TYPE       FOR 0  // for context translation/deletion
+DEFINE OLD_MOD_TYPE       FOR 1
+DEFINE OLD_HLP_TYPE       FOR 2
+DEFINE NEW_APP_TYPE       FOR 3
+DEFINE NEW_MOD_TYPE       FOR 4
+DEFINE NEW_HLP_TYPE       FOR 5
+
+DEFINE CTX_MAINT_SCAN_TYPE FOR 0
+DEFINE CTX_MAINT_OPER_TYPE FOR 1
+
+DEFINE CLN_SCAN_TYPE       FOR 0
+DEFINE CLN_DEL_TYPE        FOR 1
+
+DEFINE LEFT_SERVER_TYPE   FOR 0 // used in cross reference maintenance
+DEFINE RIGHT_SERVER_TYPE  FOR 1 // area to determine which server to use
+
+#IFDEF POINTED_CURSOR_TYPE // for display_window class
+#ELSE
+  #REPLACE POINTED_CURSOR_TYPE |CI2
+#ENDIF
+
+//////////////////////////////////
+////////////////////////////////// packages
+//////////////////////////////////
+
+use enterr          // error package (ignores find errors)
+use help            // global help package
+
+use_file grp sbj xrf ctx  // declare files and fields w/o opening files
+
+set application_name to "SYSTEM"
+set module_name to "DFHELP" // act like part of DFHELP program module
+

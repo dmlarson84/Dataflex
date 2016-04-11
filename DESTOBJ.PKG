@@ -1,0 +1,51 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// destobj.Pkg
+// Version: 1.0
+//  09-12-1992 : Created
+//
+// Author: John J. Tuohy
+//
+// Destroys standard (non-DEO) object structures.
+//
+// Desktop procedures modifies the OBJECT class so all objects inherit
+// this message
+//
+// 09-12-1992 modified to support reverse order child destruction via the
+//            request_destroy_children message which uses 3.01's NO_STOP
+//            broadcasting capability
+//   
+//************************************************************************
+
+use ui
+
+// Send request_destroy_object to all children in reverse object tree
+// order. This will recurse.
+//
+// Procedure added 09-12-1992
+//
+Procedure Request_Destroy_Children FOR DESKTOP
+  local integer id
+  Repeat                                  // For all child objects.
+    move 0 to ID                          // In case no object is found.
+    Broadcast NO_STOP Get Object_ID to ID // Get last ID.
+    if id eq 0 Procedure_Return           // If no more children...done.
+    Send request_Destroy_Object to id     // RQD this last object
+  Loop                                    // and try again.
+End_Procedure
+
+Procedure Request_Destroy_Object FOR DESKTOP
+  Send Request_Destroy_Children // added 09-12-1992
+  // removed 09-12-1992
+  // Broadcast Recursive_Up Send Request_Destroy_Object
+  Send Destroy_Object
+End_Procedure
+

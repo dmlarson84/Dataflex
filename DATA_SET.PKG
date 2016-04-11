@@ -1,0 +1,355 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\data_set.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: data_set.pkg,v $
+//Revision 2.1  1993/08/25  17:47:23  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:03  james
+//Initial revision
+//
+//Revision 1.10  92/06/03  16:06:57  steve-l
+//altered BEGIN_CONSTRAINTS...END_CONSTRAINTS macros to forward last, not first
+//
+//Revision 1.9  92/05/14  16:08:27  SWM
+//Updated Copyright slug.
+//
+//Revision 1.8  92/04/21  18:07:17  steve-l
+//altered Item_Find to run constrained_clear on recbuf iff entUpdate did not
+//change it (i.e. recbuf is clear after entUpdt and before attach)
+//
+//Revision 1.7  92/04/01  18:26:30  steve-l
+//removed changes for rev. 1.6 (incorrect!)
+//
+//Revision 1.6  92/04/01  18:23:59  steve-l
+//altered Item_Find to convert LT/LE to LAST_RECORD and GT/GE to FIRST_RECORD
+//iff the record buffer is initially clear
+//
+//Revision 1.5  92/03/29  18:44:44  lee
+//added MSG_END_CONSTRUCT_OBJECT, moved ENDMAC macro stuff into END_CONSTRUCT-
+//OBJECT procedures (in .pkgs). moved Flag_ITems to list.pkg after generalizing
+//it based on PROTOTYPE_OBJECT instead of Whether or not it is a table-oriented
+//object. Moved define_access_keys mechanism completely into actionbr.pkg.
+//fixed two typos: import_class_protocol used !# instead of !3, and register-
+//procedure used !1 instead of !2.
+//
+//Revision 1.4  92/03/26  18:33:03  steve-l
+//altered item_find to properly hold recbuf before performing an attach
+//
+//Revision 1.3  92/03/09  19:00:50  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of
+//compiler.
+//
+//Revision 1.2  92/03/05  15:45:51  steve-l
+//Item_Find changed to set ERR false before sending request_superfind,
+//request_Read, etc., and to check err (with found) afterward, in case of
+//non-file-boundary errors.
+//
+//Revision 1.1  91/10/23  10:19:58  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: Data_Set.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: April 21, 1992
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Data_Set class definition.
+//************************************************************************/
+
+#CHKSUB 2 1  // Verify the data_set subsystem.
+
+use ui
+use fndmodes
+use refmodes
+use enclient
+
+// define defaults (if not previously defined)
+define DEFAULT$SMART$FILEMODE$STATE for FALSE
+define DEFAULT$CASCADE$DELETE$STATE for TRUE
+
+//
+//Global integer status values
+//
+define OPERATION_MODE   for |VI99  //status of data-sets in application
+define OPERATION_ORIGIN for |VI108 //origin of current of data-set operation
+
+//
+//Constants for Operation_Mode global int values
+//
+define MODE_WAITING  for 0  //wait-mode
+define MODE_FINDING  for 1  //find-mode
+define MODE_CLEARING for 2  //clear-mode
+define MODE_CREATING for 3  //create-mode
+define MODE_SAVING   for 4  //save-mode
+define MODE_DELETING for 5  //delete-mode
+define MODE_ABORTING for 6  //abort-mode
+
+//
+// Description
+//
+//   The Data_Set class is implemented as a subclass of Entry_Client, with
+//   a C language handler providing the majority of new behavior.  The
+//   Data_Set class is intended to be a grouping agent for data-entry objects
+//   and a container for subordinate Data_Sets.
+//
+// Assumptions/Preconditions
+//
+//   None.
+//
+// Exceptions
+//
+//   None.
+//
+// Notes
+//
+//  Syntax:
+//
+//  Object <name> is a Data_Set <image> {ACTION_BAR <ActionBar>} {POP_UP}
+//      {RING} {MAIN_FILE <Main_File> {BY <Index>} }
+//      {UPDATING <File> | <DataSetID> ... } }
+//   :
+//  End_Object
+//
+//  Data_Sets may be used to group DEOs as well as other Data_Sets.
+//  Note also that a nested (component) Data_Set automatically enforces an
+//  UPDATES visibility and a RELATES TO constraint between its main_file and
+//  its parent's main_file.
+//
+
+// _Data_Set class deinition, private class layer. (Extra class layer needed
+// to augment procedures defined in C class handler.)
+//
+Class _Data_Set is an Entry_Client ;  //_Data_Set inherits from Entry_Client
+    STARTMAC dsStart ;                //dsStart macro is used to handle syntax
+    0 0 ;                             //default colors
+    Data_Set_Handler                  //C-function for base class behavior
+
+  !A [] $461 U__DATA_SET              //register C messages
+
+  function Field_Main_Index integer file integer field returns integer
+    local integer dataType fldNdx retval ordr
+    move -1 to retval      //field has no main index (default)
+    if file ne 0 begin
+      FIELD_DEF file field to dataType fldNdx
+      if (fldNdx > 0 OR field = 0) move fldNdx to retval //field has main index
+    end
+    if file eq (main_file(current_object)) begin
+      get ordering to ordr
+      if ordr ge 0 move ordr to retval  //ordering takes precedence over main index
+    end
+    function_return retval
+  end_function
+
+    procedure Item_Find integer mode integer datafile integer datafield ;
+        integer entUpdtFlag integer errFlag integer dfrdFlag
+        local integer ndx rec wasChanged iServer
+        move (Field_Main_Index(current_object,dataFile,datafield)) to ndx
+        if ndx GE 0 begin
+            move dataFile to FILENUMBER
+            move 0 to FIELDINDEX
+            //
+            //  'hold' buffer to prepare for entry_update
+            //
+            move Indirect_File.RECNUM to rec
+            move 0 to Indirect_File.RECNUM    //make buffer inactive but
+            move rec to Indirect_File.RECNUM  //replace record number
+            if entUpdtFlag ne 0 begin
+                send Request_Entry_Update dataFile 1  //entUpdt all DEOs as required
+                //
+                // we really only need to know if any segment of the index changed
+                // but since we don't have field-changed flags, we look at the
+                // whole recbuf - this is consistent with 2.3b and 3.0 non-dataset
+                // behavior.
+                //
+                move (FALSE) to wasChanged
+                move dataFile to FILENUMBER
+                move 0 to FIELDINDEX
+                if Indirect_file.RECNUM ne 0 move (TRUE) to wasChanged
+                ifchange Indirect_File move (TRUE) to wasChanged
+                if wasChanged eq (FALSE) constrained_clear mode datafile by ndx
+
+                Get Which_Data_Set datafile to iServer
+                if (iServer AND datafile eq (main_file(iServer))) ;
+                    send Attach_Main_File to iServer
+                else Begin
+                    move dataFile to filenumber
+                    move 0 to fieldindex
+                    attach Indirect_File
+                end
+            end
+            indicate err false
+            if (Is_SuperFind_Required(current_object,dataFile)) ;
+                send Request_SuperFind mode dataFile datafield
+            else if dfrdFlag send Request_Read mode dataFile ndx
+            else send Request_Find mode dataFile ndx
+            [not found not err] begin
+                move 0 to FIELDINDEX
+                move dataFile to FILENUMBER
+                clear Indirect_File
+                move rec to Indirect_File.RECNUM
+                find eq Indirect_File.RECNUM
+                if errFlag ne 0 begin
+                    if mode lt 2 error 41
+                    else error 42
+                end
+                indicate FOUND FALSE
+            end
+        end
+        else if errFlag error 79
+    end_procedure
+
+  // We only care about should_saves of DEOs and not DSOs when
+  // exiting the app. Create a handler for data set class. We still
+  // broadcast in case we've got nested deos in the dso (hopefully not).
+  Function Exit_Application_Check Returns Integer
+    Local Integer rVal
+    BroadCast Get Exit_Application_Check to Rval // check w/ kids
+    Function_return rVal
+  End_Function
+
+  procedure End_Construct_Object
+    if (Child_Count(current_object)) LE 0 ;
+        set Focus_Mode to NO_ACTIVATE
+
+    forward send End_Construct_Object
+  end_procedure
+end_class
+
+//************************************************************************
+// Data_set
+// Version: 1.0
+//  01-15-1993 : Created
+//
+// Author: John J. Tuohy
+//
+//  Class Data_Set is a _Data_Set   
+//
+// 1.  Adds Constrain_File Property
+// 2.  Added default setting of Cascade_Delete_State
+//
+//************************************************************************/
+
+// Data_Set class definition, public class layer. (Extra class layer needed
+// to augment C-based (Constrain) procedure(s).)
+//
+Class Data_Set is a _Data_Set
+   Procedure Construct_Object Integer Img#
+     Forward Send Construct_Object Img#
+
+     Property Integer Constrain_File Public 0
+
+     Set Smart_Filemode_State to DEFAULT$SMART$FILEMODE$STATE
+     Set Cascade_Delete_State to DEFAULT$CASCADE$DELETE$STATE
+   End_Procedure  // Construct_Object
+   
+   Procedure Constrain
+     Local Integer File#
+     Get Constrain_File to File#
+     Forward Send Constrain
+     If File# ne 0 Constrain (Main_file(Current_Object)) relates to File#
+   End_procedure  
+end_class
+
+//
+// Support Commands
+//
+
+//
+//dsStart <className> <ImageName> {ACTION_BAR <ActionBar>} {POP_UP} {RING}
+//  {MAIN_FILE <Main_File> {BY <Index>} 
+//   {UPDATING <FileName> | <DataSetID> ... } }
+//
+// this macro handles the optional syntax of Data_Sets  
+//
+#COMMAND dsStart R R
+  FORWARD_BEGIN_CONSTRUCT !1 !2 !3 !4 !5 !6 !7 !8 !9
+  Bind_Main_File !3 !4 !5 !6 !7 !8 !9
+  Bind_Index !3 !4 !5 !6 !7 !8 !9
+  Bind_Updating !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+#COMMAND bind_main_file
+  #IF (!0>1)
+    #IFSAME !1 MAIN_FILE
+      #IFDEF !2.RECNUM
+        #PUSH !u
+        #SET U$ !2.RECNUM
+        set main_file to |CI!u
+        #POP u$
+      #ELSE
+        #ERROR 778 If !2 is a file it is unopened
+      #ENDIF
+    #ELSE
+      bind_main_file !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+#COMMAND bind_index
+  #IF (!0>1)
+    #IFSAME !1 BY
+      set ordering to !2
+    #ELSE
+      bind_index !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+#COMMAND Bind_Updating
+  #IF (!0>1)
+    #IFSAME !1 UPDATING
+      SetDependents !2 !3 !4 !5 !6 !7 !8 !9
+    #ELSE
+      Bind_Updating !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+#COMMAND SetDependents   //<File>|<Server#> [ ... ]
+  #IF (!0>0)
+    #IFDEF !1
+      send Attach_Server !1
+    #ELSE
+      #IFDEF !1.OBJ
+        send attach_Server !1.OBJ
+      #ELSE
+        #IFDEF !1.RECNUM
+          #PUSH !u
+          #SET U$ !1.RECNUM
+          send Add_Parent_File |CI!u
+          #POP U$
+        #ELSE
+          #ERROR 778 If !1 is a file it is unopened
+        #ENDIF
+      #ENDIF
+    #ENDIF
+    SetDependents !2 !3 !4 !5 !6 !7 !8 !9
+  #ENDIF
+#ENDCOMMAND
+
+#COMMAND BEGIN_CONSTRAINTS
+  procedure constrain
+#ENDCOMMAND
+
+#COMMAND END_CONSTRAINTS
+    forward send constrain
+  end_procedure
+#ENDCOMMAND

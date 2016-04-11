@@ -1,0 +1,27 @@
+        FILE DEFINITION LISTING FOR FILE #41
+*************************************************** 
+        FILE ROOT NAME     = DEPOSITS
+        USER DISPLAY NAME  = GL Deposits
+        DATAFLEX FILE NAME = DEPOSITS
+*************************************************** 
+        RECORD LENGTH = 32  (USED = 18)
+        MAX NUMBER OF RECORDS = 2000  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       2   ASCII          2    36     1     BANK_CODE
+   2       3       3   DATE           2     0     0     DATE
+   3       6       4   NUMERIC   2    0     0     0     AMOUNT
+   4       1       5   OVERLAP        1     0     0     BANK_DATE
+   5      10       2   NUMERIC   0    0     0     0     LAST_SEQ
+   6      12       4   NUMERIC   2    0     0     0     BAL
+   7      16       1   ASCII          3     0     0     UPDATE
+   8      17       2   ASCII          0    35     1     JR
+ 
+INDEX 1:  FIELD SEGMENTS:  <4>   
+INDEX 2:  FIELD SEGMENTS:  <1>   <2>   
+INDEX 3:  FIELD SEGMENTS:  <7>   <0>   
+

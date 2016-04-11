@@ -1,0 +1,25 @@
+        FILE DEFINITION LISTING FOR FILE #38
+*************************************************** 
+        FILE ROOT NAME     = DIVISION
+        USER DISPLAY NAME  = GL Program Divisions
+        DATAFLEX FILE NAME = DIVISION
+*************************************************** 
+        RECORD LENGTH = 46  (USED = 43)
+        MAX NUMBER OF RECORDS = 50  (USED = 3)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       2   ASCII          1     0     0     CODE
+   2       3      30   ASCII          0     0     0     DESC
+   3      33       2   NUMERIC   0    0     0     0     A_P_ACCOUNT
+   4      35       2   NUMERIC   0    0     0     0     A_R_ACCOUNT
+   5      37       2   ASCII          0     0     0     BANK_CODE
+   6      39       2   ASCII          0     0     0     TYPE
+   7      41       1   ASCII          0     0     0     STATUS
+   8      42       2   NUMERIC   0    0     0     0     ACCOUNTS
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   
+

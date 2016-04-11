@@ -1,0 +1,37 @@
+        FILE DEFINITION LISTING FOR FILE #40
+*************************************************** 
+        FILE ROOT NAME     = DISTRIB
+        USER DISPLAY NAME  = GL Check Distribution File
+        DATAFLEX FILE NAME = DISTRIB
+*************************************************** 
+        RECORD LENGTH = 51  (USED = 49)
+        MAX NUMBER OF RECORDS = 12000  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       3   DATE           4     0     0     JR_DATE
+   2       4       2   ASCII          4     0     0     BANK_CODE
+   3       6       4   NUMERIC   0    4     0     0     CHECK_NUMB
+   4      10       1   NUMERIC   0    4     0     0     SEQUENCE
+   5       1       9   OVERLAP        4    39     5     DATE_BANK_CHECK
+   6       1      10   OVERLAP        4     0     0     DTE_BK_CHK_SEQ
+   7      11       2   NUMERIC   0    0     0     0     ACCOUNT
+   8      13       3   ASCII          0     0     0     DISTRICT
+   9      16       2   ASCII          0     0     0     DIVISION
+  10      18       4   NUMERIC   2    0     0     0     AMOUNT
+  11      22      25   ASCII          0     0     0     DESCRIPTION
+  12      47       1   ASCII          5     0     0     UPDATE
+  13      48       2   NUMERIC   0    0     0     0     OPER
+  14       4       7   OVERLAP        4     0     0     BANK_CHK_SEQ
+ 
+INDEX 1:  FIELD SEGMENTS:  <5>   <0>   
+INDEX 2:  FIELD SEGMENTS:  <3>   <0>   
+INDEX 3:  FIELD SEGMENTS:  <6>   
+INDEX 4:  FIELD SEGMENTS:  <2>   <3>   <4>   <1>   
+INDEX 5:  FIELD SEGMENTS:  <12>   <2>   <3>   <4>   
+INDEX 6:  FIELD SEGMENTS:  <14>   
+INDEX 7:  FIELD SEGMENTS:  <2>   <0>   
+

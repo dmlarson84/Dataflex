@@ -1,0 +1,441 @@
+// EnRadio.pkg: Radio_Entry_Form
+//
+// 03-29-94 (LS) Added rq-find,save,delete msgs as per full DEO protocol.
+//               Also added verify mixin, and object_validate_msg property.
+// 04-08-1994  (LS & JT) v1.1 Added DEO delegation. Created a 00 class
+//               to house the request_stuff. This way, the public class has the
+//               delegate support.
+
+//
+//  04/08/94 - JJT We are duplicating a bunch of code. There must be a better
+//             way.
+//
+
+//  05/04/94 - JJT - Pulled out all request_xxx messages. Trying this as a
+//             "wave of the future change". We are trying to make a dumb entry
+//             object that does all of its requesting via delegation. 
+//
+//  09/13/94 - JJT - Removed radio_on_item command. Use Fill_List and
+//             send Add_radio_Item messages
+//            
+//**************************************************************
+// 02/04/95  JJT **JJT**(2) added initialize_list to end_construct_Object
+// 02/08/95  JJT **JJT**(2) Changed entry_update flags
+// 03/23/95  JJT  Added kCancel to send request_cancel
+// 09/07/95  JJT - Code Clean up (removed dead commented code)
+//**************************************************************
+
+use ui
+use picklist
+use findedit    //include Finding/Editing support module
+use refmodes    // refresh mode constants
+
+//***JJT try it without the delegate stuff - it'll just happen!
+
+Class Radio_Entry_Form is a Pick_list STARTMAC R_EStart
+  procedure construct_object Integer Img
+    forward send construct_object Img
+    send define_find_edit  //invoke finding/editing support constructor
+    Property integer Zoom_Object              PRIVATE 0
+    Property integer Prompt_Object            PRIVATE 0
+    Property integer Retain_State             PUBLIC FALSE // just like items
+    Property integer NoPut_State              PUBLIC FALSE // just like items
+    Property integer Radio_State              PUBLIC TRUE  // dflt to radio
+    Property String  Default_Value            PUBLIC ''    // when cleared..find it
+    Set Local_Rotate_State to FALSE         // tab leaves object
+    Set Select_Mode to AUTO_SELECT          // s/b this or single_select
+                                            // or no_select (if 1 row list)
+
+    Object Entry_Values is an Array         // keeps values of database
+    End_Object                              // items for each radio selection
+
+    on_key kPrompt SEND Prompt PRIVATE
+    on_key kZoom   SEND Zoom   PRIVATE
+
+    on_key kCancel SEND Request_Cancel Private // added 03/23/95 - picklists
+                                               // make this key cancel
+
+    Set Allow_move_State to FALSE // Picklists move..these should not
+
+  end_procedure
+  
+  IMPORT_CLASS_PROTOCOL Find_Edit_Mixin
+
+  // undo from picklist
+  Procedure Entering Returns integer
+  End_Procedure // Entering
+  
+  //  You don't really validate items here.
+  //  (LS) Yes, you do; just augment this message.
+  //
+  function Validate_Items Integer Fg returns integer
+  end_function
+  
+  procedure Zoom
+    local integer obj#
+    get Zoom_object to obj#
+    if obj# send POPUP to obj#
+  end_procedure
+
+  procedure Prompt
+    local integer obj#
+    get Prompt_object to obj#
+    if obj# send POPUP to obj#
+  end_procedure
+
+  Procedure Set Prompt_Object integer item# Integer Obj#
+     set !$.Prompt_Object to Obj#
+  End_Procedure
+
+  Function Prompt_object Integer Item# Returns Integer
+     Function_Return (!$.Prompt_Object(Current_Object))
+  End_Function // Prompt_object
+
+  Procedure Set Zoom_Object Integer Item# Integer Obj#
+     set !$.Zoom_Object to Obj#
+  End_Procedure
+
+  Function Zoom_object Integer Item# Returns Integer
+     Function_Return (!$.Zoom_Object(Current_Object))
+  End_Function // Prompt_object
+
+
+  //
+  //  By creating these two functions our finding routines will
+  //  work properly.
+  //
+  Function Data_File Integer Itm# returns Integer
+     function_return (target_File(Current_Object))
+  End_Function
+  
+  Function Data_field Integer Itm# returns Integer
+     function_return (target_field(Current_Object))
+  End_Function
+  
+  //
+  //   Clear radio object. All items select state to false
+  //   and set current item to default.
+  //   Pass: Dflt - value to set
+  //         RetainIt - if TRUE retain the current value
+  //
+  procedure Clear_Radio String Dflt Integer RetainIt
+    // if we don't check for retains or it we have a retain we do clear
+    If Not RetainIt Begin
+       If Dflt ne '' ;
+         Send Find_Item Dflt // if we have a default value...set it
+       Else Begin
+         Set New_item     to 0  // set new current_item
+         Set Select_Count to 0  // no items selected
+         // if select_mode is auto_select then this item should be auto
+         // selected!
+         If (Select_Mode(Current_Object)=AUTO_SELECT) ;
+            Set Select_State item 0 to TRUE
+       End
+    End
+    // even if retain is true we will set changed_state to false.
+    // Entry_update has been made ever so much more clever so it
+    // will know how to move this value in.
+    Set Changed_State to FALSE // always default to no change
+  end_procedure
+
+  //
+  // created for EntItem simulation: file# <> 0 means use Cleared-array
+  //
+  procedure Entry_Clear integer file# 
+    Indicate Found as File# eq 0
+    [Not Found] Is_file_included (Target_File(Current_Object)) 0 //0=clear arry
+    [Found] Send Clear_Radio (Default_Value(Current_Object)) ;
+                             (Retain_State(Current_Object))
+  end_procedure
+
+  //
+  // created for EntItem simulation:
+  //
+  procedure Entry_Clear_All integer file#
+    Send Entry_Clear File# 
+  end_procedure
+
+  Procedure SET Entry_Value Integer Itm String Val
+    If Itm eq CURRENT Get Current_Item to Itm
+    Set Value of (Entry_Values(Current_Object)) Item Itm to Val
+  End_Procedure
+  
+  Function Entry_Value Integer Itm Returns String
+    Function_Return (Value(Entry_Values(Current_Object),Itm))
+  End_Function
+
+  //
+  // created for EntItem simulation and Server support:
+  //  if file# = 0, display only if Target_File is in Done-array
+  //  else display only if file# = Target_File
+  //
+  procedure Entry_Display integer file# integer flag
+    local integer I_C dFile dField i C_Item Itm_Len
+    get Target_File  to dFile
+    get Target_Field to dField
+    //
+    //  We will display this if the following conditions exist:
+    //    passed file is 0 and the target file is in the done array <or>
+    //    passed file= target File or flag = true)
+    if file# eq 0 is_file_included dFile 1  // set found if in done array
+    else indicate found as (file# = dFile OR flag = TRUE)
+    [FOUND] begin
+       Move dFile  to FILENUMBER
+       Move dField to FIELDINDEX
+       Send Find_Item Indirect_File.Recnum
+       Set Changed_State to False
+    End
+  End_procedure
+
+  //
+  //  Set the radio item to the value passed. If not found make it 0
+  //  with nothing selected
+  Procedure Find_Item String Itm
+    Local integer I_C i C_Item Itm_Len
+    Length Itm to Itm_Len
+    Move -1 to C_item
+    Move ( Item_count(Current_Object) - 1) to I_C
+    Set Select_Count to 0 // no selected items
+    For i from 0 to I_C
+       // Match against entry_value array
+       If (Left(Entry_Value(Current_Object,i),Itm_Len )=Itm) Begin
+          Move i to C_Item
+          If (Select_Mode(Current_Object)<>NO_SELECT) ;
+               Set Select_State Item i to True
+       End
+    Until C_Item ne -1
+    Set New_Item to (C_Item max 0)
+  End_Procedure // Find_Item
+
+  //
+  // in the remote chance that this is a no_select list (which only
+  // makes sense if it is a 1 row list) then we need to set the
+  // changed_state to true when we switch items.
+  //
+  Procedure Item_change integer From# integer to# returns integer
+    Local Integer rval
+    Forward get MSG_Item_change From# to# to Rval
+    If (Select_Mode(Current_Object)=NO_SELECT) Set Changed_State to TRUE
+    Procedure_Return rVal
+  End_Procedure // Item_change
+  
+  //
+  // created for EntItem simulation and Server support
+  //
+  //  Normally entry_update gets called during saves and finds. When
+  //     Save:  file#  = 0   flag = 3
+  //     Find:  file# <> 0   flag = 1
+  //
+  //  Allow Update Rules:
+  //    if Save update (file#=0, flag=3)
+  //       Allow Update if not noput and Target_File is in Done-array
+  //                    and (new record or changed_state).
+  //    else if Find_Update (file#=Target_File, Flag=1) or misc (file#=0)
+  //       Allow Update
+  //
+  //  Modified so that an unchanged item is moved to the field if
+  //  the main file is a new record.
+  //
+  procedure Entry_Update integer file# integer flag
+    local integer dFile dField C_Item Srvr# ok
+    Get Server       to Srvr#
+    Get Target_File  to dFile
+    Get Target_Field to dField
+    if (file# = 0 AND flag = 3) Begin
+       // this should be a save a record update.check for no put
+       If (noput_state(Current_Object)) Indicate Found False
+       Else is_file_included dFile 1
+    End
+    else indicate FOUND as (file# = dFile OR file# = 0) // new change
+    // **JJT**(2) I think this was wrong. Flag is used to figure if
+    // item_changed_state should be ignored. I don't think it is meant
+    // to override the file param.
+    //else indicate FOUND as (file# = dFile OR flag = TRUE OR file# = 0)
+    Move (found) to OK
+    If Ok Begin
+       Move dFile  to FILENUMBER
+       Move dField to FIELDINDEX
+       // If flag<>do it always and no change we normally do not update.
+       // However, if this is a new record we will move it
+       if ( Flag<>1 and changed_State(current_object)=0) ;
+          If status Indirect_file Move 0 to Ok // old record...not ok
+       if Ok Begin
+          If (Select_mode(Current_Object)) eq SINGLE_SELECT Begin
+             Get First_selected_Item to C_Item
+             // pick_lists returns a 0 if no item is
+             // selected (s/b -1). So we do a double check here
+             if (select_state(current_object,C_Item)=0) ;
+                 Move -1 to C_item
+          End
+          Else Move (Current_Item(Current_Object)) to C_Item
+          //
+          Move (if(C_Item=-1,'',Entry_Value(Current_Object,C_Item)) ) to Indirect_File.Recnum
+       end
+    End
+  end_procedure
+  
+  procedure refresh integer notifyMode
+    if notifymode eq MODE_CLEAR_ALL send Entry_Clear_All 1 
+    else Begin
+      send Entry_Clear 1   
+      send Entry_Display 0 0
+    end
+  end_procedure
+
+  //  Augment to send Initialize_list (for dynamic lists)
+  //
+  Procedure Activating
+     Local Integer rVal
+     Forward Get MSG_Activating to RVal
+     If not rVal Send Initialize_list
+     Procedure_Return RVal
+  End_Procedure // End_construct_Object
+
+  Procedure Delete_Data
+    local integer obj#
+    forward send delete_Data
+    move (Entry_Values(current_object)) to obj#
+    // we do this to get around wierd program close down problems. Delete_data
+    // seems to get called by destroy-object.
+    if obj# ne 0 send delete_Data to obj#
+  End_Procedure // Delete_Data
+
+  // If there are no items send fill_list.
+  // Also check to see of a scroll bar is needed. Display scroll bar if it
+  // is.
+  //
+  // Note If you want to rebuild an item list you should:
+  //     Send Delete_Data
+  //     Send Initialize_List
+  //
+  // Do not Send Fill_List directly (it won't handle scroll bar right)
+  //
+  procedure Initialize_List
+    local integer Lmt Itm
+    if (item_count(current_object)<1) send fill_list
+    Get Item_limit to Lmt
+    Get Item_Count to Itm
+    Set Scroll_Bar_Visible_State To True
+    Set visible_state of (Scrollbar(Current_Object)) to ;
+        (Itm=0 OR Itm/Lmt>(Display_size(Current_Object)/lmt)) 
+  end_procedure
+
+  // Message to add radio Items to a list. Similar to Add_Item except
+  // it handles an optional second parameter. If no 2nd param the first
+  // is used in its place. This will normally be used inside of Fill_List
+  //
+  // Send Add_Radio_Item Item_Value {Data_Value}
+  //
+  Procedure Add_Radio_Item String Item_value String Data_Value
+    Local String  dVal
+    Local Integer itm
+    // If one param passed use it for both display and database values
+    If num_arguments le 1 Move Item_Value to dVal
+    Else Move data_Value to dVal
+    Get item_count to itm             // get this before we add the item.
+    send add_item MSG_none Item_Value // add new item
+    Set Entry_Value Item itm to dVal
+    if (Radio_State(current_object)) ;
+       set Checkbox_Item_State item itm to TRUE
+  End_Procedure
+
+  //  Normally Mouse up does toggle select. However with a no select
+  //  it does a next (which moves to the next object). If this happens a
+  //  mouse click activates this and then (with up) switches to the next
+  //  object. We disable this. This is used for 1 line No_select lists
+  //
+  Procedure Mouse_Up integer win integer cpos
+     If (Select_Mode(Current_Object)<>NO_SELECT) ;
+        Forward Send Mouse_Up win cpos
+  End_Procedure // Mouse_Up
+
+  // **LS
+  // FindEdit support behavior
+  //
+  procedure Request_Find integer mode integer entUpdtFlag
+    local integer dataFile ser# dfrdState
+    get Data_File to dataFile
+    get Server to ser#
+    get Deferred_State to dfrdState
+  
+    //
+    // server augmentation & deferred-state use
+    //
+    if (ser# <> 0 AND dataFile > 0) begin
+      send Item_Find to ser# mode dataFile ;
+        (Data_Field(current_object,CURRENT)) entUpdtFlag TRUE dfrdState
+      [found] if dfrdState send entry_display 0 0
+    end
+    //*** JJT NO Server NO FIND - new hard line attitude
+    //***//
+    //***// standard form behavior
+    //***//
+    //***else begin
+    //***  send Entry_Find mode
+    //***  [found] send entry_display 0 0
+    //***end
+  end_procedure
+
+  //*** LS
+  //
+  // FindEdit support behavior
+  //
+  procedure Request_SuperFind integer mode
+    local integer obj# datafile
+    get Server to obj#
+    get data_file to datafile
+    //
+    // modification for Server
+    //
+    if datafile gt 0 begin
+      if obj# ne 0 begin
+        indicate err false
+        send Request_SuperFind to obj# mode datafile ;
+            (data_field(current_object,CURRENT))
+        [not found not err] begin
+          if mode lt 2 error 41
+          else error 42
+        end
+      end
+      //*** JJT NO Server NO FIND - new hard line attitude
+      //***//
+      //***// standard form behavior
+      //***//
+      //***else begin
+      //***  send Entry_SuperFind mode datafile
+      //***  [found] send entry_display 0 0
+      //***end
+    end
+  end_procedure
+
+
+  // **JJT**(2) - Fill_List at end of construct object
+  Procedure End_Construct_Object
+     Forward Send End_Construct_Object
+     Send Initialize_List
+  End_Procedure // End_Construct_Object
+
+End_Class
+  
+#COMMAND R_EStart R 
+  FORWARD_BEGIN_CONSTRUCT !1 !2 !3 !4 !5 !6 !7 !8 !9
+  bind_For_RE !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+//
+//  We let the normal FOR from pick list set target_file and field
+//  this is just here to print an error message of FOR is missing
+//
+#COMMAND Bind_For_RE
+  #IF !0=1
+    #ERROR 777 Hey... You forgot FOR datfile.field
+  #ELSE
+    #IF !0>1
+      #IFSAME !1 FOR
+      #ELSE
+        Bind_For_RE !2 !3 !4 !5 !6 !7 !8 !9
+      #ENDIF
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+

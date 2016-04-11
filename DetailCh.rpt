@@ -1,0 +1,591 @@
+/HEADER                                                           DetailCh.rpt
+Report printed on: __/__/____                              Operator Number: __
+                Arkansas Office of the Prosecutor Coordinator
+                              Hot Check System
+               Detail Change Report for __________ to __________
+									  	                                       
+   Date      ID #   CtrlSeq#   FILE   Operator | Chk Amt | Pros Fee | Mer Fee |
+/BODY RESIDENT
+__/__/____  ______    ____   ________   ___    | ____.__ |  __.__   |  __.__  |
+Rest Amt:   ____.__ | _______________________________________________________ |
+Beg Bal:  ______.__ | _______________________________________________________ |
+Def Cred: ______.__ | _______________________________________________________ |
+-------------------------------------------------------------------------------
+/TOTAL
+Total checks amount:       ____________.__
+Total prosecutor fees:     ____________.__
+Total merchant fees:       ____________.__
+Total restitution amount:  ____________.__
+Total beginning balanaces: ____________.__
+Total defendant credit:    ____________.__
+Number of records printed:	     ______
+/SELECTDATES
+                Arkansas Office of the Prosecutor Coordinator
+                              Hot Check System
+                            Detail Change Report
+
+
+                    Display report beginning  __/__/____ 
+				
+                                  and ending  __/__/____
+/OPERATORLIST
+
+    Office of the Prosecutor Coordinator
+              Hot Check System
+            Detail Change Report
+
+     ___ ______________________________
+     ___ ______________________________
+     ___ ______________________________
+     ___ ______________________________
+     ___ ______________________________
+     ___ ______________________________
+     ___ ______________________________
+     ___ ______________________________
+
+     Use up & down arrow keys to scroll
+          Press <Enter> to accept
+/STAND
+____________________
+/SOUTPUT
+                             Detail Change Report
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~						
+						
+ Enter P to send ledger to printer or S to save the ledger to a file. (P/S) _
+					
+/EXIT            RESIDENT
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+            Please Standby, Closing Files and returning to the Menu
+
+
+
+
+	
+/info
+
+     changes made on 10/11/1999 by Jeff March
+        added direct_output to LPT1:, added calcdate.inc for Y2k purposes
+
+Recompiled 01-19-2000 by Jeff March
+        Recognize new backspace command in calcdate.inc
+          
+10-13-2015 Don Larson
+	Began second version of Trans.rpt (Trans2.rpt). Long story short, introducing updates
+	from the current version of Changes.rpt (Audit9.rpt) to this report.
+	
+10-13-2015 Don Larson
+	Finished Trans.rpt 2.0. Cleaned up the report to save space and introduced the separated PAGEs for split and merged entry descriptions.
+    Beginning Trans.rpt 3.0 now. Will be implementing the scroll bar Operator list as seen in the current CHANGES.rpt version (audit9.rpt) so 
+	that auditors can view the TRANSACT table changes by the operators on an individual level. This will require some filtering on the 
+	report itself.
+
+10-27-2015 Don Larson
+	Finished Trans3.rpt. Resaving as AmtChJrl.rpt (and flx) to better describe what the file is actually for. In version 4 I plan on going 
+	through this report and adding some Quality of Life (QOL) changes and finishing touches on comments.
+	
+11-30-2015 Don Larson
+	More comments added. Took some old unused/unnecessary vars out, and added a quick function to bounce out users that lack the authorization level in the access table.
+	
+12-3-2015 Don Larson
+	More comments in, more junk out. Report now filters out the entries with a blank FILE entry (usually a sign of it being a double entry made when deleting disbursements.
+	Tweaked how the report will look when displayed a bit. Changed the name to Detail Change Report (DetailCh.rpt). Changing a couple other things too, but those are
+	outside of this file (Transact's first index needs to be changed and the user access level to CHAIN to this from menu has been increased to 5.) Considering this
+	the final revision unless something comes up.
+
+12-9-2015 Don Larson
+	Requested to add functionality to send report straight to printer. Tried to find a solution to allow the report to be printed in landscape,
+	but couldn't find one. Redesigned printed report. Removed the old split/merged description distinction section - tl;dr not worth it anymore,
+    more can be found with the code for it on the bottom of the page, where I commented it out. Also adjusted some other minor things. Also, 
+	rolled back the Dataflex version it uses from 3.1 to 2.3 because many users probably won't remember that Next/Prev are F7/F8 instead of PgUp/PgDn.
+
+/*
+//===========================================================================================
+USE Y2K.PKG
+Read_dfini "df23ini.cfg"		 // The config file that describes which version of Dataflex is being run. Changing this WILL affect your flexkeys (keyboard shortcuts).
+
+//========< NOTE: Cannot Run Program From Command Line (DOS) >===============================
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+
+//===========================================================================================
+#include calcdate.inc
+#include macs.frm						//Contains a variety of sometimes-handy macros.
+
+//========< Declaring variables >============================================================
+INTEGER ROW_NUM SCROLL$ROW$NUM SCROLL$EXTRA STOP_NUM 
+INTEGER COUNTER FIRST_REC LAST_REC
+INTEGER SIZE_USERX ADAY AMONTH AYEAR			// Keeping these variables so the output filename sub will work.
+
+STRING ANSW 1
+STRING SCROLL$ANS 1
+STRING filterNum
+string outputFile 200
+
+INDICATOR TOPP BOT NOGO
+
+DATE today										// Declaring a variable to store the date to print in the report's header.
+SYSDATE today									// Setting that date var to today's date.
+
+// ~~~~~~~~~~~~~ These indicators are used by the report section to filter the text. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Indicator scrollChoice 						// Indicator to track whether or not the scroll bar is being used to make a choice, or if the report is for all Operators.
+INDICATOR includeNulls						// Indicator to determine whether or not null Operator values will be included.
+Indicator datesSelected						// Pointless indicator that only exists to make the printing work properly (it requires an indicator to be present).
+
+string outputSelection 1					// Used to track if the user is going to be printing or saving to a file.
+
+//=========< Grabbing user info for program use >============================================
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+
+OPEN REF
+OPEN USERX
+
+SCREENMODE 248 ON
+DISPLAY '  *   STANDBY   *   ' TO STAND.1
+PAGE STAND
+SCREENMODE 248 OFF
+KEYPROC OFF
+CLEAR USERX
+MOVE 0 TO FIRST_REC
+MOVE 99999 TO LAST_REC
+FIND GT USERX BY INDEX.1
+[FOUND] MOVE USERX.User_Numb TO FIRST_REC
+CLEAR USERX
+FIND LT USERX BY INDEX.1
+[FOUND] MOVE USERX.User_Numb TO LAST_REC
+CLEAR USERX
+GOSUB SCROLL_DEFEND
+
+PAGE SOUTPUT
+ACCEPT SOUTPUT.1 {CHECK='PpSs'}
+move SOUTPUT.1 to outputSelection
+gosub determineOutput
+
+Start:
+	OPEN TRANSACT INDEX.1
+	PAGE SELECTDATES
+	ACCEPT SELECTDATES.1
+	ACCEPT SELECTDATES.2
+	if SELECTDATES.1 ne '' indicate datesSelected true
+	if SELECTDATES.2 ne '' indicate datesSelected true  
+		
+//============================================================================
+// Report section begins =====================================================
+//============================================================================
+ REPORT TRANSACT BY INDEX.1												// If the sort isn't working, remember that OPERATOR should be included with the this index.
+
+	[datesSelected] INDICATE SELECT AS TRANSACT.DATE GE SELECTDATES.1
+	[datesSelected] [SELECT] INDICATE SELECT AS TRANSACT.DATE LE SELECTDATES.2
+	[datesSelected] [scrollChoice] [SELECT] INDICATE SELECT AS filterNum MATCH TRANSACT.Operator
+	[datesSelected] [includeNulls] [SELECT] INDICATE SELECT AS '' MATCH TRANSACT.Operator
+
+	[~datesSelected] [scrollChoice] INDICATE SELECT AS filterNum MATCH TRANSACT.Operator
+	[~datesSelected] [includeNulls] INDICATE SELECT AS '' MATCH TRANSACT.Operator
+	
+	[SELECT] INDICATE SELECT AS '' NE TRANSACT.FILE
+							
+	SECTION HEADER
+		print today
+		print USER_NUMB
+//		gosub datesUsed
+		[datesSelected]  print SELECTDATES.1 to HEADER.3
+		[~datesSelected] print "none given" to HEADER.3
+		[datesSelected]  print SELECTDATES.2 to HEADER.4
+		[~datesSelected] print "none given" to HEADER.4
+        OUTPUT HEADER
+		
+	SECTION BODY
+        print TRANSACT.DATE
+        print TRANSACT.IDNO
+        print TRANSACT.CTRL_SEQ_NO
+        print TRANSACT.FILE
+		print TRANSACT.OPERATOR
+		print TRANSACT.CKAMT
+		print TRANSACT.PFEE
+        print TRANSACT.MFEE
+        print TRANSACT.RESAMT
+        print TRANSACT.DESC1
+        print TRANSACT.BEGBAL
+        print TRANSACT.DESC2
+        print TRANSACT.CREDIT
+		print TRANSACT.DESC3
+		OUTPUT BODY
+		
+// There were issues with the total sums before but now they seem to be functioning. Keep an eye on them.
+	SECTION TOTAL
+        SUBTOTAL BODY.6 TO TOTAL.1
+        SUBTOTAL BODY.7 TO TOTAL.2
+        SUBTOTAL BODY.8 TO TOTAL.3
+        SUBTOTAL BODY.9 TO TOTAL.4
+        SUBTOTAL BODY.11 TO TOTAL.5
+        SUBTOTAL BODY.13 TO TOTAL.6
+        PRINT RECCOUNT TO TOTAL.7
+        OUTPUT TOTAL
+REPORTEND
+FORMFEED
+ABORT
+
+//============================================================================
+// Scroll list subroutines ===================================================
+//============================================================================
+SCROLL_DEFEND:
+    BLANKFORM OPERATORLIST
+	GOSUB SCROLL$FORWARD$ROUTINE
+	MOVE 0 TO WINDOWINDEX
+	MOVE 1 TO ROW_NUM
+	GOSUB SET_HIGHLIGHT
+	PAGE OPERATORLIST
+	REPEAT
+		MOVE ((ROW_NUM - 1) * 2 ) TO WINDOWINDEX
+		INKEY SCROLL$ANS
+		[KEY.UP TOPP] GOSUB SCROLL$BACKWARD$ROUTINE
+		[KEY.UP][NOT TOPP] GOSUB REDRAW_UP
+		[KEY.DOWN BOT] GOSUB SCROLL$FORWARD$ROUTINE
+		[KEY.DOWN][NOT BOT] GOSUB REDRAW_DOWN
+		[KEY.NEXT] GOSUB SCROLL$FORWARD$ROUTINE						// Given that they share functionality with the other calls I could probably remove them safely.
+		[KEY.PREVIOUS] GOSUB SCROLL$BACKWARD$ROUTINE				// Next and previous in this version (2.3) should be PageUp and PageDown.
+		MOVE '' TO SCROLL$ANS
+		INDICATE SCROLL$VALID GROUP ANY [KEY.ESCAPE KEY.RETURN KEY.USER] 	// Without this line SCROLL_DEFEND will not RETURN when one of the keys is pressed.
+        [NOT SCROLL$VALID] LOOP
+	[KEY.ESCAPE][SCROLL$VALID] BEGIN
+		indicate includeNulls false
+		indicate scrollChoice false
+		KEYPROC ON
+		RETURN
+	END
+	[KEY.RETURN][SCROLL$VALID] BEGIN
+		indicate scrollChoice true
+		indicate includeNulls false
+		KEYPROC ON
+		RETURN
+	END
+	[KEY.USER][SCROLL$VALID] BEGIN
+		indicate includeNulls true
+		indicate scrollChoice false
+		KEYPROC ON
+		RETURN
+	END
+		
+//=====> Scroll Forward Routine <==============================================
+SCROLL$FORWARD$ROUTINE:
+    CLEARWARNING
+	IF OPERATORLIST.1& EQ LAST_REC GOSUB ERR_MSG_42
+	INDICATE SCROLL.FOUND.STATUS AS [FOUND]
+	CLEAR USERX
+    [KEY.NEXT] GOSUB LOAD_POINTS_GT
+    [KEY.DOWN] GOSUB LOAD_POINTS_LT
+	MOVE 1 TO SCROLL$ROW$NUM
+	REPEAT
+		FIND GT USERX BY INDEX.1
+		[FOUND] GOSUB TEST_DEFEND								
+		[FOUND] MOVE ((SCROLL$ROW$NUM - 1) * 2) TO WINDOWINDEX	
+		[FOUND] GOSUB DISPLAY_DEFEND							
+		[FOUND] INCREMENT SCROLL$ROW$NUM						
+		[FOUND] IF SCROLL$ROW$NUM LE 8 LOOP							
+	[FINDERR] GOSUB SCROLL$CLEAR$ROW
+	INDICATE FOUND AS [SCROLL.FOUND.STATUS]
+RETURN
+
+//=====> Scroll Backward Routine <=============================================
+SCROLL$BACKWARD$ROUTINE:
+    IF OPERATORLIST.1 EQ FIRST_REC GOSUB ERR_MSG_41
+	INDICATE SCROLL.FOUND.STATUS AS [FOUND]
+	CLEAR USERX									
+	[KEY.PREVIOUS] GOSUB LOAD_POINTS_LT
+	[KEY.UP] GOSUB LOAD_POINTS_GT
+	MOVE 8 TO SCROLL$ROW$NUM
+	REPEAT
+		FIND LT USERX BY INDEX.1
+		[FOUND] GOSUB TEST_DEFEND												
+		[FOUND] MOVE ((SCROLL$ROW$NUM - 1) * 2) TO WINDOWINDEX					
+		[FOUND] GOSUB DISPLAY_DEFEND											
+		[FOUND] MOVE (SCROLL$ROW$NUM - 1) TO SCROLL$ROW$NUM
+		[FOUND] IF SCROLL$ROW$NUM GE 1 LOOP
+	[FINDERR] GOSUB SCROLL$CLEAR$BOTTOM
+	[FINDERR] GOSUB SCROLL$FORWARD$ROUTINE
+	INDICATE FOUND AS [SCROLL.FOUND.STATUS]
+RETURN
+
+//=====> Scroll Clear Row <====================================================
+SCROLL$CLEAR$ROW:
+	FOR SCROLL$ROW$NUM FROM SCROLL$ROW$NUM TO 8
+        MOVE ((SCROLL$ROW$NUM - 1) * 2) TO WINDOWINDEX		
+		MOVE 0 TO SCROLL$EXTRA
+		WHILE SCROLL$EXTRA LT 2			
+			BLANKFORM OPERATORLIST.1&
+			INCREMENT SCROLL$EXTRA
+			INCREMENT WINDOWINDEX
+		END
+    LOOP
+    GOSUB SET_HIGHLIGHT
+RETURN
+
+//=====> Scroll Clear Bottom <=================================================
+SCROLL$CLEAR$BOTTOM:
+    MOVE ((2 * 8 - 2)) TO WINDOWINDEX				
+    WHILE WINDOWINDEX LT (8 * 2)					
+        BLANKFORM OPERATORLIST.1&				
+		INCREMENT WINDOWINDEX					
+    END
+   GOSUB SET_HIGHLIGHT
+RETURN
+
+//=====> Other Scroll Utility Subroutines <====================================
+REDRAW_DOWN:
+    CLEARWARNING
+	IF OPERATORLIST.1& EQ LAST_REC GOSUB ERR_MSG_41
+	IF ROW_NUM LT 8 BEGIN
+		MOVE ROW_NUM TO STOP_NUM
+		FOR ROW_NUM FROM ROW_NUM TO STOP_NUM
+			MOVE ((ROW_NUM - 1) * 2) TO WINDOWINDEX
+			SCREENMODE 79 ON
+			GOSUB DISPLAY_HIGHLIGHT
+			SCREENMODE 112 ON
+			MOVE (WINDOWINDEX + 2) TO WINDOWINDEX
+			GOSUB DISPLAY_HIGHLIGHT
+			SCREENMODE 112 OFF
+		LOOP
+	END
+    IF ROW_NUM EQ 8 INDICATE BOT TRUE
+    IF ROW_NUM LT 8 INDICATE BOT FALSE
+    IF ROW_NUM GT 1 INDICATE TOPP FALSE
+    IF ROW_NUM EQ 1 INDICATE TOPP TRUE
+RETURN
+
+REDRAW_UP:
+    CLEARWARNING
+    IF ROW_NUM LE 8 BEGIN
+		MOVE ROW_NUM TO STOP_NUM
+		FOR ROW_NUM FROM ROW_NUM TO STOP_NUM
+			MOVE ((ROW_NUM - 1 ) * 2) TO WINDOWINDEX
+			SCREENMODE 79 ON
+			GOSUB DISPLAY_HIGHLIGHT
+			SCREENMODE 112 ON
+			MOVE (WINDOWINDEX - 2 ) TO WINDOWINDEX
+			GOSUB DISPLAY_HIGHLIGHT
+			SCREENMODE 112 OFF
+			MOVE (ROW_NUM - 2) TO ROW_NUM		
+			MOVE 0 TO STOP_NUM
+		LOOP
+	END
+    IF ROW_NUM EQ 8 INDICATE BOT TRUE
+    IF ROW_NUM LT 8 INDICATE BOT FALSE
+    IF ROW_NUM GT 1 INDICATE TOPP FALSE
+    IF ROW_NUM EQ 1 INDICATE TOPP TRUE
+RETURN
+
+DISPLAY_DEFEND:
+    BEGIN
+		DISPLAY USERX.USER_NUMB TO OPERATORLIST.1&
+		DISPLAY USERX.USER_NAME TO OPERATORLIST.2&
+    END
+RETURN
+
+LOAD_POINTS_LT:
+    BEGIN
+        MOVE OPERATORLIST.3 TO USERX.USER_NUMB
+        MOVE OPERATORLIST.4 TO USERX.USER_NAME
+    END
+RETURN
+
+LOAD_POINTS_GT:
+	BEGIN
+		MOVE OPERATORLIST.15 TO USERX.USER_NUMB
+		MOVE OPERATORLIST.16 to USERX.USER_NAME
+    END
+RETURN
+
+TEST_DEFEND: 
+     INDICATE SCROLL_VALID TRUE
+  RETURN
+  
+//========< Error display subroutines >=============================================
+ERR_MSG_42:						// Displays when trying to scroll past end of file.
+    SCREENMODE 79 ON
+	ERROR 42
+	SCREENMODE 79 OFF
+	[ERR] RETURN RETURN
+RETURN
+
+ERR_MSG_41:						// Displays when trying to scroll past beginning of file.
+    SCREENMODE 79 ON
+	ERROR 41
+	SCREENMODE 79 OFF
+	[ERR] RETURN RETURN
+RETURN
+
+//=====> Scroll Highlight Subroutines <========================================
+SET_HIGHLIGHT:
+	PAGE OPERATORLIST
+	MOVE 8 TO STOP_NUM
+	MOVE 8 TO ROW_NUM
+	FOR ROW_NUM FROM ROW_NUM TO STOP_NUM
+		MOVE ((ROW_NUM - 1) * 2) TO WINDOWINDEX
+		SCREENMODE 79 ON
+		GOSUB DISPLAY_HIGHLIGHT
+		SCREENMODE 79 OFF
+		MOVE (ROW_NUM - 2) TO ROW_NUM
+		IF ROW_NUM  LE 0 MOVE 0 TO STOP_NUM
+	LOOP
+	SCREENMODE 112 ON
+	MOVE 0 TO WINDOWINDEX
+	GOSUB DISPLAY_HIGHLIGHT
+	SCREENMODE 112 OFF
+	INDICATE TOPP TRUE
+	INDICATE BOT FALSE
+	MOVE 1 TO ROW_NUM
+RETURN
+
+DISPLAY_HIGHLIGHT:
+	BEGIN
+		DISPLAY OPERATORLIST.1& TO OPERATORLIST.1&
+		DISPLAY OPERATORLIST.2& TO OPERATORLIST.2&
+		move OPERATORLIST.1& to filterNum
+	END
+RETURN
+// =< END OF SCROLL_DEFEND SUBROUTINES >=======================================
+
+RESTART:
+    CLEARFORM
+    CLEAR USERX TRANSACT
+    RETURN START
+RETURN
+
+get_answ:
+    repeat
+         inkey answ
+         uppercase answ
+    if ~ answ in 'YyNn' loop
+return
+
+// Names the output file in the format of "Detail Change Report month-day-year"
+determineOutput:
+	DATE_MACRO_INIT
+	DECOMPOSE_DATE TODAY TO ADAY AMONTH AYEAR
+	move "Detail Change Report " to outputFile
+	append outputFile amonth
+	append outputFile "-"
+	append outputFile aday
+	append outputFile "-"
+	append outputFile ayear
+	move 60 to pageend
+	if outputSelection in 'Pp' direct_output "lpt1:"
+	else if outputSelection in 'Ss' direct_output outputFile	
+return
+	
+//============================================================================
+// Key Procs =================================================================
+//============================================================================
+KEYPROC KEY.ESCAPE
+    CLEARXY 24 0
+    GOTOXY 24 10
+    SHOW 'Do you really want to return to the main menu (Y/N)?  '
+    INKEY ANSW
+    IF ANSW IN 'Yy' BEGIN
+         page exit
+         CLEARFORM OPERATORLIST
+         clear USERX
+		 clear TRANSACT		// It shouldn't really matter if I throw this clear in here, but I'll do it just to be safe.
+         ABORT
+    END
+    CLEARXY 24 0
+    ENTAGAIN
+RETURN
+
+// This keyproc just allows the user to go back to the previous field during the date entry screen.
+KEYPROC KEY.UP
+				// I tried to include provisions for bad inputs here, but couldn't find 
+				// a way to make it work the way I wanted. Will try to come back later.
+	BACKFIELD 	// Allows the user to return to the previous field.
+RETURN
+
+KEYPROC KEY.FIELD	// Not strictly necessary, but I don't have a compelling reason to remove it.
+    BACKFIELD	
+RETURN
+
+///HEADER                                                                    DetailCh.rpt
+//                                                Report Date: __/__/____		Operator Number: __
+//                Arkansas Office of the Prosecutor Coordinator
+//                              Hot Check System
+//                            Detail Change Report
+//									  	                                                 
+//  DATE    | IDNO |SEQ NO|  FILE  | MFEE  |  CKAMT  | PFEE  | BEGBAL  | RESAMT  |  CREDIT   |OPERATOR|
+//  Descriptions
+//-----------------------------------------------------------------------------------------------------  
+///BODY RESIDENT
+//__/__/____|______| ____ |________| __.__ | ____.__ | __.__ |______.__| ____.__ | ______.__ |  ___   |
+///SPLITDESCS RESIDENT
+//_______________________________________________________
+//_______________________________________________________ _______________________________________________________
+//---------------------------------------------------------------------------------------------------------------
+///MERGEDDESCS RESIDENT
+//____________________________________________________________________________________________________
+//-----------------------------------------------------------------------------------------------------
+///BORDERONLY
+//-----------------------------------------------------------------------------------------------------
+
+//// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+////The plan here is to squeeze all three of the description fields into one if possible so we can save space (and paper). We declare a
+////description string and 3 numbered description strings for the three desc fields; they each have a character length of 55 because that's
+////the max length of the desc fields from the TRANSACT table. We will need 4 integers so we can check how the length of each string later.
+//String combinedDescription 200				// Default string size is 80 characters - we need at least 165 (for all 3 desc fields). 200 is the max length.
+//STRING description1 55
+//string description2 55
+//string description3 55
+//integer descLen1 descLen2 descLen3 descLenSum
+
+//// We use the description variables declared earlier here.
+//// The trim command removes all of the null characters from the strings so we can get an accurate string length.
+//// Dataflex doesn't allow interrupting the REPORT macro with conditional output, so we go ahead and output
+//// the BODY section without the descriptions. Dataflex will let us throw the descriptions in later.
+//		move TRANSACT.DESC1 to description1
+//		trim description1 to description1
+//		length description1 to descLen1
+//		move TRANSACT.DESC2 to description2
+//		trim description2 to description2
+//		length description2 to descLen2
+//		move TRANSACT.DESC3 to description3
+//		trim description3 to description3
+//		length description3 to descLen3
+//		move description1 to combinedDescription
+//		ifnot description2 match "" BEGIN
+//			append combinedDescription " / "
+//			append combinedDescription description2
+//			END
+//		ifnot description3 match "" BEGIN
+//			append combinedDescription " / "
+//			append combinedDescription description3
+//		END
+//		trim combinedDescription to combinedDescription
+//		length combinedDescription to descLenSum
+
+//// Now that we've output the BODY, we see if the descriptions total more than 100 characters. If it's <= 100 we can put all of
+//// the descriptions on the same line and save space. If it's more, we output the descriptions spread across two lines instead. 
+
+////Each of these subroutines create pages (Dataflex concept) that are output to the page (the output file) after each individual BODY output.
+//MergeDescSub:
+//	autopage MERGEDDESCS
+//	print combinedDescription to MERGEDDESCS.1
+//	output MERGEDDESCS
+//return
+//
+//SplitDescSub:
+//	autopage SPLITDESCS
+//	print TRANSACT.DESC1 to SPLITDESCS.1
+//	print TRANSACT.DESC2 TO SPLITDESCS.2
+//	print TRANSACT.DESC3 TO SPLITDESCS.3
+//	output SPLITDESCS
+//return
+//noDescSub:
+//	autopage BORDERONLY
+//	output BORDERONLY
+//return

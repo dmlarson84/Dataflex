@@ -1,0 +1,119 @@
+/frm                                       defcred3.rpt
+
+
+
+
+          Enter date at the end of the month considered.. __/__/____
+
+
+
+
+/info
+  created 08/24/1999 by Gary Grooms
+  Purpose - to calculate defendant credit at the end of a month
+  will calc receipts from beginning of system to end of month considered.
+
+  change 11/02/1999 by Brent Lauer
+  edited file to read from disburse.cityamt to disburse.prosamt on 
+  line 77.  Added Y2K lines and extended date input field to accept 
+  4 digit years.
+
+/HEADER
+                   Defendants with credit month ending ... __/__/__
+                                
+                                                    TOTAL     TOTAL      CALC
+   IDNO NAME                                        REST.     DISB.     CREDIT
+                                                                       
+/BODY RESIDENT                                                         
+______. ______________________________ ______.__ ______.__ ______.__ ______.__ 
+/TOTAL                                                                 
+                    ____________.__
+TOTAL RESTITUTION   ____________.__   
+TOTAL DISBURSEMENT  ____________.__   
+CALCULATED CREDIT   ____________.__   
+
+NUMBER OF DEFENDANTS =   ______.
+/*
+Use y2k.pkg
+Read_dfini "df23ini.cfg"
+#include calcdate.inc
+#include macs.frm
+
+OPEN DEFENDNT INDEX.2
+open restitut index.1
+open disburse index.5
+
+number defcred defrest defdisb
+STRING ANSW
+
+accept frm.1
+
+direct_output "defcred.txt"
+//direct_output "LPT1:"
+REPORT DEFENDNT BY INDEX.2
+
+
+SECTION HEADER
+        Print frm.1
+        OUTPUT HEADER
+SECTION BODY
+    show '*'
+    clear restitut
+    move defendnt.idno to restitut.idno
+    find ge restitut by index.1
+    [found] while restitut.idno eq defendnt.idno
+         show "*"
+          If restitut.recdt le frm.1 MOVE (defrest+restitut.resamt) to defrest
+         find gt restitut by index.1
+         [finderr] clear restitut
+    end
+    //print defrest
+
+    show "*"
+
+    clear disburse
+    move defendnt.idno to disburse.idno
+    find ge disburse by index.5
+    [found] while disburse.idno eq defendnt.idno
+         show '#'
+         If disburse.dispdt NE "" Begin
+           If disburse.dispdt le frm.1 MOVE (defdisb+disburse.dispamt+disburse.prosamt) to defdisb
+         End
+         // FIND Next Disburse record
+         find gt disburse by index.5
+         [finderr] clear disburse
+    end
+    //print defdisb
+
+    MOVE (defcred+defrest-defdisb) to defcred
+    //print defcred
+//dud
+    If defcred ne 0 begin
+        PRINT DEFENDNT.IDNO
+        PRINT DEFENDNT.NAME
+        PRINT 0.00           //DEFENDNT.CREDIT
+        Print defrest
+        Print defdisb
+        Print defcred
+         Output body
+    End
+    move 0 to defrest
+    move 0 to defdisb
+    move 0 to defcred
+
+      //  OUTPUT BODY
+
+SECTION TOTAL
+    
+    SUBTOTAL BODY.3 TO TOTAL.1
+    SUBTOTAL BODY.4 TO TOTAL.2
+    SUBTOTAL BODY.5 TO TOTAL.3
+    SUBTOTAL BODY.6 TO TOTAL.4
+        PRINT RECCOUNT TO TOTAL.5
+        OUTPUT TOTAL
+REPORTEND
+FORMFEED
+ABORT
+
+keyproc key.escape
+    abort

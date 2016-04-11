@@ -1,0 +1,258 @@
+//*** DEP_ITEM.PKG
+//*** Dependent Item support package
+//*** 1994-Mar-1  LS
+
+//*** 06/01/94  -JJT
+//*** Set Auto_dependent_item_state to default to false (setting this
+//*** true creates too great of an overhead.
+
+//*** 1994-Mar-22  LS
+//*** got this updated version from john. he moved some code into mixins
+//*** for deos and views.
+//*** I added prototype object stuff from john and converted it to use
+//*** "manual" delegation and broadcasting. Also added "non-deo" mixin
+//*** for dep-item support in entry_client and text_window classes.
+
+//*** 1994-Mar-1  LS
+//*** first attempt
+
+// 02/17/95 JJT - Removed checking for component_state before delegating.
+//                Component_state is not set yet. End_construct_Object
+//                does this. Has_components should be ok. **JJT**(2)
+//                This means that you should not use REGISTER_DEPENDENT_
+//                ITEMS without an entry_view_client0. Such is life.
+//************************************************************************
+
+//*** Notes:
+//*** Contains mixin classes for view and DEO classes to automatically
+//*** define item_groups for same file.field within same view.
+//*** Allows use of Dependent_Entry_Item command. Only supported within
+//*** DEOs nested within Views. Dependent_Entry_Item MUST use a file.field
+//*** for its data. All dependent matching file.fields within a view are
+//*** grouped together. If only one item appears in a group, the item group
+//*** is not created.
+
+//*** Dependent_entry_item command for forcing item into item group.
+//*** For efficiency, turn off auto_dependent_item_state, and use this,
+//*** or send register_dependent_item right after the entry_item.
+
+#COMMAND DEPENDENT_ENTRY_ITEM
+    #CHECK !1 _CVWLR#GU // must be a file.field
+    ENTRY_ITEM !1 !2 !3 !4 !5 !6 !7 !8 !9
+    SEND REGISTER_DEPENDENT_ITEM
+#ENDCOMMAND
+
+#COMMAND SIZED_ITEM_GROUP R . // item_group command with size passed as parm.
+  #PUSH !Zd
+  #PUSH !Ze
+  #SET ZD$ 0
+  !A [] $462 !1        //create new item group; size is passed as arg
+  #SET ZE$ !a
+#ENDCOMMAND
+
+use set
+
+//*** Class for set of item groups
+
+// This class defines a set of ID strings. It has a child array
+// (item_group_ids) that stores object ids of arrays that contain the
+// item group information for each ID. Each of the item group arrays
+// contains a list of dependent object ids and item numbers.
+
+class item_group_set is a set
+    procedure construct_object
+        forward send construct_object
+
+        object item_group_ids is an array
+        end_object
+    end_procedure
+
+    procedure add_group_item integer deo_obj integer deo_itm string group_id
+        local integer total_groups count group_index group_obj
+        local integer deo_index
+
+        // find or create object for this group
+        get find_element group_id to group_index
+
+        if group_index ne -1 get integer_value of ;
+                (item_group_ids(current_object)) item group_index to group_obj
+        else begin
+            send add_element group_id
+            get find_element group_id to group_index
+                    // it'd be nice if add_element returned this!
+
+            object item$group is an array
+                move current_object to group_obj
+            end_object
+
+            set array_value of (item_group_ids(current_object)) ;
+                    item group_index to group_obj
+        end
+
+        // add deo item info to group object
+        get item_count of group_obj to deo_index
+        set array_value of group_obj item deo_index to deo_obj
+        set array_value of group_obj item (deo_index+1) to deo_itm
+    end_procedure
+
+    procedure create_item_groups
+        local integer count total_groups group_obj total_deos deo_index
+        local integer deo_offset igs_obj
+
+        get item_count to total_groups
+
+        if total_groups le 0 procedure_return
+
+        decrement total_groups
+        move (item_group_ids(current_object)) to igs_obj
+
+        for count from 0 to total_groups
+            get integer_value of igs_obj item count to group_obj
+            get item_count of group_obj to total_deos
+            move (total_deos / 2) to total_deos
+
+            if total_deos gt 1 begin // only make item group if necessary
+                sized_item_group (total_deos)
+                    decrement total_deos
+
+                    for deo_index from 0 to total_deos
+                        move (deo_index * 2) to deo_offset
+                        dependent_item (integer_value(group_obj,deo_offset)) ;
+                                (integer_value(group_obj,deo_offset+1))
+                    loop
+                end_item_group
+            end
+        loop
+    end_procedure
+end_class
+
+//*** for the entry_view_client class
+class View_Dependent_item_mixin is a message
+
+    procedure Define_View_Dependent_item
+        property integer deo_item_groups public 0
+        property integer Auto_Dependent_item_State Public FALSE   
+    end_procedure
+
+    procedure add_group_item integer deo_obj integer deo_itm string group_id
+        local integer di_groups
+
+        get deo_item_groups to di_groups
+
+        if di_groups eq 0 begin
+            object deo$item$groups is an item_group_set
+                move current_object to di_groups
+            end_object
+
+            set deo_item_groups to di_groups
+        end
+
+        send add_group_item to di_groups deo_obj deo_itm group_id
+    end_procedure
+
+    procedure register_all_deo_items integer obj
+        if (has_components_state(current_object)) ;
+                broadcast send register_all_deo_items obj
+    end_procedure
+
+    procedure Construct_Item_Groups
+        local integer obj
+
+        move current_object to obj
+
+        If (Auto_Dependent_Item_State(Current_Object)) ;
+                Send Register_all_deo_items obj
+
+        move (deo_item_groups(current_object)) to obj
+
+        If Obj gt 0 Begin
+            send create_item_groups to obj
+            send Request_destroy_object to obj
+        End
+
+    end_procedure        
+end_class
+
+//*** for DEO entry_item-oriented classes
+class DEO_Dependent_item_mixin is a message
+    // send this to register one dependent item based on its file and field
+    // (used by dependent_entry_item command)
+    procedure register_dependent_item integer itm
+        local integer curitm fil fld pobj
+
+        get prototype_object to pobj
+
+        if num_arguments gt 0 move itm to curitm
+        else get current_item of pobj to curitm
+
+        get data_file of pobj item curitm to fil
+
+        if fil ne 0 get data_field of pobj item curitm to fld
+
+        Send Register_Deo_Item curitm (string(fil) + "," + string(fld))
+    end_procedure
+
+    // send this to register one deo item based on a specified group_id
+    // (group id can be any unique string; this allows you to make non-dbms
+    // dependent items; [we use "##,##" for file.field])
+    procedure register_deo_item integer itm string group_id integer view_obj
+        local integer curobj curitm
+
+        if group_id eq "" procedure_return // do nothing if no group_id
+
+        move current_object to curobj
+
+        if num_arguments ge 3 ;
+                send add_group_item to view_obj curobj itm group_id
+        else send add_group_item curobj itm group_id
+    end_procedure
+    
+    procedure register_all_deo_items integer view_obj
+        Local integer itm_cnt itm_idx fil fld pobj
+
+        get prototype_object to pobj
+
+        Get Item_Count of pobj to itm_cnt
+        Decrement itm_cnt
+
+        for itm_idx from 0 to itm_cnt
+            get data_file of pobj item itm_idx to fil
+
+            if fil ne 0 begin
+                get data_field of pobj item itm_idx to fld
+                if num_arguments ge 1 Send Register_Deo_Item itm_idx ;
+                        (string(fil) + "," + string(fld)) view_obj
+                else Send Register_Deo_Item itm_idx ;
+                        (string(fil) + "," + string(fld))
+            end
+            Else if num_arguments ge 1 ;
+                    Send Register_Deo_Item itm_idx "" view_obj
+            else Send Register_Deo_Item itm_idx ""
+                // call it for non-dbms entry_items passing "" as
+                // group_id so user can override
+        Loop
+
+        if (has_components_state(current_object)) ;
+                broadcast send register_all_deo_items view_obj
+    End_procedure
+
+    procedure add_group_item integer deo_obj integer deo_itm string group_id
+        // **JJT** - Component_state not yet defined
+        // if (component_state(current_object)) ;
+                delegate send add_group_item deo_obj deo_itm group_id
+    end_procedure
+end_class
+
+//*** for classes that must pass dep-item messages on to parents/children.
+class Non_Dependent_item_mixin is a message
+    procedure register_all_deo_items integer view_obj
+        if (has_components_state(current_object)) ;
+                broadcast send register_all_deo_items view_obj
+    End_procedure
+
+    procedure add_group_item integer deo_obj integer deo_itm string group_id
+        // **JJT** - Component_state not yet defined
+        //if (component_state(current_object)) ;
+                delegate send add_group_item deo_obj deo_itm group_id
+    end_procedure
+End_Class

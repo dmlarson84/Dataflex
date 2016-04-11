@@ -1,0 +1,128 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// DFTest.Pkg
+// Version: 1.0
+//  10-04-1993 : Created
+//               Thanks to Dave Bennett of Bennett Software in
+//               Independence, Mo. for the idea behind this package         
+//
+// Author: John J. Tuohy
+//
+// This creates a test program. You may write very short programs which will
+// allow you to test your views. A sample test program might look like the
+// following:
+//
+//   // Test.src : Program to test a view
+//   use dftest // include this package
+// 
+//   Add_test "Customer Entry..." Send Activate_Customer to desktop
+//
+//   Use CustEnt
+//
+//   start_Ui (Main_Menu(Current_Object)) // start the program
+// 
+// You can include up to 10 test views in a program (although it really
+// makes most sense to test views one at a time - compile time will be
+// faster).
+//
+//************************************************************************/
+
+Use AllEntrc // We will make the test program compile with debug/trace
+             // code built in. If for some reason you don't want this
+             // you should replace this with allentry.
+
+Set Verbose_State of Error_Info_Object to True // for debugging let's see
+                                               // all error information.
+
+              
+Use ExitApp  // Smarter exit. Checks and warns of changes.
+
+Set Application_name to "TestApp" // this is usefull for the help system
+
+//************************* create backdrop ***************************
+
+Use BackGnd //  Standard background and title...creates object
+Send Paint_Desktop to (Background(Current_Object)) "Test Application"
+
+//************************* create main menu ***************************
+
+// test menu
+//
+#REPLACE MAX$MENU$ITEMS 10
+
+/Main_Menu
+   ______  ____  ____  ________  ____                                           
+/View_Pull_Down
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³ ________________________________ ³
+³ ________________________________ ³
+³ ________________________________ ³
+³ ________________________________ ³
+³ ________________________________ ³
+³ ________________________________ ³
+³ ________________________________ ³
+³ ________________________________ ³
+³ ________________________________ ³
+³ ________________________________ ³
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+³ ________________________________ ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+/*
+
+Create_Menu Main_Menu Location 1 0 Absolute
+
+    Set Action_Bar_Keys_Msg To Main_Menu_Keys
+    
+    Property integer Test_Item_Count Public 0
+
+    #INCLUDE RECDE_PD.INC
+    On_Item "&View" Begin_Pull_Down View_Pull_Down
+        repeat_item MAX$MENU$ITEMS times "" send none      // filled in below
+        On_Item "Close                         F3" Send Exit_Function
+    End_Pull_Down
+
+    #INCLUDE TXTW_PD.INC
+    #INCLUDE NAVI_PD.INC
+    #INCLUDE HELP_PD.INC
+    
+    Procedure Add_PullDown_Item String Ttl Integer Msg Integer ID
+      Local Integer V_ID Cnt
+      Move (View_Pull_Down(Current_Object)) to V_ID
+      Get Test_Item_Count to Cnt
+      Set Test_Item_Count to (Cnt+1)
+      set value     of V_ID item Cnt to Ttl
+      Send Assign_Item_Highlight Cnt // highlight char setting
+      set message   of V_ID item Cnt to Msg
+      set aux_value of V_ID item Cnt to Id        
+    End_Procedure
+
+End_Menu
+
+Procedure Main_Menu_Keys For Desktop Integer Act_Obj
+    On_Key KEY_ALT+KEY_R Send Activate To (Record_Pull_Down(Act_Obj)) Private
+    On_Key KEY_ALT+KEY_V Send Activate To (View_Pull_Down(Act_Obj)) Private
+    On_Key KEY_ALT+KEY_T Send Activate To (Text_Pull_Down(Act_Obj)) Private
+    On_Key KEY_ALT+KEY_N Send Activate To (Navigate_Pull_Down(Act_Obj)) Private
+    On_Key KEY_ALT+KEY_H Send Activate To (Help_Pull_Down(Act_Obj)) Private
+End_Procedure
+
+// Macro command to add items to main_menu
+//
+// Usage: Add_Test <menu title> SEND <msg> TO <object>
+//
+#COMMAND Add_Test R "SEND" R
+    #IF (!0=3)
+        Add_Test !1 !2 !3 to desktop
+    #ELSE
+      Register_Procedure !3
+      send add_Pulldown_Item to (main_menu(Current_Object)) !1 MSG_!3 !5
+    #ENDIF
+#ENDCOMMAND

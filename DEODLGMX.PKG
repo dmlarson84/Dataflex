@@ -1,0 +1,118 @@
+//****************************************
+//
+// DEO Delegate Mixin class
+//
+// Allows for automatic delegation of standard data base operations in DEOs.
+// Also adds database operation support to clients.
+//
+// 04-08-94  LS  First attempt.
+// 09/02/94  JJT Added request_save_no_clear.
+//               Modifed changed_state to return should_save (as
+//               all other objects do.
+//           LS  Undid changed_state modification.
+// 12/20/94 JJT  Moved Explicit_server to Server.pkg
+//               Create single deo_delegate_mixin for DEO controls and
+//               containers.
+//               Created Messages Should_delegate_save, _clear, _delete
+//               and _find.
+//               Moved all request_ out ofthis package and placed them
+//               in the appropriate DEO class.
+// 4-11-95   LS  Changed should delegate to check to see delegated object is
+//               server instead of current object; was causing request_save to
+//               be delegated to data_sets when deos were nested in them (as
+//               in a DFAuto program). This meant that request_validate
+//               wasn't being sent (since data_sets don't send request_validate
+//               during request_save).
+// 05/22/95 JJT - created desktop messages Get_object_Validation and
+//                Set_Object_Validation. See comments below for reasons
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+//****************************************
+
+//****************************************
+// Augmented Messages: None (all right!)
+//****************************************
+
+use ui
+
+enum_list
+    define DELEGATE_NEVER
+    define DELEGATE_SERVER
+    define DELEGATE_ALWAYS
+end_enum_list
+
+integer default.deo.delegate.mode
+
+move DELEGATE_SERVER to default.deo.delegate.mode
+
+procedure set default_deo_delegate_mode for desktop integer val
+    move val to default.deo.delegate.mode
+end_procedure
+
+function default_deo_delegate_mode for desktop returns integer
+    function_return default.deo.delegate.mode
+end_function
+
+register_function component_state returns integer
+
+class deo_delegate_mixin is a message
+    procedure define_deo_delegate
+        property integer deo_delegate_mode     public (default_deo_delegate_mode(desktop))
+        property integer delegate_clear_state  public TRUE
+        property integer delegate_delete_state public TRUE
+        property integer delegate_find_state   public FALSE
+        property integer delegate_save_state   public TRUE
+    end_procedure
+
+    function should_delegate returns integer
+        local integer Mode Dlg_Obj
+
+        delegate get Object_Id to Dlg_Obj
+        get Deo_Delegate_Mode to Mode
+        function_return ( (((Mode = DELEGATE_SERVER) and ;
+                not(Explicit_Server_State(Current_Object)) and ;
+                (Locate_Server(Current_Object) <> Dlg_Obj)) or ; // don't delegate if the object to delegate to is a server.
+                (Mode = DELEGATE_ALWAYS)) and Component_State(Current_Object))
+    end_function
+
+    Function Should_delegate_Clear returns integer
+        Function_Return (should_delegate(current_object) and ;
+                         delegate_clear_state(current_object))
+    End_function
+
+    Function Should_delegate_Save returns integer
+        Function_Return (should_delegate(current_object) and ;
+                         delegate_Save_state(current_object))
+    End_function
+
+    Function Should_delegate_Delete returns integer
+        Function_Return (should_delegate(current_object) and ;
+                         delegate_delete_state(current_object))
+    End_function
+
+    Function Should_delegate_Find returns integer
+        Function_Return (should_delegate(current_object) and ;
+                         delegate_Find_state(current_object))
+    End_function
+
+End_Class
+
+// Added: 05/22/95 JJT
+//
+//  During a clear (or a save/delete which sends clear) object-validation is
+//  properly shut off. However, the false assumption had been made that the
+//  DEO request_clear/clear_all messages originated with the object that had
+//  the focus. This was never true and is now even less likely to be true
+//  with the request_??? delegation method. The proper solution is to shut
+//  off object-validation in the focus object. The problem here is that
+//  the focus object may not understand this message (text_windows, buttons,
+//  etc). The work-around for now is to make sure that all objects understand
+//  these message. We can not directly add an Object_Validation message to the
+//  desktop (Object class). Because this message is internal this didn't work.
+//  By default this does nothing. Objects using val_mx actually pass this on
+//  object_validation.
+Procedure Set Object_Item_validation for DESKTOP integer fg
+End_Procedure
+
+Function Object_Item_Validation for DESKTOP returns integer
+End_Function
+

@@ -1,0 +1,140 @@
+/SUBHEADER1                              defledg.rpt
+                            DEFENDANT LEDGER SHEET
+                              PRINTED  __/__/____
+
+
+                                   DEFENDANT:  ______________________________ 
+                                        IDNO:  _____.
+                                    DATE DUE:  __/__/____ _
+
+                               TOTAL OUTSTANDING ACTIVE OFFENSES: _$,______.__
+
+    
+DATE      MERCHANT                     CTRLNO    CKAMT  MFEE   PFEE     TOTAL
+------------------------------------------------------------------------------
+
+/BODY RESIDENT
+__/__/____ ______________________________ __. _____.__ __.__ ___.__  ______.__
+/SUBTOTAL1
+
+
+                                          TOTAL DUE THIS BATCH _,__________.__
+
+______________________________________________________________________________
+
+
+
+
+DATE      RECEIPT #     TYPE OF PAYMENT              RECEIPT AMOUNT
+ 
+/SELECTION
+                        PROSECUTOR COORDINATOR'S OFFICE
+                            DEFENDANT LEDGER SHEET
+ 
+
+
+
+         Print ledgers by OFFENSE.ENTRY DATE equal to __/__/____ 
+
+/FINALE
+
+
+
+
+           TOTAL OF LEDGERS WITH ENTRY DATE __/__/____ 
+
+
+              TOTAL INCLUDING FEES         _$,________.__
+
+              TOTAL OF CHECK AMOUNT ALONE  _$,________.__
+/INFO
+
+        CHANGES MADE ON 10/11/1999 BY JEFF MARCH
+        ADDED DIRECT_OUTPUT TO LPT1
+
+Recompiled 01-19-2000 by Jeff March
+        Recognize new backspace command in calcdate.inc
+          
+
+/*
+USE Y2k.pkg
+Read_dfini "df2ini.cfg"
+//----------------- Cannot Run Program From Command Line (DOS)
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+#include calcdate.inc
+#include macs.frm
+STRING NOTES 1 NOTES_2 68
+NUMBER TOTL
+DATE TODAY DUEDATE ENTERED
+SYSDATE4 TODAY
+
+OPEN DEFENDNT
+OPEN OFFENSE INDEX.9
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.USER_NUMB
+FIND EQ USERX BY INDEX.1
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+direct_output "lpt1:"
+  PAGE SELECTION
+  MOVE TODAY TO SELECTION.1
+  ACCEPT SELECTION.1
+  MOVE SELECTION.1 TO OFFENSE.ENTRY_DATE                   //JUMP INTO INDEX
+  MOVE SELECTION.1 TO ENTERED
+
+REPORT OFFENSE BY INDEX.9 BREAK OFFENSE.IDNO
+             INDICATE SELECT AS OFFENSE.ENTRY_DATE EQ SELECTION.1
+[NOT SELECT] RETURN END.OF.REPORT  //JUMP OUT OF INDEX
+
+SECTION SUBHEADER1
+  PRINT TODAY
+  PRINT DEFENDNT.NAME
+  PRINT DEFENDNT.IDNO
+  MOVE '' TO NOTES
+  MOVE '' TO NOTES_2
+  IF OFFENSE.LETDT GT '' BEGIN
+     MOVE (OFFENSE.LETDT + 13) TO DUEDATE
+  END
+  ELSE BEGIN
+     MOVE (OFFENSE.ENTRY_DATE + 13) TO DUEDATE
+     MOVE '*' TO NOTES
+     MOVE '* DUE DATE HAS BEEN ESTIMATED AS 13 DAYS FROM ENTRY DATE' TO NOTES_2
+  END
+  PRINT DUEDATE
+  PRINT NOTES
+  PRINT DEFENDNT.BAL
+  OUTPUT SUBHEADER1
+
+SECTION BODY
+        PRINT OFFENSE.CKDT
+        PRINT OFFENSE.NAME
+        PRINT OFFENSE.CTRLNO
+        PRINT OFFENSE.CKAMT
+        PRINT OFFENSE.MFEE
+        PRINT OFFENSE.PFEE
+        PRINT OFFENSE.TOTAL
+        OUTPUT BODY
+
+SECTION SUBTOTAL1
+        SUBTOTAL BODY.7
+        PRINT NOTES_2
+        OUTPUT SUBTOTAL1
+         FORMFEED
+section total
+    PRINT ENTERED TO FINALE.1
+    subtotal subtotal1.1 to finale.2
+    subtotal body.4 to finale.3
+    OUTPUT FINALE
+    FORMFEED
+REPORTEND
+ABORT

@@ -1,0 +1,125 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Confidential Trade Secret.
+// Copyright 1987-1994 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+// Module: 
+//      daccmd.pkg
+//      
+// Purpose:
+//      Defines the DAC_Command_Parser class for parsing command line
+//      arguments. Based on the Command_Response_Parser; adds the
+//      Error_If_Parameters and Required_Parameter functions for error
+//      handling.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      8/26/94
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+use cmdarg
+
+#IFDEF DFERR_BAD_PARAMETER
+#ELSE
+  #INCLUDE ERRORNUM.INC
+#ENDIF
+
+class DAC_Command_Parser is a Command_Response_Parser
+    procedure Construct_Object
+        forward send Construct_Object
+
+        set Case_Sensitive_Option_State to FALSE
+    end_procedure
+
+    procedure Parameter_Required_Error string Param_Name
+        error DFERR_BAD_PARAMETER
+        showln (Param_Name + " parameter required for " + ;
+            Argument_Value(Current_Object, Current_Option(Current_Object)) ;
+            + " option")
+    end_procedure
+
+    procedure Parameter_Not_Expected_Error
+        local string Option
+
+        error DFERR_BAD_PARAMETER
+        show ("Parameter " + Argument_Value(Current_Object, ;
+            Current_Parameter(Current_Object)) + " not expected")
+
+        get Argument_Value (Current_Option(Current_Object)) to Option
+
+        if Option GT "" ;
+            show (" for " + Option + " option")
+
+        showln
+    end_procedure
+
+    procedure Invalid_Parameter_Error string Param_Name
+        error DFERR_BAD_PARAMETER
+        showln ("Invalid " + Param_Name + " parameter " + ;
+            Argument_Value(Current_Object, ;
+            Current_Parameter(Current_Object)) + " passed to " + ;
+            Argument_Value(Current_Object, Current_Option(Current_Object)) ;
+            + " option")
+    end_procedure
+
+    procedure Option_Not_Allowed_Error string Option_Name
+        error DFERR_BAD_PARAMETER
+        showln ("Improper usage of " + Argument_Value(Current_Object, ;
+            Current_Option(Current_Object)) + " option")
+    end_procedure
+
+    procedure Command_Line_Too_Long_Error string Option_Name
+        error DFERR_BAD_PARAMETER
+        showln ("Command line too long for " + Argument_Value(Current_Object, ;
+            Current_Option(Current_Object)) + " option; extra arguments ignored")
+    end_procedure
+
+    procedure Max_Nesting_Level_Reached
+        error DFERR_CANT_OPEN_INPUT_FILE
+        indicate Err FALSE
+        showln ("Maximum Response File nesting level reached. Use -rn option.")
+    end_procedure
+
+    procedure Invalid_Max_Nesting_Level_Parameter string Arg
+        error DFERR_BAD_PARAMETER
+        showln ("Invalid Nesting level parameter " + ;
+            Arg + " passed to -rn option")
+    end_procedure
+
+    procedure Response_Filename_Parameter_Expected
+        send Parameter_Required_Error "Filename"
+        indicate Err FALSE
+    end_procedure
+    
+    procedure Cannot_Open_Response_File string Fname
+        error DFERR_CANT_OPEN_INPUT_FILE
+        indicate Err FALSE
+        showln ("Cannot Open Response File: " + Fname)
+    end_procedure
+
+    function Required_Parameter string Param_Name returns string
+        local string Val
+
+        get Next_Parameter to Val
+
+        if Val LE "" ;
+            send Parameter_Required_Error Param_Name
+
+        function_return Val
+    end_function
+
+    procedure Error_If_Parameters
+        local string Param
+
+        get Next_Parameter to Param
+
+        while Param GT ""
+            send Parameter_Not_Expected_Error
+            get Next_Parameter to Param
+        end
+    end_procedure
+end_class

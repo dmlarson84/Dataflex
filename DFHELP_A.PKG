@@ -1,0 +1,217 @@
+// dfhelp_a.pkg (secondary help maintenance program [A] header package)
+// July 2, 1991
+// LS
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+inherit_screen // use current screen (from parent .flx) as background
+
+//////////////////////////////////
+////////////////////////////////// macro commmands
+//////////////////////////////////
+
+#COMMAND USE_FILE R // declares fields in a database file without opening it
+  #IFDEF !1.RECNUM
+  #ELSE
+    #INCLUDE !1.FD
+  #ENDIF
+
+  #IFDEF !1.FILE_NUMBER
+  #ELSE
+    #SET Q$ !1.RECNUM
+    #REPLACE !1.FILE_NUMBER |CI!q
+  #ENDIF
+
+  #IF (!0>1)
+    USE_FILE !2 !3 !4 !5 !6 !7 !8 !9
+  #ENDIF
+#ENDCOMMAND
+
+//////////////////////////////////
+////////////////////////////////// symbol definitions
+//////////////////////////////////
+
+DEFINE VALID_OPTIONS      FOR 'PONIE' // passed command line options values
+DEFINE PATH_OPTION        FOR 'P'
+DEFINE OPEN_FILE_OPTION   FOR 'O'
+DEFINE NEW_FILE_OPTION    FOR 'N'
+DEFINE IMP_MAINT_OPTION   FOR 'I'
+DEFINE ERS_MAINT_OPTION   FOR 'E'
+
+DEFINE SUCCESS_REPLY      FOR 'Y'
+DEFINE FAIL_REPLY         FOR 'N'
+DEFINE ABORT_REPLY        FOR 'A'
+
+DEFINE MAX_LINES_ALLOWED  FOR 32767
+
+DEFINE EMPTY_STRING       FOR ('')
+DEFINE EMPTY_REPL_STRING  FOR ('@')
+
+DEFINE F1_HELP_TEXT       FOR ('<F1=Help>')
+DEFINE F2_OK_TEXT         FOR ('<F2=OK>')
+DEFINE ESC_CANCEL_TEXT    FOR ('<Esc=Cancel>')
+DEFINE DEF_EXT_TEXT       FOR ('.DEF')
+DEFINE DAT_EXT_TEXT       FOR ('.DAT')
+
+DEFINE HELP_GRP_FILENAME  FOR 'helpgrp' // default filenames
+DEFINE HELP_SBJ_FILENAME  FOR 'helpsbj'
+DEFINE HELP_XRF_FILENAME  FOR 'helpxrf'
+DEFINE HELP_CTX_FILENAME  FOR 'helpctx'
+
+DEFINE GRP_SCAN_TYPE      FOR 0
+DEFINE SBJ_SCAN_TYPE      FOR 1
+DEFINE XRF_SCAN_TYPE      FOR 3
+DEFINE CTX_SCAN_TYPE      FOR 5
+
+DEFINE XRF_SAVE_TYPE      FOR 2
+DEFINE CTX_SAVE_TYPE      FOR 4
+    
+#IFDEF POINTED_CURSOR_TYPE // for display_window class
+#ELSE
+  #REPLACE POINTED_CURSOR_TYPE |CI2
+#ENDIF
+
+//////////////////////////////////
+////////////////////////////////// images for file output (make_file)
+//////////////////////////////////
+
+/helpgrp_def_top_img // help grp def format
+-----------------------------------------------------------------------------
+  DATE: 00/00/00      TIME: 00:00                                  PAGE:  1
+  FILE DEFINITION FOR FILE: GRP (# 255)
+-----------------------------------------------------------------------------
+  FILE ROOT NAME          : _@______________________________________
+  USER DISPLAY NAME       : GROUP
+  DATAFLEX FILE NAME      : GRP
+-----------------------------------------------------------------------------
+  RECORD LENGTH           : 34        ( USED: 33 )
+  MAX NUMBER OF RECORDS   : 10000     ( USED: 0 )
+  FILE COMPRESSION        : None
+  RE-USE DELETED SPACE    : Yes
+  MULTI-USER REREAD       : Yes
+-----------------------------------------------------------------------------
+
+/helpsbj_def_top_img // help sbj def format
+-----------------------------------------------------------------------------
+  DATE: 00/00/00      TIME: 00:00                                  PAGE:  1
+  FILE DEFINITION FOR FILE: SBJ (# 255)
+-----------------------------------------------------------------------------
+  FILE ROOT NAME          : _@______________________________________
+  USER DISPLAY NAME       : SUBJECT
+  DATAFLEX FILE NAME      : SBJ
+-----------------------------------------------------------------------------
+  RECORD LENGTH           : 4096      ( USED: 4081 )
+  MAX NUMBER OF RECORDS   : 10000     ( USED: 0 )
+  FILE COMPRESSION        : Standard
+  RE-USE DELETED SPACE    : Yes
+  MULTI-USER REREAD       : Yes
+-----------------------------------------------------------------------------
+
+/helpxrf_def_top_img // help xrf def format
+-----------------------------------------------------------------------------
+  DATE: 00/00/00      TIME: 00:00                                  PAGE:  1
+  FILE DEFINITION FOR FILE: XRF (# 255)
+-----------------------------------------------------------------------------
+  FILE ROOT NAME          : _@______________________________________
+  USER DISPLAY NAME       : LINK
+  DATAFLEX FILE NAME      : XRF
+-----------------------------------------------------------------------------
+  RECORD LENGTH           : 8         ( USED: 6 )
+  MAX NUMBER OF RECORDS   : 10000     ( USED: 0 )
+  FILE COMPRESSION        : None
+  RE-USE DELETED SPACE    : Yes
+  MULTI-USER REREAD       : Yes
+-----------------------------------------------------------------------------
+
+/helpctx_def_top_img // help ctx def format
+-----------------------------------------------------------------------------
+  DATE: 00/00/00      TIME: 00:00                                  PAGE:  1
+  FILE DEFINITION FOR FILE: CTX (# 255)
+-----------------------------------------------------------------------------
+  FILE ROOT NAME          : _@______________________________________
+  USER DISPLAY NAME       : CONTEXT
+  DATAFLEX FILE NAME      : CTX
+-----------------------------------------------------------------------------
+  RECORD LENGTH           : 73        ( USED: 73 )
+  MAX NUMBER OF RECORDS   : 10000     ( USED: 0 )
+  FILE COMPRESSION        : None
+  RE-USE DELETED SPACE    : Yes
+  MULTI-USER REREAD       : Yes
+-----------------------------------------------------------------------------
+
+/helpgrp_def_bottom_img // help grp def format
+NUM  FIELD NAME       TYPE SIZE  OFFST IX   RELATES TO FILE.FIELD
+---  ---------------  ---- ----- ----- --   ---------------------------------
+  1  GRP_NAME         ASC     33     1  1   
+
+
+INDEX# FIELDS          DES U/C    LENGTH LEVELS SEGMENTS MODE
+------ --------------- --- ---    ------ ------ -------- -------
+  1    GRP_NAME        No  No       33     4       1     Online
+
+/helpsbj_def_bottom_img // help sbj def format
+NUM  FIELD NAME       TYPE SIZE  OFFST IX   RELATES TO FILE.FIELD
+---  ---------------  ---- ----- ----- --   ---------------------------------
+  1  SBJ_NAME         ASC     33     1  1   
+  2  SBJ_TEXT         TEX   4048    34      
+
+
+INDEX# FIELDS          DES U/C    LENGTH LEVELS SEGMENTS MODE
+------ --------------- --- ---    ------ ------ -------- -------
+  1    SBJ_NAME        No  No       36     4       2     Online
+       RECNUM          No  No 
+
+/helpxrf_def_bottom_img // help xrf def format
+NUM  FIELD NAME       TYPE SIZE  OFFST IX   RELATES TO FILE.FIELD
+---  ---------------  ---- ----- ----- --   ---------------------------------
+  1  GRP_RECNUM       NUM    6.0     1  1   FILE_251.RECNUM (251,0)
+  2  SBJ_RECNUM       NUM    6.0     4  2   FILE_252.RECNUM (252,0)
+
+
+INDEX# FIELDS          DES U/C    LENGTH LEVELS SEGMENTS MODE
+------ --------------- --- ---    ------ ------ -------- -------
+  1    GRP_RECNUM      No  No       6      3       2     Online
+       SBJ_RECNUM      No  No 
+
+  2    SBJ_RECNUM      No  No       6      3       2     Online
+       GRP_RECNUM      No  No 
+
+/helpctx_def_bottom_img // help ctx def format
+NUM  FIELD NAME       TYPE SIZE  OFFST IX   RELATES TO FILE.FIELD
+---  ---------------  ---- ----- ----- --   ---------------------------------
+  1  APP_NAME         ASC     15     1  1   
+  2  MOD_NAME         ASC     15    16  1   
+  3  HLP_NAME         ASC     40    31  1   
+  4  XRF_RECNUM       NUM    6.0    71  2   FILE_253.RECNUM (253,0)
+
+
+INDEX# FIELDS          DES U/C    LENGTH LEVELS SEGMENTS MODE
+------ --------------- --- ---    ------ ------ -------- -------
+  1    APP_NAME        No  Yes      70     5       3     Online
+       MOD_NAME        No  Yes
+       HLP_NAME        No  Yes
+
+  2    XRF_RECNUM      No  No       6      3       2     Online
+       RECNUM          No  No 
+
+/*
+
+//////////////////////////////////
+////////////////////////////////// packages
+//////////////////////////////////
+
+use enterr          // error package (ignores find errors)
+use help            // global help package
+use key_btn         // key button class
+use set             // set class (generic)
+use data_set        // data set database mgmt class
+use sellist         // selection list data entry class
+
+use_file grp sbj xrf ctx  // declare files and fields w/o opening files
+use_file grp2 sbj2 xrf2 ctx2
+
+set application_name to "SYSTEM"
+set module_name to "DFHELP"      // act like part of DFHELP program module
+

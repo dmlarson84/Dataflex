@@ -1,0 +1,1346 @@
+//************************************************************************
+//     File Name: Datalist.Pkg
+// Creation Date: Thu  06-06-1991
+//     Author(s): John J. Tuohy
+//
+// Class: Data_List
+//
+// replacement Data_List
+// 03-21-1992 - adjustments to handle empty tables and list
+// 01-14-1993 - shut dynamic update state in delete_row proc.
+// 12/27/93   - updated for DAC DAF
+// 05/19/94   - set dynamic_update_state in scroll procedure (pg up/dn was
+//              uncomfortably slow).
+// 07/21/94   - Added goto_top_row/Bottom_row messages and set top/bottom
+//              panel keys to these messages (this is what the old 3.01 data_
+//              list did. Also added Read_record (which does the same as
+//              read_by_recnum (backwards compatability issue).
+// 09/13/94   - Added symbolic names for TOP, BOTTOM and CENTER of rows
+// 10/18/94   - Added Read_by_recnum in reorder_list to make sure the
+//              current record is in the done array.
+//
+//************************************************************************/
+
+//************************************************************************/
+// 12/27/94 (JJT) Set Changed_state now back in server.
+// 12/30/94 (JJT) Display_UI's request_assign now passes table's Main_file
+// 01/04/95 (JJT) Modified Display_row always send entry_display. Note
+//                that we use entry_display 0 1 through-out. This
+//                bypasses any problems with done arrays not being set
+//                correctly.
+//                Modified Initialize_list to check that an active record
+//                is valid before using it.
+// 02/01/95 (JJT) Disable_no_refresh_State disables display_other_ui
+// 02/01/95 (JJT) Added new display_ui logic that optimizes request_assign.
+// 03/08/95 (JJT) Fixed bug in intitialize_list (OR not and).
+// 03/09/95 (JJT) Display_ui clears changed_state conditional upon main_file
+//                being the same is the server's main-file.
+// 03/27/95 (JJT) Clear_Current_record only sends clear to DSO if not
+//                deferred and the main-files are OK. Else vClear
+// 05/01/95 (JJT) Altered refresh. When called as part of a saves or delete
+//                where the table did not start the process the table
+//                did not display properly. Save & delete should just
+//                redisplay the current line. Also, a clear to an already
+//                cleared lin should just blank the line (and not open up
+//                a new line).
+// 05/16/95 (JJT) Improved above logic. Moved the unsorted_State set in
+//                refresh into table.
+// 05/16/95 (JJT) Display_UI now checks the record of the base item row and
+//                not the current_row. The row being displayed is not always
+//                the current_row (based on current_item). It is always the
+//                row of the base-item.
+// 06/06/95 (JJT) Col_Index. Get Superfind_field modified to use ele. (bug)
+// 06/09/95 (JJT) Fixed Refresh to handle empty rows properly. See refresh (bug)
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+// 09/14/95 JJT - In refresh changed add_row to Append_Blank_Row. Else
+//                we have the chance that it will leave that row with a -1
+//                in it instead of 0.
+//************************************************************************/
+
+use ui
+use protoent
+use Widelist
+use refmodes    // refresh mode constants
+use fndmodes    // special find modes
+
+define FILL_FROM_TOP    for  0
+define FILL_FROM_CENTER for -2
+define FILL_FROM_BOTTOM for -1
+
+Register_Function Current_Record returns integer
+Register_Function File_record    returns integer
+
+Class ScrollB_Arrows is a Scrollb
+  // always force arrows to be on
+  procedure set arrows integer ua integer da
+     local integer int
+     forward set arrows 1 1 int
+     procedure_return int
+  end_procedure
+end_class
+
+Register_Procedure Auto_reorder_List
+
+class Data_List is a Wide_List STARTMAC dlStart ENDMAC dlEnd
+  //
+  // forward-reference of row-prototype, Element
+  //
+  Register_Object Element
+
+  procedure construct_object integer img
+    forward send construct_object img
+    Property integer Main_File           PRIVATE  0
+    Property integer Ordering            PUBLIC  -1   // index order
+    Property integer Batch_State         PUBLIC   0
+    Property integer Static_State        PUBLIC   0
+    Property integer Init_from_Top_State PUBLIC  TRUE //
+    Property integer Initial_Row         PUBLIC  FILL_FROM_TOP // dflt refresh row
+    Property integer Initial_Column      PUBLIC   0   // dflt refresh col
+    Property Integer Auto_index_state    PUBLIC  FALSE
+    Property Integer Read_Only_State     PUBLIC  FALSE
+    Property Integer No_relate_State     PUBLIC  FALSE // optimizer. Non_DS only
+
+    Property integer Changing_State      PUBLIC   0    // internal
+    Property integer Line_Display_State  PUBLIC   0    // internal
+    Property Integer No_refresh_State    PUBLIC  FALSE // internal.optimizer
+    // This disables no_refresh_state. This property is internal and
+    // will probably go away (along the no_refresh_state)
+    Property Integer Disable_No_refresh_State    PUBLIC  TRUE // don't mess with this
+
+    Property Integer Item_Index_state    PUBLIC  FALSE // internal
+    Property Integer Find_Mode           PUBLIC  0     // internal non-ds
+    object Records is an array
+    end_object
+
+    set  Auto_Fill_State to TRUE  //default auto-fill to true
+    on_key kBegin_of_Data SEND Beginning_of_Data  PRIVATE
+    on_key kEnd_of_Data   SEND End_of_Data        PRIVATE
+    //
+    on_key kBegin_of_Panel SEND Goto_Top_Row    PRIVATE
+    on_key kEnd_of_Panel   SEND Goto_Bottom_Row PRIVATE
+
+    object sbar is a ScrollB_Arrows
+    End_object
+    Set Scrollbar to (sbar(current_object))
+  End_Procedure // Construct_Object
+
+
+  procedure set Main_File integer newval
+    set !$.Main_File to newval
+  end_procedure
+
+  function Main_File returns INTEGER
+    local integer retval obj#
+    get !$.Main_File to retval
+    if retval le 0 begin
+      get Server to obj#
+      if obj# ne 0 Begin
+         get Main_File of obj# to retval
+         // this'll speed it up the next time!
+         if Retval ne 0 Set !$.Main_File to retval
+      end
+    end
+    function_Return retval
+  end_function
+
+  // internal
+  procedure activating returns integer
+    local integer retval srvr# ordr# Col# i
+
+    // first make sure we have the correct index if an auto index
+    // state
+    Get Initial_Column to Col#
+    If (Auto_index_State(Current_Object) OR ;
+        (Item_Entry_Msg(Element(Current_Object),Col#)=MSG_Auto_Reorder_List) ) Begin
+       Get Col_Index Col# to ordr#
+       if ordr# ge 0 Set Ordering to Ordr#
+    end
+
+    get server    to srvr#
+    get ordering  to ordr#
+
+    if (Srvr# AND main_file(current_object)=main_file(srvr#) AND ordr#>=0) ;
+       set suggested_ordering of srvr# to ordr#
+
+    if (Srvr#=0 AND Ordr#=-1) Set Ordering to 0 // if no server...cant guess
+
+    set Read_Only_State to ;
+        (Read_Only_State(Current_Object) OR Srvr#=0 OR Read_Only_State(Srvr#) )
+
+    forward get msg_activating to retval
+    // always activate with an empty list...so it gets rebuilt
+    // If not static clear everything
+    // if static and not batch clear data but keep selections (delete_data)
+    //
+    if retval eq 0 Begin
+       If (Static_State(Current_Object)=0) Send Empty_List // Delete_Data
+       Else If (Batch_state(Current_Object)=0) Send Delete_Data
+    End
+    procedure_return retval
+  end_procedure
+
+  procedure set record_number integer row# integer newval
+    set array_Value of (Records(current_object)) item row# to newval
+  end_procedure
+
+  function record_number integer row# returns integer
+    Function_Return (Integer_Value(Records(Current_Object),row#))
+  end_function
+
+  function Current_Record returns integer
+    Function_Return (Record_number(Current_Object,current_row(current_object)))
+  end_function
+
+  procedure SET Current_Record integer newVal
+    set record_number item (current_row(current_object)) to newVal
+  end_procedure
+
+  //
+  // note also sets base_Item and record_Number
+  //
+  procedure display_row integer row#
+    local integer oldlinedisp
+    set Row_base_item to row#
+    set record_number item row# to (File_Record(Current_Object))
+    get line_display_State to oldlinedisp
+    set line_display_state to true
+    // 01/04/95 JJT - I think we always want to send entry_display
+    // (which is what refresh ends up doing anyway. Only DSOs should
+    // send the refresh message. This seems to work ok.
+    //If (Server(Current_Object) AND Batch_State(Current_Object)=0) ;
+    //     send refresh MODE_FIND_OR_CLEAR_SET
+    //Else Send entry_Display 0 1
+    Send entry_Display 0 1
+    set line_display_state to oldlinedisp
+  end_procedure
+
+  //
+  // invoked by append_blank_row and insert_blank_row
+  //
+  procedure clear_row integer row#
+    local integer oldLDS
+    get Line_Display_State to oldLDS
+    set Line_Display_State to true
+    set Row_base_item to row#
+    Send Clear_Current_record
+    set Line_Display_State to oldLDS
+    set record_number item row# to 0
+  end_procedure
+
+  procedure Insert_row integer row#  //insert row before specified row#
+    forward send insert_row (Prototype_Object(current_object)) row#
+    send insert_item to (Records(Current_Object)) row# -2 //insert 0 before row#
+  end_procedure
+
+  procedure Insert_new_row integer row#  //insert & display row before specified row#
+    send insert_row row#
+    send display_row row#
+  end_procedure
+
+  procedure add_row     //add row at end of item list
+    forward send add_row (ProtoType_Object(current_object))
+    set array_value of (Records(Current_Object)) ;
+        item (Row_Count(Current_Object) - 1) to -1
+  end_procedure
+
+  procedure append_new_row     //add row at end of item list & display
+    send add_Row
+    send display_row (row_count(Current_Object) - 1)
+  end_procedure
+
+  procedure append_blank_row     //add blank row at end of item list
+    send add_row
+    send clear_row (row_count(Current_Object) - 1)
+  end_procedure
+
+  procedure insert_blank_row integer row#
+    send insert_row row#
+    send clear_row row#
+  end_procedure
+
+  procedure Delete_row integer row#   //remove given row#
+    local integer lim baseItem counter width Dyn#
+    Get Dynamic_update_state to Dyn#    // 01-14-1993
+    Set Dynamic_update_state to False   // 01-14-1993
+    get item_limit to width
+    calc (width * row#) to baseItem
+    calc (baseItem + width - 1) to lim
+    for counter from baseItem to lim
+      send delete_item baseItem
+    loop
+    send delete_item to (Records(Current_Object)) row#
+    Set Dynamic_update_state to Dyn#    // 01-14-1993
+  end_procedure
+
+  //
+  //  Function: Fill_next_Row
+  //     Pass: Row# - The record for this row MUST be -1 or -2
+  //                  -1 = find down, -2 = find up.
+  //   Return: Rec# if found. if -1 or -2 it is not found
+  //           New record and related in buffer
+  //
+  Function Fill_next_row Integer Row# returns Integer
+    local integer lastRow rec# mode oldRec# CurRec
+    get record_number item row# to rec# // s/b -1 or -2
+    Move Row# to LastRow
+    if rec# eq -1 begin
+       Decrement LastRow   // lastrow is the current row we add to
+       Move 4 to mode      // 4=GT
+    end
+    else begin
+       Increment LastRow
+       Move 0 to mode      // 0=LT
+    End
+    // if lastrow is lt 0 then we must be adding row 0 to an empty table
+    // in this case place the LAST record in row 0. This could happen in
+    // the case of Deletes from the top line of a table (that is not the
+    // top of the file)
+    If lastrow lt 0 Send Find_Init Upward_Direction // find last record
+    Else Begin
+       Get record_number Item LastRow to OldRec# // get prior record
+       // read in the record for the current row
+       If OldRec# le 0 Function_return Rec# // couldn't find the prior rec
+                                            // probably an empty list
+       // if currec eq lastrow we've already got the record we need
+       // optional syntax for speed... I'm not sure its worth it
+       //Get File_Record to Currec
+       //If (Not(found) OR CurRec<>OldRec#) Send Read_by_RecNum OldRec#
+       Send Read_by_RecNum OldRec#
+       Send Establish_Find_mode mode
+       Send Read_Next_Record
+    End
+    [Found] begin
+       Send Display_Row row# // add to list
+       Get record_number Item row# to rec#
+    end
+    function_return rec#
+  end_Function
+
+  procedure down_row
+    local integer toitem Lim DynUpdt // retval
+    set search_mode to (search_mode(current_object))  //reset incr srch index
+    get Item_limit to lim
+    calc (current_item(current_object) + lim) to toitem
+    If (toItem >= item_Count(Current_object) AND ;
+         Batch_State(Current_Object)=0) Begin
+       Get Dynamic_update_state to DynUpdt
+       Set Dynamic_update_state to False
+       send add_row
+       set base_item to (Current_Row(Current_object) * lim)
+       set Current_item to toItem
+       set Dynamic_update_state to DynUpdt
+    End
+    Else set current_item to toItem
+  end_procedure
+
+  procedure up_row
+    local  integer toitem Lim OldDynUpdt
+    set search_mode to (search_mode(current_object))  //reset incr srch index
+    get Item_limit to lim
+    calc (current_item(current_object) - lim) to toitem
+    If (toItem<0 AND Batch_State(Current_Object)=0) Begin
+       get Dynamic_Update_State to oldDynUpdt
+       set Dynamic_Update_State to false
+       send Insert_Row 0
+       calc (toitem + lim) to toitem
+       Set New_item to (toitem+lim)
+       set base_item to (Current_Row(Current_object) * lim)
+       set current_item to toItem
+       set Dynamic_Update_State to oldDynUpdt
+    end
+    Else set current_item to toItem
+  End_Procedure
+
+  procedure Beginning_of_Panel
+    set search_mode to (search_mode(current_object))  //reset incr srch index
+    forward send Beginning_of_Panel
+  end_procedure
+
+  procedure End_of_Panel
+    set search_mode to (search_mode(current_object))  //reset incr srch index
+    forward send End_of_Panel
+  end_procedure
+
+  Procedure Trim_Page // force to fit within visible table
+    Local Integer Count  Drows OldChg
+    get changing_State to oldChg
+    set changing_State to true
+    // trim top
+    Get Top_Row to Count
+    While Count ne 0
+      Send Delete_Row 0
+      Decrement count
+    Loop
+    // trim bottom row if needed
+    Get Row_Count to Count
+    Get Displayable_Rows to dRows
+    While Count gt dRows
+       decrement Count
+       Send Delete_Row Count
+    Loop
+    set changing_State to oldChg
+    set Row_base_item to (Current_Row(Current_object))
+  End_procedure
+
+  procedure scroll integer dir integer dist
+    local integer retval dynUpdt
+    set search_mode to (search_mode(current_object))  //reset incr srch index
+    if (Batch_State(current_object)) ;
+       forward send scroll dir dist
+    else begin
+        get dynamic_update_State to dynUpdt
+        set dynamic_update_State to false
+        get virtual_scroll dir dist to retval
+        set dynamic_update_State to dynUpdt
+    end
+  end_procedure
+
+  // private: only used by non-batch lists
+  //
+  Function Virtual_Scroll Integer Direction Integer Dist Returns integer
+    local integer crec# rec# Col# Row# Dest_row# Rowsadded dRows
+    Local Integer OldChg Dyn#
+
+    Get Current_Row to Row#
+    Get Current_Col to Col#
+    Get Current_Record to cRec#
+    Get Displayable_Rows to dRows
+    // if no distance passed use default. Num row -1
+    if dist eq 0 Move (dRows - 1) to dist
+
+    // if scroll down must find records starting with last rec
+    // if scroll up must find records starting with top record
+    if direction eq DOWNWARD_DIRECTION ;
+         Move (Row_Count(Current_Object)-1) to Dest_row#
+    else Move 0 to Dest_row#
+    get record_number item Dest_row# to rec#
+    if Rec# le 0 Function_Return // no record...no movement
+    Send Read_by_RecNum rec# // could be optimized (save 1 find)
+    [Not Found] Begin
+      Send Read_by_RecNum Crec#
+      Function_Return
+    End
+
+    if (focus(desktop) = current_object) ;
+        get exec_exit item current to windowindex  // force exit of current item
+
+    get changing_State to oldChg
+    set changing_State to true
+
+    Get Add_Rows Direction Dist to RowsAdded
+
+    If RowsAdded Begin
+
+       If Direction eq DOWNWARD_DIRECTION ;
+          Set Top_Item to ( ((Row_Count(Current_Object)-dRows)* Item_Limit(Current_Object))MAX 0 )
+       Else ;
+          Set Top_Item to 0
+       Send Trim_Page
+    End
+
+    set changing_State to oldChg
+
+    If RowsAdded ne Dist ;
+          Move (if(Direction=DOWNWARD_DIRECTION,Row_Count(Current_Object)-1,0)) to row#
+    // now relocate row# to top or bottom as needed
+    set Row_base_item to Row#
+    get record_number item row# to rec#
+    send Read_by_Recnum rec#
+    send Display_Other_UI
+    Set New_Item to (Row#  * Item_limit(Current_Object) + Col# )
+
+    Send New_Entry_Set
+    Function_Return RowsAdded
+  end_Function
+
+  //
+  // created to empty list item data (aug'd by SelList)
+  //
+  procedure empty_list
+    send delete_data
+  end_procedure
+
+  procedure delete_Data
+    local integer obj#
+    forward send delete_Data
+    move (Records(current_object)) to obj#
+    // we do this to get around wierd program close down problems. Delete_data
+    // seems to get called by destroy-object. If changed_state is outside you
+    // get an exit error.
+    if obj# ne 0 Begin
+       send delete_Data to obj#
+       set base_item to 0
+       Set Changed_state to FALSE //  I would think delete_data should..it doesn't
+    End
+  end_procedure
+
+  //
+  // created for Server support
+  //
+  procedure clear  //notification of clear-record
+    if (Line_Display_State(current_object)) send entry_clear 1
+  end_procedure
+
+  //
+  // created for Server support
+  //
+  procedure clear_all  //notification of clear-set
+    local integer oldDynUpdt
+    if (Line_Display_State(current_object)) send entry_clear_all 1
+    else begin
+      get Dynamic_Update_State to oldDynUpdt
+      set Dynamic_Update_State to false
+      send Empty_List // delete_data
+      Send Append_blank_row // add 1 empty row..for navigation aid
+      set Dynamic_Update_State to oldDynUpdt
+    end
+  end_procedure
+
+  //
+  //use of lineDisplayState is required because the list sends its Server
+  //msgs Clear and Find when it only wants to affect the current row
+  //
+  procedure display
+    local Integer Row# Col#
+    if (Line_Display_State(current_object)) send entry_display 0 1 // was 0 0
+    else begin
+//*      is_file_included (main_file(current_object)) 1
+//*      if [found] Begin
+         If (Item_Count(Current_Object)=0) Begin
+            Get Initial_Row to Row#
+            Get Initial_Column to Col#
+         end
+         else begin
+            Get current_Row to Row#
+            Get current_col to Col#
+         End
+         send refresh_page Row# Col#
+//*      end
+//*      else send entry_display 0 0
+    end
+    set changed_state to false
+  end_procedure
+
+  procedure display_Line
+    Local integer oldDisp
+    get line_display_State to oldDisp
+    set line_display_State to true
+    Send Display
+    set line_display_State to oldDisp
+  End_Procedure
+
+  //
+  // created for Server support
+  //
+  procedure clear_Set  //notification of derived clear
+    send clear_all
+  end_procedure
+
+  // Public:
+  // refresh page will refresh the screen both up and down. Based on
+  // the contents of the active record buffer.
+  // This allows for proper multi-user refreshes
+  //
+  Procedure Refresh_Page integer Row# integer Col#
+    Local Integer C#
+    If Num_Arguments eq 1
+       Get Current_Col to C#
+    Else Move Col# to C#
+    if (item_count(current_object) AND focus(desktop) = current_object) ;
+        get exec_exit item current to windowindex  //force exit of current item
+    set changed_state to false
+    if (active_State(current_object)) ;
+         send Fill_Page Row# c#
+    else send Empty_List // (delete_data) inactive list, so empty it
+  End_Procedure
+
+  //  Internal
+  //  Fill list around Row# Col# based on the current active record buffer
+  //
+  //
+  Procedure Fill_Page integer Row# integer Col#
+      // chck for special row conditions
+      if Row# eq FILL_FROM_BOTTOM Move (Displayable_Rows(current_object)-1) to Row#
+      else if Row# eq FILL_FROM_CENTER Move ((Displayable_Rows(current_object)-1)/2) to Row#
+      Get Load_Page Row# to Row#
+      Set Row_base_item to Row#
+      Set New_Item to (Row#  * Item_limit(Current_Object) + Col# )
+      send Read_by_recnum (current_record(current_object))
+      Send Display_Other_UI
+      Send New_Entry_Set
+  End_Procedure
+
+  //  Load_Page: Load page starting at row#.
+  //  Internal
+  //  Pass: Row# to load from. MUST have starting record in buffer
+  //  Returns: The records new row (in case it got adjusted).
+  //  Will relocate if the top is not filled.
+  //  Note that the record is not in the buffer any more.
+  //
+  Function Load_Page Integer Row# Returns Integer
+    local integer dynUpdt oldChg dRows rec# whocares BS RowsAdded
+    Get Batch_State to BS
+    get dynamic_update_state to dynUpdt
+    set dynamic_update_state to false
+    get Changing_State to oldChg
+    set Changing_State to TRUE
+    // number of rows in table-1
+    Move (Displayable_Rows(Current_Object)-1)  to dRows
+    //
+    send delete_Data    // delete all current data
+    Send Append_New_Row  // this fills out the target row..now up and down
+    // 1st fill from row to top..if not at top
+    If (Row#>0 OR BS) Begin // fill er up bub
+       //Get Top_Item to OldTop
+       Get Add_Rows UPWARD_DIRECTION Row# to RowsAdded
+       If RowsAdded Begin
+          If BS ;
+             Set Top_Item to (Top_Item(Current_Object) - ;
+                              ((Row# MIN RowsAdded)*item_limit(Current_Object)))
+          Else ;
+             Set Top_Item to 0
+       End
+       // this is the row we are really on now
+       Move RowsAdded to Row#
+       // if we need to fill down we MUST have the current record
+       // restored
+       If (Row#<DRows or BS) Begin
+          get record_number item Row# to rec#
+          if rec# gt 0 send read_by_Recnum rec#
+       end
+    End
+    // now fill from row to end of table
+    If (Row#<DRows or BS);
+       Get Add_Rows DOWNWARD_DIRECTION (dRows-Row#) to whocares
+    set Changing_State to oldChg
+    set dynamic_update_state to dynUpdt
+    Function_Return Row# // actual row we are on - if adjusted
+  end_function
+
+  // Add_Rows: Load records into table
+  //
+  // very internal
+  //
+  // Pass: Direction and number of rows to add (to top or bottom).
+  //       Current top or bottom record must be in buffer.
+  //
+  // Returns: number of rows actually added.
+  //
+  Function Add_Rows integer direction Integer NumRows returns integer
+    local integer mode RowsAdded BS
+    //Move CurRow to Row#
+    Get Batch_State to BS
+    Move (if(direction=UPWARD_DIRECTION,LT,GT)) to mode
+    Send Establish_Find_mode mode
+    Repeat
+      Send Read_Next_Record
+      [found] begin
+        if direction eq UPWARD_DIRECTION ;
+           send Insert_New_Row 0
+        else ;
+           send append_new_row
+        indicate found TRUE
+        Increment RowsAdded
+      end
+    until ( not(found) OR (BS=0 AND RowsAdded = NumRows) )
+    Function_Return RowsAdded
+  end_Function
+
+  Procedure New_Entry_Set
+    // manually force entry for new current item
+    if (focus(desktop) = current_object) ;
+        get exec_entry item current to windowindex
+    //if (select_mode(current_object) = AUTO_SELECT) ;
+    //    set select_state item current to TRUE
+  end_procedure
+
+  //  Assume the From# comes pre-loaded with its current record
+  //  return with current record for the returned item (to#)
+  //
+  function row_changing integer from# integer to# returns integer
+    local integer lim toRow fromrow rec# dynUpdt top
+
+    If (Batch_State(Current_Object)) Function_Return to#
+
+    Get row Item to#   to toRow   // destination row
+    Get row Item from# to fromRow // source row
+    get Item_Limit to lim
+
+    // Temporary fix to fix problem of row changing getting sent
+    // in a 1 row 2 column table when doing a shift+tab
+    if fromRow eq toRow function_return to#
+
+    set new_item to to# // this assigns the new item
+    set base_item to (toRow * lim)
+    Get Record_Number Item toRow to Rec# // the new rec number
+    If Rec# lt 0 Begin  // if an added row -1,-2 we will fill this row
+      get fill_next_row torow to rec# // attempt to fill row
+      // we failed..remove this row. refind the proper record
+      If Rec# le 0 Begin
+         send delete_Row toRow
+         If to# lt from# // Move (to# + lim) to to#
+         else Begin
+           move from# to to#
+           Get Top_item to top
+           If top ne 0 Set Top_item to 0 // (top-1)
+         End
+         set new_item to to#
+         // restore proper record
+         Send Read_by_Recnum (Current_record(Current_Object))
+      End
+      send Trim_Page
+    End
+    Else if rec# gt 0 send Read_by_Recnum rec#
+    Send Display_Other_UI // display all but itself
+    Move (current_item(current_object)) to to# // in case it moved
+    function_return to#
+  end_function
+
+  procedure item_change integer from# integer to# returns integer
+    local integer retval t_Col# newval
+    if (Changing_State(Current_Object)) procedure_Return to#
+    set Changing_State to true
+    // Added to restore current line back to its original contents
+    // if a read only object
+    If ( Read_Only_State(Current_Object)  AND ;
+         Item_Changed_State(Current_Object,from#) AND ;
+         Batch_State(Current_Object)=0) Send Display_Line
+    forward get msg_item_change from# to# retval
+    set Changing_State to false
+    set row_base_item to (row(current_object,retval))
+    If ( (Auto_index_state(Current_Object) OR ;
+          Item_index_state(Current_Object)) AND ;
+         (Column(Current_Object,from#)<>Column(Current_Object,Retval)) ) ;
+       Begin
+         Send Reorder_list retval            // assign new index
+         get Current_Item to newval               // if current_item changed
+         if newval ne from# move newval to retval // then we re-ordered.
+       End
+    Set Item_Index_State to FALSE
+    procedure_Return retval
+  end_procedure
+
+  // Public: Reorder_list
+  // Assign Index and refresh screen based.
+  // Parameter To# is optional
+  // To# is item# to base index and refresh around
+  // if not passed use current column
+  Procedure Reorder_list Integer to#
+     local integer Indx# Row# Col# Item#
+     If (Batch_state(Current_Object)) Procedure_Return // can't reorder batches
+     // In some cases the current record is not in place with done flags
+     // set correctly. Read current record should help this.
+     Send Read_by_recnum (Current_record(Current_Object))
+     // if no arguments use current_item else use to#
+     if NUM_ARGUMENTS lt 1 get current_item to item#
+     else move to# to item#
+     Get Row    Item Item# to Row#
+     Get Column Item Item# to Col#
+     Get Col_Index Col# to Indx#
+     If (Indx#=-1 OR Ordering(Current_Object)=Indx#) Function_Return
+     Set Ordering to Indx#
+     set Changing_State to TRUE
+     send refresh_page Row# Col#
+     set Changing_State to FALSE
+     //set Initial_Column to Col#
+  end_procedure
+
+  // Public:
+  // Set index to idex number Indx# and refresh
+  Procedure Request_New_Index Integer Indx#
+    If (Ordering(Current_Object)<>Indx#) Begin
+       Set Ordering to Indx#
+       Send Display
+    End
+  End_Procedure
+
+  // Function Col_Index           public
+  //   return the best Index for this column or -1 if no choice is good
+  //
+  // This is useful for override and augmentation. When the Auto_Reorder_List
+  // message is invoked as part of iEntry this gets called. If we override it
+  // we can do some custom selections for a choice of index.
+  //
+  Function Col_Index Integer Item# Returns Integer
+    local integer file field dataType fldNdx
+    local integer mainfile mainNdx Ele Itm
+    Move (MOD(item#,item_limit(current_object))) to Itm
+    Move (Prototype_object(Current_Object)) to ele // use prototype in case we have an empty table
+    get data_field of ele item itm to field
+    get data_file  of ele item itm to file
+    if file begin
+       get main_file to mainfile
+       if file ne mainfile Begin
+          move mainfile to file
+          // 06/06/95 - altered to find value from prototype row!
+          get superfind_field of ele file itm to Field //get field for superfind
+       end
+       if field eq 0 function_return 0
+       FIELD_DEF file field to dataType FldNdx //get main index for field
+    end
+    Function_Return (If(FldNdx=0,-1,FldNdx))
+  End_Function
+
+  procedure fill_List
+    Send Fill_Page (Initial_Row(current_Object)) (Initial_Column(current_object))
+  end_procedure
+
+  // Internal:
+  // Fill from top or bottom of the table based on dir
+  // If the table is empty then we will use the Initial_Column as our column.
+  // If the table has lines. we use the current column position.
+  Procedure Beg_End_Data Integer Direction Integer NoSave
+    Local Integer rowcount Newish Col# Lim
+    set search_mode to (search_mode(current_object))  //reset incr srch index
+    Get row_count to rowcount
+    Move ( RowCount<1 OR ;
+           (rowCount = 1 AND record_number(current_object,0)= 0) ) to Newish
+    Move (if(Newish, Initial_Column(Current_Object),;
+                     Current_Col(Current_Object) )) to Col#
+    //
+    If (Batch_State(Current_Object) and Newish=0) Begin
+       If Direction eq DOWNWARD_DIRECTION ;
+         set Current_Item to 0
+       Else ;
+          set Current_item to ( (Row_Count(current_object)-1) * ;
+                             Item_Limit(Current_Object) )
+       Send Move_to_Column Col#
+    End
+    Else begin
+      Send Find_Init Direction
+      if [found] ;
+         send Refresh_Page (if(direction=Downward_Direction,0,-1)) Col#
+      else send Clear_All
+    End
+    send update_dependent_items
+  End_Procedure
+
+  // Public
+  procedure Beginning_of_Data Integer NoSave
+    Local Integer Ns
+    If Num_Arguments eq 0 Move 1 to NS
+    Else Move NoSave to NS
+    Send Beg_End_Data Downward_Direction NS
+  end_procedure
+
+  // Public
+  procedure End_of_Data Integer NoSave
+    Local Integer Ns
+    If Num_Arguments eq 0 Move 1 to NS
+    Else Move NoSave to NS
+    Send Beg_End_Data Upward_Direction NS
+  end_procedure
+
+  // Internal: for override
+  procedure Initialize_List
+    Local integer rowCount rec srvr
+    forward send initialize_list // Actually does nothing...
+    get Row_Count to rowCount    // If there are no rows or 1 row but
+    if (rowCount < 1 OR ;        // an empty field we initialize.
+        (rowCount = 1 AND record_number(current_object,0) = 0)) begin
+      // replaced by following
+      //if (server(current_object)) EQ 0 begin
+      //    get main_file to filenumber
+      //    move 0 to fieldnumber
+      //    if status Indirect_File Begin
+      //       Relate Indirect_File // if active do a relate
+      //       send Display
+      //       Procedure_Return
+      //    End
+      //End
+      Get File_record to Rec // FOUND will tell us if we have an active rec
+      // 01/04/95 JJT-modified to make sure that the found record is a valid
+      // record. If it is not ingore the record
+      If [Found] begin
+         get server to srvr
+         // JJT- 03/08/95
+         // was: If (srvr AND Validate_Constraints(srvr)) begin
+         If (srvr=0 OR Validate_Constraints(srvr)) begin
+            Send Display
+            procedure_return
+         end
+      end
+      If (Init_From_Top_State(Current_Object)) send Beginning_of_Data
+      else send End_of_Data
+    end
+  End_procedure
+
+  function item_matching string searchStr integer item# returns integer
+    local integer slen ser# file# retval rec# ordr# mainfile rFound
+    local string lookStr
+    if (Batch_State(current_object)) begin
+        forward get item_matching searchStr to item#
+        move item# to retval
+    end
+    else begin
+      move -1 to retval
+      length searchStr to slen
+      if slen gt 1 left searchStr to lookStr (slen - 1)
+      else move "" to lookStr
+      get data_file to file#
+      if file# le 0 function_return -1 //can't find if no valid main file
+      get Server to ser#
+      get main_file to mainfile
+      //move (current_item(current_object) - base_item(current_object)) ;
+      //    to oldCol
+      move file# to filenumber
+      move 0 to fieldindex
+      move Indirect_File.RECNUM to rec#
+      move 0 to Indirect_File.RECNUM      //hold recbuf
+      move rec# to Indirect_File.RECNUM   //replace rec#
+      get data_field to fieldindex
+      move lookStr to Indirect_File.RECNUM
+
+      if mainfile ne file# begin  //find in parent-file
+        if ser# ne 0 begin   //has a server
+          send Request_Superfind to ser# GE file# ;
+              (data_field(current_object,CURRENT))
+          Move (Found) to rFound
+        end
+        else begin  //no server
+          send entry_superfind GE mainfile
+          Move (Found) to rFound
+          if rfound send display
+        end
+      end
+      else begin  //find in main-file
+        get Ordering to ordr#
+        if ser# ne 0 begin
+          if (Deferred_State(current_object)) begin
+            send Request_Read to ser# GE file# ordr#
+            Move (Found) to rFound
+            if rFound send display
+          end
+          else begin
+            send Request_Find to ser# GE file# ordr#
+            Move (Found) to rFound
+          end
+        end
+        else begin
+          if ordr# lt 0 move 0 to ordr#
+          vfind file# ordr# GE
+          Move (Found) to rFound
+          if rFound begin
+            move file# to filenumber
+            move 0 to fieldindex
+            relate Indirect_File.RECNUM
+            send display
+          end
+        end
+      end
+      If not rFound begin
+          move file# to filenumber
+          move 0 to fieldindex
+          clear Indirect_File
+          move rec# to Indirect_File.RECNUM
+          find eq Indirect_File.RECNUM
+      end
+      Else Get Current_Item to RetVal
+    end
+    function_return retval
+  end_function
+
+  procedure Scan_Servers
+    send find_servers_to_watch TRUE
+  end_procedure
+
+  // Find_Current_Buffer: Public Message
+  //   find record that matches the record buffer, Current record should
+  //   be inactive --- Forces load buffer record..does not notify others.
+  Procedure Find_Current_Buffer
+     Send Establish_Find_mode Ge // first look down the list
+     Send Read_Next_record       // anyone home?
+     [~Found] Send Find_init upward_direction // no..go to end of the list
+  End_procedure
+
+  // Public:
+  // Move to the selected column...
+  Procedure Move_to_Column Integer Col#
+    If (Col#<>Current_Col(Current_Object)) ;
+       Set Current_Item to (Base_Item(Current_Object)+Col#)
+  End_Procedure
+
+  // Refind & relate the record in rec# by Main_file
+  //
+  procedure find_record integer rec#
+    Send Read_by_Recnum Rec# // read and relate the record
+    Send Display_UI
+  end_procedure
+
+  //--------------------------------------------------------------------
+  // All record finding handled by these routines
+  //--------------------------------------------------------------------
+  //
+  //  Procedure Display_UI
+  //  Procedure Display_Other_UI
+  //  Procedure Read_by_Recnum      record
+  //  Procedure Establish_Find_Mode find_mode
+  //  Procedure Read_Next_Record
+  //  Procedure Find_Init           Direction
+  //  Procedure Clear_Current_Record
+  //  Function  File_record Returns Record
+  //
+
+  // display other UI objects. If server only do this if the
+  // deferred_state to false (also do a request assign).
+  // if no server this is idea for override
+  //
+  // JJT- Modify to never set no_refresh_state to true.
+  // This was an optimzation that never should have
+  // happened. By disabling this, display_other_ui acts exactly like
+  // display_ui. So, this message might go away in the future.
+  Procedure Display_Other_UI
+    Local Integer Old_RS
+    Get No_refresh_State to Old_Rs
+    // this property will probably go away - so don't get used to it.
+    If not (Disable_No_refresh_State(Current_Object)) ;
+        Set No_refresh_State to TRUE
+    Send Display_UI
+    Set No_refresh_State to Old_Rs
+  End_Procedure
+
+  // display all UI objects. If server only do this if the
+  // deferred_state to false (also do a request assign).
+  // if no server just do the one object
+  // - JJT Don't send request_assign if already assigned
+  // - JJT Pass main_file with request_assign
+  Procedure Display_UI
+    Local Integer Srvr# OldDisp No_refrsh mFile row#
+    get Line_Display_State to oldDisp
+    set Line_Display_State to true    // set flag to prevent regen
+    Get No_Refresh_state to No_Refrsh
+    Get Server to Srvr#
+    if (Srvr#=0 OR Deferred_State(current_object)) Begin
+       If Not No_refrsh Send Display
+    End
+    Else Begin
+       // 01/03/95 - only latch if we need to, else just display_ui.
+       //            main_file added in case server is not mainfile (from Lee)
+       //Move (Current_record(Current_Object)=Current_record(srvr#)) to no_refrsh
+       // 05/16/95 - don't use current-record (which is based on current_item)
+       // instead use the row of the current base_item. This is the one we are
+       // setting in request_assign or display_ui
+       get row item (base_item(Current_Object)) to row#
+       Move (record_number(Current_Object,row#)=Current_record(srvr#)) to no_refrsh
+       Get Main_File to mFile
+       if No_refrsh Send Display_UI     to srvr#
+       else         Send Request_Assign to srvr# mFIle
+       // if mFile is same as server main_file then the server's should be
+       // unchanged. I would think that Request_assign would do this for us
+       // so it is possible that this is not needed at all. But it must have
+       // been here for some reason. Test removing this at some point. JJT
+       if ( mFile=Main_File(Srvr#) ) Set Changed_State of Srvr# to FALSE
+    End
+    set Line_Display_State to oldDisp  // reset no-regen flag
+  End_Procedure
+
+  //  Read_By_Recnum:
+  //
+  //       Pass: Rec# find from server or from direct file.
+  //    Returns: FOUND if record found and records in buffer & related
+  //
+  procedure Read_by_Recnum integer rec#
+    local integer srvr# file#
+    get Server to srvr#
+    get Main_File to file#
+    if srvr# ne 0 send Read_By_RecNum to srvr# file# rec#
+    else send vRead_Rec file# Rec#
+  end_procedure
+
+  // Create this message because the old 3.01 data-list did it this
+  // way. (Avoid this if possible - use Read_by_recnum. This might
+  // go away).
+  //
+  procedure Read_record Integer Rec#
+    Send read_by_recnum Rec#
+  end_procedure
+
+  // Establish finding direction
+  //   Pass: Mode
+  //
+  Procedure Establish_Find_Mode Integer mode
+    Local Integer Srvr#
+    Get Server to Srvr#
+    if Srvr# ne 0 ;
+       send establish_find_direction to srvr# mode ;
+         (Main_File(Current_Object)) (Ordering(Current_Object))
+    Else Set Find_Mode to Mode
+  End_Procedure
+
+  //  Read_Next_Record
+  //    Return: FOUND, and record in and related
+  //
+  Procedure Read_Next_Record
+    Local Integer Srvr#
+    Get Server to Srvr#
+    If Srvr# ne 0 send Locate_Next to srvr#
+    Else Send vFind_Rec (Main_File(Current_Object)) ;
+               (Ordering(Current_Object)) (Find_Mode(Current_Object))
+  End_Procedure
+
+  Procedure Find_Init Integer Dir
+    Local Integer srvr# file# Ordr# mode
+    Get server to srvr#
+    Get main_file to file#
+    Get Ordering to Ordr#
+    if Srvr# ne 0 Begin
+       Move (if(Dir=Downward_Direction,FIRST_RECORD,LAST_RECORD)) to Mode
+       send Request_Read to srvr# mode file# Ordr#
+    End
+    else send vFind_Init File# Ordr# Dir
+  End_Procedure
+
+  // Replaced with proc below 03/27/95
+  //procedure Clear_Current_Record
+  //  local integer ser#  //oldchg
+  //  get Server to ser#
+  //  //
+  //  // NOTE: Clear may cause problems with other tables on the same data_Set
+  //  //
+  //  If Ser# ne 0 Send Clear to ser#
+  //  else Send vClear (Main_File(Current_Object))
+  //end_procedure
+
+  // alternate better method for clearing file. If deferred or main-file
+  // is not the same as the server then only the buffer should clear.
+  procedure Clear_Current_Record for data_list
+    local integer ser# File#
+    get Server to ser#
+    Get Main_File to File#
+    // Only send clear to server if  not Deferred, a server exists
+    // and the list's main-file is the same as the server or it is
+    // 0 (which implies use server's main-file). Else just clear the
+    // main-file's buffer.
+    If ( (deferred_State(Current_Object)=0) AND ;
+         (Ser# and (File#=0 OR main_file(Ser#)=File#))) ;
+         Send Clear to ser#
+    else Send vClear File#
+  end_procedure
+
+  // Function: File_Record
+  //   Returns: The record number of the record currently in the buffer
+  //            Return FOUND if record is active
+  //
+  Function File_Record Returns Integer
+    get main_file to filenumber
+    if filenumber ne 0 begin
+       move 0 to fieldindex
+       Indicate FOUND Status Indirect_file
+       Function_Return Indirect_File.RECNUM
+    end
+  End_Function
+
+  //------- Various direct file commands. Called when no server ----
+
+  Procedure vFind_Init Integer File# Integer ordr# Integer Dir
+    Send vClear file#
+    Send vFind_Rec File# Ordr# (if(Dir=Downward_Direction,3,1))
+  End_Procedure
+
+  Procedure vFind_Rec Integer File# Integer Ordr# Integer Mode
+    vFind file# ordr# mode
+    [found] Send vRelate file#
+  End_Procedure
+
+  procedure vRead_rec integer file# integer rec#
+    Send vClear File# // also sets filenumber & FieldIndex
+    move rec# to Indirect_File.RECNUM
+    Send vFind_Rec File# 0 EQ
+  end_procedure
+
+  Procedure vRelate integer File#
+    If (No_Relate_State(Current_Object)) Procedure_Return
+    Move File# to filenumber
+    Move 0 to fieldindex
+    Relate Indirect_File
+    Indicate found TRUE
+  End_Procedure
+
+  Procedure vClear integer File#
+    Move File# to filenumber
+    move 0 to fieldindex
+    clear Indirect_File
+  End_Procedure
+
+  //-------------------------------------------------------------------
+  procedure refresh integer notifyMode
+    local integer mainfile row# rowcount#
+    // no_refresh_state is an internal optimizer. Batch state should never
+    // use refresh. (initialize_list should load batch files)
+    if (no_refresh_state(Current_Object) OR Batch_State(Current_Object)) Procedure_return
+
+    get main_file to mainfile
+                               // 06/09/95 JJT
+    Get Row_count to RowCount# // we need to know this later if we are filling
+                               // list. Since we add a row when empty, checking
+                               // row_count later on will never return a 0.
+
+    // 05/16/95 Always make sure that we've a row.
+    If (item_count(Current_Object)=0) begin  // When we add a row
+       Send ADD_ROW // Record must be 0      // we must make sure the rec#
+       set record_number item 0 to 0         // is 0, not -1 or -2
+    end
+
+    // 05/01/95 - replaced with following code
+    //if (notifyMode = MODE_DELETE AND ;
+    //    main_file(current_object) = main_file(server(current_object))) ;
+    //    send display_row (current_row(current_object))
+    //
+    //else if (Line_Display_State(current_object) OR ;
+    //    notifyMode > MODE_CLEAR_ALL) ;
+    //    forward send refresh notifyMode
+    //
+
+    // If save or delete we display the current row. Note that a delete will
+    // redisplay the deleted record (it is still in the buffer). This is
+    // consistant with form behaviors. It will set current_record to 0 which
+    // will make a subsequent request_clear work properly
+    //
+    if (notifyMode=MODE_DELETE OR NotifyMode=MODE_SAVE OR ;
+        Line_Display_State(current_object) ) Begin
+
+          Forward Send refresh notifyMode
+
+          // 05/16/95 - set record of row of current base-item to
+          // the current record in the buffer
+          get row item (base_item(Current_Object)) to row#
+          Set record_Number item row# to (File_Record(Current_Object))
+    end
+
+    else begin               //notifyMode = find/clearSet or Clear
+      //get main_file to mainfile // moved up
+      is_file_included mainfile 1                      //look in done
+      if [found] Begin
+      //if (Row_Count(Current_Object)=0) ;
+      if RowCount# eq 0 ;
+         send Refresh_Page (Initial_Row(Current_Object)) (Initial_Column(Current_Object))
+      else ;
+         Send Refresh_Page (Current_Row(Current_Object)) (Current_Col(Current_Object))
+      end
+      else begin
+        is_file_included mainfile 0                  //look in cleared
+        if [found] begin  //empty list or insert blank row
+          if (notifyMode = MODE_CLEAR_ALL OR ;
+              notifyMode = MODE_FIND_OR_CLEAR_SET) send clear_all
+          else Begin
+            // 05/01/95 if there is no current record just clear the current
+            // line. If a current record exits do the clear which
+            // will open up a new line.
+            // 09/14/95 - Changed so that empty tables (rowcount=0) will
+            //            send clear & not refresh. Clear must know what
+            //            to do with lines that are already cleared.
+            If (current_record(Current_Object)=0 AND RowCount# ) ;
+               forward send refresh notifyMode // just clear current line
+            Else send clear  // insert a new line
+          end
+          
+          //replaced with above block
+          //else send clear
+        end
+        else forward send refresh notifyMode
+      end
+    end
+  end_procedure
+
+  //
+  //  added for dependent-items support
+  //
+  function prototype_object returns integer
+    function_return (element(current_object))
+  end_function
+
+  //
+  //  This should only get called by an iEntry procedure
+  //
+  procedure auto_reorder_list integer item#
+    Set Item_Index_State to TRUE
+  end_procedure
+
+  // Added to make this work like the old 3.01 data_list
+  //
+  procedure Goto_Top_Row
+    if (focus(desktop) <> current_object) send activate
+    set current_item to (top_item(current_object) + current_Col(Current_Object) )
+  end_procedure
+
+  procedure Goto_Bottom_Row
+    local integer lastRow
+    if (focus(desktop) <> current_object) send activate
+    move (row_count(current_object) - 1) to lastRow
+    set current_item to ((lastRow * item_limit(current_object)) + current_Col(Current_Object) )
+  end_procedure
+end_class
+
+//
+// Support Commands
+//
+
+#COMMAND dlStart R R
+  FORWARD_BEGIN_CONSTRUCT !1 !2 !3 !4 !5 !6 !7 !8 !9
+  bind_using !3 !4 !5 !6 !7 !8 !9
+  bind_datalist_main_file !3 !4 !5 !6 !7 !8 !9
+  bind_datalist_index !3 !4 !5 !6 !7 !8 !9
+  bind_batch !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+#COMMAND Bind_Batch
+  #IF (!0>0)
+    #IFSAME !1 BATCH VIRTUAL
+      #IFSAME !1 BATCH
+        set Batch_State to true
+      #ELSE
+        set Batch_State to false
+      #ENDIF
+    #ELSE
+      Bind_Batch !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+#COMMAND Bind_Static
+  #IF (!0>0)
+    #IFSAME !1 STATIC
+      set Batch_State to true
+      set Static_State to true
+    #ELSE
+      Bind_Static !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+#COMMAND bind_datalist_index
+  #IF (!0>1)
+    #IFSAME !1 BY
+      set ordering to !2
+    #ELSE
+      bind_datalist_index !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+#COMMAND bind_datalist_main_file
+  #IF (!0>1)
+    #IFSAME !1 MAIN_FILE
+      #PUSH !u
+      #SET U$ !2.RECNUM
+      set main_file to |CI!u
+      #POP U$
+    #ELSE
+      bind_datalist_main_file !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+//
+// dlEnd <className>
+//
+// This macro ends the declaration of an instance, and checks for the
+// existance of the ELEMENT component (defined by Begin_Row...End_Row)
+//
+#COMMAND dlEnd R
+  //#IFDEF OBJ$!Zj$ROWDEF
+  //#ELSE
+  //  #ERROR 777 Object is missing BEGIN_ROW...END_ROW commands
+  //#ENDIF
+  FORWARD_END_CONSTRUCT !1 !2 !3 !4 !5 !6 !7 !8 !9 //end instance normally
+#ENDCOMMAND

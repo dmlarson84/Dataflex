@@ -1,0 +1,7 @@
+use enclient
+define Entry_Client0 for Entry_Client
+define U_Entry_Client0 for U_Entry_Client
+define Entry_View_Client0 for Entry_View_Client
+define U_Entry_View_Client0 for U_Entry_View_Client
+define Selection_List_Client0 for Selection_List_Client
+define U_Selection_List_Client0 for U_Selection_List_Client

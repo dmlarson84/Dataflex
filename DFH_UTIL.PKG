@@ -1,0 +1,303 @@
+// help maintenance utility classes
+// January 21, 1991
+// LS
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+use sellist
+use text_win
+
+#COMMAND USE_FILE R
+  #IFDEF !1.RECNUM
+  #ELSE
+    #INCLUDE !1.FD
+  #ENDIF
+
+  #IFDEF !1.FILE_NUMBER
+  #ELSE
+    #SET Q$ !1.RECNUM
+    #REPLACE !1.FILE_NUMBER |CI!q
+  #ENDIF
+
+  #IF (!0>1)
+    USE_FILE !2 !3 !4 !5 !6 !7 !8 !9
+  #ENDIF
+#ENDCOMMAND
+
+#IFDEF POINTED_CURSOR_TYPE
+#ELSE
+  #REPLACE POINTED_CURSOR_TYPE |CI2
+#ENDIF
+
+use_file grp sbj xrf ctx  // allow file and field references w/o opening files
+
+class help_maintenance_text_window is a text_window
+    register_function filename returns string
+    register_function initial_highlight_color returns integer
+
+    procedure construct_object
+        forward send construct_object
+
+        property integer export_object   public 0
+        property integer import_object   public 0
+        property integer highlight_color public (initial_highlight_color(current_object))
+        property integer normal_colors   public (object_color(current_object))
+        property integer zoom_state      public 0
+    end_procedure
+
+    procedure end_construct_object
+        local integer fnum
+
+        local integer fil_num fld_num
+        local string dev_name
+
+        get data_file item 0 to fil_num
+        get data_field item 0 to fld_num
+        move "DBMS:" to dev_name
+        append dev_name fil_num "," fld_num
+        set file_name to dev_name
+
+        forward send end_construct_object
+    end_procedure
+
+    function initial_highlight_color returns integer
+        local integer obj chk_obj pal ret_val
+
+        move current_object to obj
+
+        repeat
+            move obj to chk_obj
+            get class_palette (class(chk_obj)) to pal
+            if pal eq 0 get parent of chk_obj to obj
+        until (pal <> 0 or chk_obj = desktop)
+
+        get palette_color pal POINTED_CURSOR_TYPE to ret_val
+        function_return ret_val
+    end_function
+
+    procedure entering returns integer
+        local integer ret_val
+
+        forward get msg_entering to ret_val
+
+        if not ret_val begin
+            set object_color to ;
+            (highlight_color(current_object)) (low(normal_colors(current_object)))
+        end
+    end_procedure
+
+    procedure exiting integer obj returns integer
+        local integer ret_val clrs
+
+        forward get msg_exiting obj to ret_val
+
+        if not ret_val begin
+            get normal_colors to clrs
+            set object_color to (hi(clrs)) (low(clrs))
+        end
+    end_procedure
+
+    procedure release_focus returns integer
+        local integer clrs retval
+
+        forward get msg_release_focus to retval
+
+        if retval procedure_return retval
+
+        get normal_colors to clrs
+        set object_color to (hi(clrs)) (low(clrs))
+    end_procedure
+
+    procedure import_text
+        local integer ret_val imp_obj
+
+        get import_object to imp_obj
+        ui_accept imp_obj to ret_val
+
+        if ret_val ne msg_cancel begin
+            send read (filename( imp_obj ))
+            set changed_state of imp_obj to true
+        end
+    end_procedure
+
+    procedure export_marked_area
+        local integer ret_val
+
+        ui_accept (export_object( current_object )) to ret_val
+
+        if ret_val ne msg_cancel begin
+            send copy_marked_area
+            send write to clipboard (filename( export_object( current_object ) ))
+            send mark_off
+        end
+    end_procedure
+
+    set class_colors to u_!$ 0 0 // set colors for current class to inherit
+end_class
+
+#COMMAND ASSIGN_DBMS_FIELD R . // for use in assigning the dbms field to the text_window
+  #PUSH !l
+  #SET L$ !1 //get file#
+  set data_file item 0 to |CI!l
+  #SET L$ %!1 //get field#
+  set data_field item 0 to |CI!l
+  #POP L$
+#ENDCOMMAND
+
+class help_maintenance_selection_list is a selection_list
+    procedure construct_object integer img
+        forward send construct_object img
+
+        property integer export_server         public 0 // user-specified server to export selected record to
+        property integer export_server_state   public 0 // determines whether to export normally or via export_server
+        property integer current_export_server public 0 // "real" export server - assumed if not user-specified
+        property integer old_popup_state       public 0 // used when making list act like popup when used inside a client
+
+        set auto_fill_state to false // not wanted in popup selection lists
+        set deferred_state  to true  // assume popup = deferred
+    end_procedure
+
+    procedure activating returns integer
+        local integer srvr# obj# ret_val
+
+        forward get msg_activating to ret_val
+        if not ret_val procedure_return ret_val
+
+        get server to srvr#
+
+        if srvr# ne 0 begin
+            get which_data_set of srvr# (main_file(current_object)) to obj#
+            set suggested_ordering of obj# to (ordering(current_object))
+              // alter suggested_ordering of server that controls main_file
+        end
+    end_procedure
+
+    procedure request_cancel
+        set popup_state to (old_popup_state(current_object))
+
+        forward send request_cancel
+
+        set current_export_server to 0
+        set export_server_state to false
+    end_procedure
+
+    procedure add_focus integer obj returns integer
+        local integer exp_svr retval
+        local integer svr mfile
+
+        // latch on to current record
+        get server to svr
+        if svr ne 0 begin
+            get main_file to mfile
+            send request_assign to svr mfile
+        end
+
+        get export_server to exp_svr
+
+        if exp_svr ne 0 begin
+            set current_export_server to exp_svr
+            set export_server_state to true
+        end
+        else begin
+            get server of (focus(desktop)) to exp_svr
+            if (exp_svr <> 0 and server(current_object) <> exp_svr) begin
+                set current_export_server to exp_svr
+                set export_server_state to true
+            end
+        end
+
+        forward get msg_add_focus obj to retval
+        if retval procedure_return retval
+
+        set old_popup_state to (popup_state(current_object))
+        set popup_state to true
+        set focus_mode to focusable
+    end_procedure
+
+    procedure move_value_out
+        local integer exp_svr rec olddisp
+
+        if not (export_server_state(current_object)) forward send move_value_out
+        else begin
+            get current_export_server to exp_svr
+            get first_selected_item to rec
+            get line_display_state to olddisp
+            set line_display_state to true
+            send find_by_recnum to exp_svr (main_file(current_object)) rec
+            set line_display_state to olddisp
+            set changed_state to false  //list not changed after value exported
+      end
+    end_procedure
+
+    procedure cancel
+        local integer exp_svr rec
+
+        if (export_server_state(current_object)) begin
+            get current_export_server to exp_svr
+            get original_selection to rec
+            if (exp_svr <> 0 and rec <> 0) ;
+                        send find_by_recnum to exp_svr (main_file(current_object)) rec
+            send request_cancel
+        end
+        else forward send cancel
+    end_procedure
+end_class
+
+class help_maintenance_prompt_client is a client
+    procedure construct_object integer img
+        forward send construct_object img
+
+        property integer grp_recnum   public 0
+        property integer sbj_recnum   public 0
+        property integer xrf_recnum   public 0
+        property integer prompt_state public 0
+
+        set block_mouse_state to true
+        set popup_state       to true
+        set scope_state       to true
+    end_procedure
+
+    procedure activate returns integer
+        local integer retval
+
+        set grp_recnum to grp.recnum
+        set sbj_recnum to sbj.recnum
+        set xrf_recnum to xrf.recnum
+
+        forward get msg_activate to retval
+
+        procedure_return retval
+    end_procedure
+
+    procedure request_cancel_area
+        local integer rec
+
+        get xrf_recnum to rec
+        if xrf.recnum ne rec begin
+            clear xrf
+            if rec ne 0 begin
+                move rec to xrf.recnum
+                find eq xrf.recnum
+            end
+        end
+
+        get sbj_recnum to rec
+        if sbj.recnum ne rec begin
+            clear sbj
+            if rec ne 0 begin
+                move rec to sbj.recnum
+                find eq sbj.recnum
+            end
+        end
+
+        get grp_recnum to rec
+        if grp.recnum ne rec begin
+            if rec ne 0 begin
+                clear grp
+                move rec to grp.recnum
+                find eq grp.recnum
+            end
+        end
+    end_procedure
+end_class

@@ -1,0 +1,11 @@
+use dfabout
+
+class DAC_About_Client is an About_Client
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        set Copyright_Information to ;
+            "Copyright 1987-1995 Data Access Corp" ;
+            "Miami FL, USA - All rights reserved"
+    end_procedure
+end_class

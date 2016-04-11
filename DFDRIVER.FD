@@ -1,0 +1,4 @@
+#REPLACE FILE3 dfdriver
+#REPLACE dfdriver.RECNUM |FN3,0
+#REPLACE dfdriver.NAME |FS3,1
+#REPLACE dfdriver.DESCRIPTION |FS3,2

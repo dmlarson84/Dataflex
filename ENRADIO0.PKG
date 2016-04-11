@@ -1,0 +1,3 @@
+use enradio
+define Radio_Entry_Form0 for Radio_Entry_Form
+define U_Radio_Entry_Form0 for U_Radio_Entry_Form

@@ -1,0 +1,33 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+//      
+// Module: 
+//      dfmisc.pkg
+//      
+// Purpose:
+//      Miscellaneous procedures/functions/classes.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      8/16/94
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+use ui
+use cd_stuff    // Object Create/Destroy command support
+use destobj     // Object class definitions for object destruction
+
+define DF_SCREENMODE_WINDOW for 1
+define DF_SCREENMODE_IMAGE  for 2
+define DF_SCREENMODE_EXIT   for 256
+define DF_SCREENMODE_INIT   for 257
+
+procedure Locate_In_Center_Of_Screen for Desktop
+    local integer Sz
+
+    get Size to Sz
+    set Location to ((ScreenEnd - hi(Sz) + 1) / 2) ((Screen_Width - low(Sz) + 1) / 2)
+end_procedure
+
+

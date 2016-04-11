@@ -1,0 +1,217 @@
+use ui
+use dfmisc
+use clwindow
+use infowin
+
+/About_Img
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ______________________________________________________บ
+บ                                                      บ
+บ______________________________________________________บ
+บ______________________________________________________บ
+บ                                                      บ
+บ______________________________________________________บ
+บ______________________________________________________บ
+บ                                                      บ
+บ This license is registered to:                       บ
+บ ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ บ
+บ ณ__________________________________________________ณ บ
+บ ณ__________________________________________________ณ บ
+บ ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู บ
+บ                                                      บ
+บ                                                      บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/About_Button_Img
+             ____        ________________             
+/System_Information_Client_Img
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ________________________________________________________________บ
+บ                                                                บ
+บ ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ บ
+บ ณ                                                            ณ บ
+บ ณ                                                            ณ บ
+บ ณ                                                            ณ บ
+บ ณ                                                            ณ บ
+บ ณ                                                            ณ บ
+บ ณ                                                            ณ บ
+บ ณ                                                            ณ บ
+บ ณ                                                            ณ บ
+บ ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู บ
+บ                                                                บ
+บ                                                                บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/System_Information_Button_Img
+                              ____                              
+/*
+
+class System_Information_Client is a Client_Window
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        set Popup_State to TRUE
+        set Block_Mouse_State to TRUE
+        set Value to "DataFlex System Information"
+        send Locate_In_Center_Of_Screen
+
+        object Button is a Button System_Information_Button_Img
+            set Location to 14 1 RELATIVE
+
+            item_list
+                on_item "<OK>" send Close_Client
+            end_item_list
+        end_object
+
+        object Info is an Information_Window
+            set Size to 8 59
+            set Location to 4 3 RELATIVE
+        end_object
+
+        set Key_Path to Desktop
+    end_procedure
+
+    procedure Activating
+        local integer obj
+
+        move (Info(Current_Object)) to Obj
+        send Delete_Data to Obj
+
+        send Show_Dataflex_Rev
+        send Show_User_Count
+        send Show_Memory
+        send Show_Current_Directory
+        send Show_Screen_Size
+        send Show_Page_Size
+        send Show_Date
+
+        send Beginning_Of_Data to Obj
+
+        forward send Activating
+    end_procedure
+
+    procedure Add_Line string Val
+        send Add_Line to (Info(current_object)) Val
+    end_procedure
+
+    procedure Show_Dataflex_Rev
+        send Add_Line ("DataFlex " + sysconf(SYSCONF_DATAFLEX_REV) + ;
+                " for " + sysconf(SYSCONF_OS_NAME))
+    end_procedure
+
+    procedure Show_User_Count
+        local integer Cnt Max_Cnt
+        
+        get_current_user_count to Cnt
+        get_licensed_max_users to Max_Cnt
+        send Add_Line ("Active users: " + string(Cnt) ;
+                + ", Maximum allowed: " + string(Max_Cnt) ;
+                + if(MULTIUSER," (Multi-User)", " (Single-User)"))
+    end_procedure
+
+    procedure Show_Memory
+        local integer Mem
+
+        memory Mem
+        send Add_Line ("Available memory: " + string(Mem))
+    end_procedure
+
+    procedure Show_Current_Directory
+        local integer DF
+        local string Dir
+
+        get_current_directory to Dir
+        diskfree Dir to DF
+        send Add_Line ("Current directory: " + Dir)
+        send Add_Line ("Available space: " + string(DF))
+    end_procedure
+
+    procedure Show_Screen_Size
+        send Add_Line ("Screen size: " + string(Screenend + 1) + ;
+            "x" + string(Screen_Width + 1))
+    end_procedure
+
+    procedure Show_Page_Size
+        send Add_Line ("Output text lines per page: " + string(Pageend) + ", End of page: " + string(Pagefeed))
+    end_procedure
+
+    procedure Show_Date
+        local date Today
+
+        sysdate Today
+        send Add_Line ("Current system date: " + string(Today))
+    end_procedure
+end_class
+
+enum_list
+    define ABOUT_ITEM_PROGRAM_INFO_NAME for 1
+    define ABOUT_ITEM_PROGRAM_INFO_VERSION
+    define ABOUT_ITEM_COPYRIGHT1
+    define ABOUT_ITEM_COPYRIGHT2
+    define ABOUT_ITEM_REG_NAME
+    define ABOUT_ITEM_SERIAL_NUMBER
+end_enum_list
+
+class About_Client is a Client_Window
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        set Popup_State to TRUE
+        set Attach_Parent_State to FALSE
+        set Block_Mouse_State to TRUE
+        set Value to "About"
+        send Locate_In_Center_Of_Screen
+
+        set Center_State item ABOUT_ITEM_PROGRAM_INFO_NAME to TRUE
+        set Center_State item ABOUT_ITEM_PROGRAM_INFO_VERSION to TRUE
+
+        set Center_State item ABOUT_ITEM_COPYRIGHT1 to TRUE
+        set Center_State item ABOUT_ITEM_COPYRIGHT2 to TRUE
+
+        object Button is a Button About_Button_Img
+            set Location to 15 1 RELATIVE
+
+            item_list
+                on_item "<OK>" send Close_Client
+                on_item "<System Info...>" send System_Info
+            end_item_list
+        end_object
+
+        object Sys_Info is a System_Information_Client System_Information_Client_Img
+        end_object
+
+        set Key_Path to Desktop
+    end_procedure
+
+    procedure Activating
+        local string Reg_Name
+        local integer Ser_Num
+
+        registration Reg_Name Ser_Num
+
+        set Value item ABOUT_ITEM_REG_NAME to Reg_Name
+        set Value item ABOUT_ITEM_SERIAL_NUMBER to ("Serial number: " + string(Ser_Num))
+
+        forward send Activating
+    end_procedure
+
+    procedure set Program_Information string Prog_Name string Ver_Id
+        set Value item ABOUT_ITEM_PROGRAM_INFO_NAME to Prog_Name
+        if Num_Arguments GT 1 ;
+            set Value item ABOUT_ITEM_PROGRAM_INFO_VERSION ;
+                to ("Version " + Ver_Id)
+        else ;
+            set Value item ABOUT_ITEM_PROGRAM_INFO_VERSION to ""
+    end_procedure
+
+    procedure set Copyright_Information string Cpr1 string Cpr2
+        set Value item ABOUT_ITEM_COPYRIGHT1 to Cpr1
+
+        if Num_Arguments GT 1 ;
+            set Value item ABOUT_ITEM_COPYRIGHT2 to Cpr2
+        else ;
+            set Value item ABOUT_ITEM_COPYRIGHT2 to ""
+    end_procedure
+
+    procedure System_Info
+        send Popup to (Sys_Info(Current_Object))
+    end_procedure
+end_class

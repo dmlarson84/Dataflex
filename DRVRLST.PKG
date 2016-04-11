@@ -1,0 +1,299 @@
+use ui
+use dfmisc
+use clwindow
+use igncslst
+use key_btn
+
+declare_datafile DFDriver
+
+#COMMAND INIT_FIELD_NUMBER R .
+  #SET Q$ %!1
+#ENDCOMMAND
+
+init_field_number DFDriver.Name
+define DFDriver.Name.Field_Number for !q
+init_field_number DFDriver.Description
+define DFDriver.Description.Field_Number for !q
+
+///Database_Driver_Selection_Client_Img
+//ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+//บ__________________________________________________________________บ
+//บ                                                                  บ
+//บ Active Description                              Name             บ
+//บ  ___   ________________________________________ _______________  บ
+//บ  ___   ________________________________________ _______________  บ
+//บ  ___   ________________________________________ _______________  บ
+//บ  ___   ________________________________________ _______________  บ
+//บ  ___   ________________________________________ _______________  บ
+//บ                                                                  บ
+//บ                                                                  บ
+//ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/Database_Driver_Selection_Client_Img
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ__________________________________________________________________บ
+บ                                                                  บ
+บ Active Description                              Name             บ
+บ                                                                  บ
+บ                                                                  บ
+บ                                                                  บ
+บ                                                                  บ
+บ                                                                  บ
+บ                                                                  บ
+บ                                                                  บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/Database_Driver_Active_List_Img
+___
+___
+___
+___
+___
+/Database_Driver_Descr_List_Img
+________________________________________
+________________________________________
+________________________________________
+________________________________________
+________________________________________
+/Database_Driver_Name_List_Img
+_______________
+_______________
+_______________
+_______________
+_______________
+/Database_Driver_Button_Img
+            _______       ____________       _________            
+/*
+
+register_object Driver_Name
+
+class Database_Driver_Description_List is an Ignore_Case_Item_Matching_List
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        set Select_Mode to AUTO_SELECT
+    end_procedure
+
+    procedure set Top_Item integer Itm
+        forward set Top_Item Itm
+        delegate set Other_Lists_Top_Item Itm
+    end_procedure
+
+    procedure Item_Change integer Fr_Itm integer To_Itm returns integer
+        local integer Itm
+
+        forward get MSG_Item_Change Fr_Itm To_Itm to Itm
+        delegate set Other_Lists_Current_Item to Itm
+        procedure_return Itm
+    end_procedure
+end_class
+
+class Database_Driver_Selection_Client is a Client_Window
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        property integer Explicit_Invoking_Object   PUBLIC 0
+        property integer Invoking_Object_ID         PUBLIC 0
+        property integer Invoking_Item              PUBLIC CURRENT
+
+        set Attach_Parent_State to FALSE
+        set Block_Mouse_State to TRUE
+        set Popup_State to TRUE
+        send Locate_In_Center_Of_Screen
+
+        set Value to "Database Drivers"
+
+        object Known_Driver_List is an Array
+        end_object
+
+        object Active_List is a Checklist Database_Driver_Active_List_Img
+            set Location to 4 3 RELATIVE
+            set Focus_Mode to NONFOCUSABLE
+            set Scroll_Bar_Visible_State to FALSE
+        end_object
+
+        object Descr_List is a Database_Driver_Description_List Database_Driver_Descr_List_Img
+            set Location to 4 9 RELATIVE
+            set Scroll_Bar_Visible_State to TRUE
+            set Location of (Scrollbar(Current_Object)) to 0 56 RELATIVE
+        end_object
+
+        object Name_List is an Ignore_Case_Item_Matching_List Database_Driver_Name_List_Img
+            set Location to 4 50 RELATIVE
+            set Focus_Mode to NONFOCUSABLE
+            set Select_Mode to AUTO_SELECT
+            set Scroll_Bar_Visible_State to FALSE
+        end_object
+
+        object Button is a Button Database_Driver_Button_Img
+            set Location to 10 1 RELATIVE
+
+            item_list
+                on_item "<F2=OK>" send Save_Driver
+                on_item "<Esc=Cancel>" send Close_Client
+                on_item "<F1=Help>" send Help
+            end_item_list
+        end_object
+
+        set Key_Path to Desktop
+
+        on_key KSAVE_RECORD send Save_Driver
+        on_key KHELP        send Help
+    end_procedure
+
+    procedure Initialize
+        send Delete_Data to (Known_Driver_List(Current_Object))
+        send Delete_Data to (Active_List(Current_Object))
+        send Delete_Data to (Descr_List(Current_Object))
+        send Delete_Data to (Name_List(Current_Object))
+
+        send Add_Drivers
+    end_procedure
+
+    function Active_Index string Drv_Name returns integer
+        local integer Idx Tot
+        local string Active_Drv
+
+        move 1 to Idx
+        get_attribute DF_NUMBER_DRIVERS to Tot
+
+        while Idx LE Tot
+            get_attribute DF_DRIVER_NAME of Idx to Active_Drv
+
+            if Active_Drv EQ Drv_Name ;
+                function_return Idx
+
+            increment Idx
+        end
+
+        function_return 0
+    end_function
+
+    procedure Error_Report
+        indicate Err TRUE
+    end_procedure
+
+    procedure Add_Drivers
+        local integer Kno_Obj Act_Obj Dsc_Obj Nam_Obj Was_ID
+        local integer Idx Tot Open_Err Driver_File#
+        local string Name_Val Description_Val
+
+        move (Known_Driver_List(Current_Object)) to Kno_Obj
+        move (Active_List(Current_Object)) to Act_Obj
+        move (Descr_List(Current_Object)) to Dsc_Obj
+        move (Name_List(Current_Object)) to Nam_Obj
+
+        //
+        // First, add drivers from dfdriver datafile
+        //
+        get_attribute DF_FILE_NEXT_EMPTY to Driver_File#
+
+        indicate Err FALSE
+        move Error_Object_ID to Was_ID
+        move Current_Object to Error_Object_ID
+
+        open "dfdriver" as Driver_File# Index.2
+
+        move Was_ID to Error_Object_ID
+        move (Err) to Open_Err
+        indicate Err FALSE
+
+        if not Open_err begin
+            clear Driver_File#
+            vfind Driver_File# Index.2 GE
+
+            while [Found]
+                get_field_value Driver_File# DFDriver.Name.Field_Number to Name_Val
+                get_field_value Driver_File# DFDriver.Description.Field_Number to Description_Val
+                get Active_Index (trim(Name_Val)) to Idx
+
+                if Idx GT 0 ;
+                    set Array_Value of Kno_Obj item Idx to 1
+
+                send Add_Item to Act_Obj MSG_None ""
+                set Select_State of Act_Obj item (Item_Count(Act_Obj) - 1) to (Idx > 0)
+                send Add_Item to Nam_Obj MSG_None (trim(Name_Val))
+                send Add_Item to Dsc_Obj MSG_Next (trim(Description_Val))
+
+                vfind Driver_File# Index.2 GT
+            end
+
+            close Driver_File#
+        end
+
+        //
+        // Then add active drivers not found in dfdriver datafile
+        //
+        move 1 to Idx
+        get_attribute DF_NUMBER_DRIVERS to Tot
+
+        while Idx LE Tot
+            if (Integer_Value(Kno_Obj, Idx)) NE 1 begin
+                send Add_Item to Act_Obj MSG_None ""
+                set Select_State of Act_Obj item (Item_Count(Act_Obj) - 1) to TRUE
+                send Add_Item to Nam_Obj MSG_None ""
+                get_attribute DF_DRIVER_NAME of Idx to Name_Val
+                send Add_Item to Dsc_Obj MSG_Next Name_Val
+            end
+
+            increment Idx
+        end
+    end_procedure
+
+    procedure set Other_Lists_Top_Item integer Itm
+        local integer Obj
+
+        set Top_Item of (Active_List(Current_Object)) to Itm
+
+        move (Name_List(Current_Object)) to Obj
+        set Top_Item of Obj to Itm
+        set Select_State of Obj to TRUE
+    end_procedure
+
+    procedure set Other_Lists_Current_Item integer Itm
+        set Current_Item of (Active_List(Current_Object)) to Itm
+        set Current_Item of (Name_List(Current_Object)) to Itm
+    end_procedure
+
+    procedure Activating
+        local integer Obj Itm
+        local string Val
+
+        send Initialize
+
+        get Invoking_Object_ID to Obj
+        set Explicit_Invoking_Object to Obj
+        
+        if Obj EQ 0 begin
+            get Focus to Obj
+            set Invoking_Object_ID to Obj
+        end
+
+        get Value of Obj item (Invoking_Item(Current_Object)) to Val
+
+        move (Descr_List(Current_Object)) to Obj
+
+        move 0 to Itm
+        get Ignore_Case_Item_Matching of Obj Val Itm to Itm
+
+        if Itm EQ -1 begin
+            move 0 to Itm
+            get Ignore_Case_Item_Matching of (Name_List(Current_Object)) Val Itm to Itm
+        end
+
+        if Itm NE -1 ;
+            set Current_Item of Obj to Itm
+
+        forward send Activating
+    end_procedure
+
+    procedure Save_Driver
+        if (Item_Count(Descr_List(Current_Object))) GT 0 ;
+            set Value of (Invoking_Object_ID(Current_Object)) ;
+                item (Invoking_Item(Current_Object)) ;
+                to (Value(Descr_List(Current_Object), CURRENT))
+
+        if not (Explicit_Invoking_Object(Current_Object)) ;
+            set Invoking_Object_ID to 0
+            
+        send Close_Client
+    end_procedure
+end_class

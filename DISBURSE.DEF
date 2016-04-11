@@ -1,0 +1,39 @@
+        FILE DEFINITION LISTING FOR FILE #8
+*************************************************** 
+        FILE ROOT NAME     = DISBURSE
+        USER DISPLAY NAME  = HC Disbursement File
+        DATAFLEX FILE NAME = DISBURSE
+*************************************************** 
+        RECORD LENGTH = 85  (USED = 77)
+        MAX NUMBER OF RECORDS = 65000  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       5   NUMERIC   0    1     0     0     ID_NO
+   2       6       6   NUMERIC   0    1     0     0     SEQ_NO
+   3       1      11   OVERLAP        1     7     3     OVERLAP
+   4      12       5   NUMERIC   0    5     0     0     IDNO
+   5      17       2   NUMERIC   0    5     0     0     SEQNO
+   6      12       7   OVERLAP        5     6    21     OVERLAP2
+   7      19      30   ASCII          2     6     4     MERCHANT
+   8      49       3   DATE           2     0     0     DISPDT
+   9      52       4   NUMERIC   2    0     0     0     DISPAMT
+  10      56       1   ASCII          0     0     0     MANUAL
+  11      57       4   NUMERIC   0    7     0     0     CHKNO
+  12      61       3   NUMERIC   2    0     0     0     PROSAMT
+  13      64       4   NUMERIC   0    3     0     0     PCKNO
+  14      68       1   NUMERIC   0    3     0     0     MONTH
+  15      69       4   NUMERIC   2    0     0     0     PROS_TOTAL
+  16      73       5   NUMERIC   0    6     6     3     MERCHANT_IDNO
+ 
+INDEX 1:  FIELD SEGMENTS:  <3>   <6>   
+INDEX 2:  FIELD SEGMENTS:  <8>   <7>   <16>   <6>   
+INDEX 3:  FIELD SEGMENTS:  <8>   <14>   <13>   <11>   <7>   <6>   
+INDEX 4:  FIELD SEGMENTS:  <8>   <14>   <3>   <6>   
+INDEX 5:  FIELD SEGMENTS:  <6>   
+INDEX 6:  FIELD SEGMENTS:  <16>   <6>   
+INDEX 7:  FIELD SEGMENTS:  <11>   <16>   <3>   <6>   
+
