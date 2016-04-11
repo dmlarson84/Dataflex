@@ -1,0 +1,670 @@
+//
+// Calendar.Pkg
+// November 26, 1991
+// Theo van Dongeren
+//
+// Modeless prompt package for date values
+//
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+use sysbutn
+
+/calendar
+ÚÄ[_]ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³_________________________³
+³Wk³Su Mo Tu We Th Fr Sa  ³
+³_.³_. _. _. _. _. _. _.  ³
+³_.³_. _. _. _. _. _. _.  ³
+³_.³_. _. _. _. _. _. _.  ³
+³_.³_. _. _. _. _. _. _.  ³
+³_.³_. _. _. _. _. _. _.  ³
+³_.³_. _. _. _. _. _. _.  ³
+³  <_______>   <_______>  ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+/calendar_system_pull_down
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³ ______________ ³
+³ ______________ ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+/*
+
+#IFDEF P_ACTION_BAR
+#ELSE
+    #REPLACE P_ACTION_BAR |CI3
+#ENDIF
+
+class system_pull_down is a menu
+    procedure construct_object integer image
+        forward send construct_object image
+
+        set popup_state to true
+        set exit_msg to exit
+        set class_palette of desktop to u_system_pull_down p_action_bar
+        set inverse_state to true
+
+        on_key kcancel send deactivate private
+    end_procedure
+
+    procedure move_parent
+        send deactivate
+        send move_calendar
+    end_procedure
+
+    procedure mouse_click 
+        send go_away
+    end_procedure
+end_class
+
+class calendar_scrollb is a scrollb
+    procedure set arrows integer up_ar integer dn_ar
+        // always force scrollbar arrows on
+        forward set arrows true true
+    end_procedure
+end_class
+
+register_object monthsize
+
+// this class handles the calendar body (the day numbers)
+class calendar_body is a list
+    procedure construct_object integer image
+        forward send construct_object image
+
+        object scroll_bar is a calendar_scrollb
+        end_object
+
+        set scroll_bar_offset to 1
+
+        on_key key_alt+key_f10 send pull_down_system private
+
+        property integer ok_item public
+
+        item_list
+            repeat_item 42 times '' send move_value_out
+        end_item_list
+    end_procedure
+
+    // check if new item is valid (non-zero)
+    // keep this information handy for msg_mouse_up which
+    // will be sent if the item selection was made by mouse
+    procedure set current_item integer item#
+        local integer invalid
+
+        get shadow_state item item# to invalid
+        if (not(invalid)) begin
+            set ok_item to true
+            forward set current_item to item#
+        end
+        else set ok_item to false
+    end_procedure
+
+    // check if mouse selection is valid
+    // uses information set by set_current_item
+    procedure mouse_up integer win# integer char
+        local integer valid
+
+        get ok_item to valid
+        if valid forward send mouse_up win# char
+    end_procedure
+
+    // augmented to update properties needed for date calculations
+    procedure item_change integer from# integer to# returns integer
+        // update properties
+        delegate send newdate (to# - from#)
+        // go to new item
+        procedure_return to#
+    end_procedure
+
+    // initializes the calendar body display and the properties needed
+    // for date calculations
+    procedure init_body integer thismonth
+        local integer index day offset prevmonth
+        local date startdate
+
+        // turn off real-time display update
+        set dynamic_update_state to false
+
+        // get work values
+        delegate get original_date to startdate
+        delegate get work_day to day
+
+        // calculate weekday of day one of this month
+        // NB. startdate has 4-digit year
+        move (mod((startdate - day - 1),7)) to offset
+
+        get work_month to prevmonth
+        move (mod((prevmonth + 10),12) + 1) to prevmonth
+        get integer_value of (monthsize(parent(current_object))) item prevmonth ;
+            to prevmonth
+
+        // fill in calendar body display
+        for index from 0 to 41
+            if (index < offset) begin
+                set value item index to (index - offset + prevmonth + 1)
+                set shadow_state item index to true
+            end
+            else if (index >= (offset + thismonth)) begin
+                set value item index to (index - offset - thismonth + 1)
+                set shadow_state item index to true
+            end
+            else begin
+                set value item index to (index - offset + 1)
+                set shadow_state item index to false
+            end
+        loop
+
+        // protect original_date, work_date and work_day, since set_current_item
+        // will send msg_item_change, which changes these properties.
+        delegate get work_date to index
+
+        // preset current_item
+        set current_item to (day + offset - 1)
+
+        // restore work properties
+        delegate set original_date to startdate
+        delegate set work_date to index
+        delegate set work_day to day
+
+        // display new calendar body
+        set dynamic_update_state to true
+    end_procedure
+
+    // override scroll messages sent by scrollbar
+    procedure scroll integer direction integer distance
+        if direction send next_month
+        else send prev_month
+    end_procedure
+end_class
+
+// this class handles the calendar popup
+class calendar_popup is a client
+    procedure construct_object integer dummy
+        local integer c1 c2
+
+        // force usage of the built-in image
+        forward send construct_object calendar.n
+
+        property date original_date public          // the 'real' date
+        property date work_date public              // previous minus centuries
+        property integer work_year public
+        property integer work_month public
+        property integer work_day public
+        property integer work_adjust public         // # of centuries
+        property integer invoking_object public     // object that called us
+        property integer doing_exit public (false)  // flag to prevent recursion
+        property string monthnames public ;
+            'January  February March    April    May      June     July     August   SeptemberOctober  November December '
+
+
+        // default state
+        set popup_state to true
+        set scope_state to true
+
+        // accelerator key definitions
+        on_key kcancel send go_away
+        on_key kclose_panel send go_away
+        on_key kfind_previous send prev_year
+        on_key kfind_next send next_year
+        on_key kscroll_back send prev_month
+        on_key kscroll_forward send next_month
+
+        sub_page sysbutton from calendar 1
+        sub_page title_box from calendar 2
+        sub_page weeks from calendar vertical 3 6
+        sub_page cal_body from calendar rectangular 4 7 6
+        sub_page button from calendar horizontal 51 2
+
+        // month sizes; note that size of february is missing.
+        // this value is filled in as we go
+        object monthsize is an array
+            set array_value item 1  to 31
+            set array_value item 3  to 31
+            set array_value item 4  to 30
+            set array_value item 5  to 31
+            set array_value item 6  to 30
+            set array_value item 7  to 31
+            set array_value item 8  to 31
+            set array_value item 9  to 30
+            set array_value item 10 to 31
+            set array_value item 11 to 30
+            set array_value item 12 to 31
+        end_object
+
+        // system button
+        object sysbutton is a system_button
+            item_list
+                on_item 'ð' send pull_down_system
+            end_item_list
+        end_object
+
+        // system menu
+        object calendar_system_pull_down is a system_pull_down
+            set location to 1 0 relative
+
+            item_list
+                on_item 'Move...       ' send move_parent
+                on_item 'Close  Ctrl+F4' send go_away
+            end_item_list
+        end_object
+
+        // calendar title
+        object title_box is a title
+            set center_state item 0 to true
+            set value item 0 to ''
+        end_object
+
+        // weeknumbers
+        object weeks is a title
+            set value item 0 to ''
+            set value item 1 to ''
+            set value item 2 to ''
+            set value item 3 to ''
+            set value item 4 to ''
+            set value item 5 to ''
+            set shadow_state item 0 to true
+            set shadow_state item 1 to true
+            set shadow_state item 2 to true
+            set shadow_state item 3 to true
+            set shadow_state item 4 to true
+            set shadow_state item 5 to true
+        end_object
+
+        // calendar body (day numbers plus scrollbar)
+        object body is a calendar_body cal_body
+        end_object
+
+        // buttons for going to previous and next year
+        object button is a button
+            set focus_mode to pointer_only
+            item_list
+                on_item '' send prev_year
+                set center_state to true
+                on_item '' send next_year
+                set center_state to true
+            end_item_list
+        end_object
+    end_procedure
+
+    procedure pull_down_system
+        send popup to (calendar_system_pull_down(current_object))
+    end_procedure
+
+    // we need to do this; don't just deactivate
+    procedure go_away
+        local integer new_focus
+
+        get invoking_object to new_focus
+        send activate to new_focus
+    end_procedure
+
+    // we need to do this; don't just deactivate
+    procedure exiting_scope integer new_scope returns integer
+        local integer new_focus retval
+
+        if (doing_exit(current_object)) begin
+            forward get msg_exiting_scope new_scope to retval
+            procedure_return retval
+        end
+        set doing_exit to true
+        get scope_focus of new_scope to new_focus
+        send activate to new_focus
+        send deactivate
+        set doing_exit to false
+    end_procedure
+
+    // returns true if supplied year is a leapyear
+    function leapyear integer year returns integer
+        function_return (mod(year,4) = 0)
+    end_function
+
+    // this message will be sent by the invoking object
+    procedure popup
+        local integer obj#
+        local date import_date
+
+        // add ourselves to the focus tree
+        forward send popup
+
+        // find out who called us
+        get prior_level to obj#
+        set invoking_object to obj#
+
+        // get caller's current item value
+        get value of obj# item current to import_date
+
+        // initialize to today if it's zero
+        if import_date eq 0 sysdate import_date
+
+        // set up starting point and prepare the display
+        set original_date to import_date
+        send init_date true
+    end_procedure
+
+    // this initializes the calendar display
+    procedure init_date integer flag
+        local integer period index remainder wrk_year wrk_month jan1day
+        local integer namelength maxweek
+        local string title_text
+        local date wrk_date week0date jan1st
+
+        get original_date to wrk_date
+
+        // get # of centuries
+        move (wrk_date / 36525) to index
+
+        if flag begin
+            // if year is less than 100 assume 2 digit year; 
+            // adjust by 19 centuries
+            if index eq 0 begin
+                move 19 to index
+                set work_adjust to index
+                move (wrk_date + (index * 36525)) to wrk_date
+                set original_date to wrk_date
+            end
+            else set work_adjust to 0
+        end
+
+        // strip centuries
+        move (wrk_date - (index * 36525)) to wrk_date
+
+        // keep handy
+        set work_date to wrk_date
+
+        // calculate number of full 4-year periods (366 + (3 * 365) days)
+        move (wrk_date / 1461) to period
+
+        // calculate # of days into current period
+        move (mod(wrk_date,1461)) to remainder
+
+        // calculate current year (0 - 99)
+        move ((period * 4) + integer(remainder / 365.25)) to wrk_year
+
+        // calculate Jan 1st
+        move (wrk_year * 365.25 + 0.75) to jan1st
+
+        // calculate daynum of Jan 1st
+        move (mod(jan1st,7)) to jan1day
+
+        // calculate date of Sunday of week 0 (week prior to week 1)
+        move (jan1st - jan1day) to week0date
+        if jan1day le 3 move (week0date - 7) to week0date
+
+        // add centuries
+        move (wrk_year + (index * 100)) to wrk_year
+
+        // keep handy
+        set work_year to wrk_year
+
+        // calculate # of days into current year
+        // and set size of February
+        if (leapyear(current_object,wrk_year)) ;
+            set array_value of (monthsize(current_object)) item 2 to 29
+        else begin
+            set array_value of (monthsize(current_object)) item 2 to 28
+            move (mod((remainder - 366),365)) to remainder
+        end
+
+        // make remaining # of days 1-based (was 0-based)
+        increment remainder
+
+        // calculate current month
+        for index from 1 to 12
+            move index to wrk_month
+            get array_value of (monthsize(current_object)) item wrk_month to period
+            move (remainder - period) to remainder
+        until remainder le 0
+
+        // keep month and day handy
+        set work_month to wrk_month
+        set work_day to (remainder + period)
+
+        // set up title
+        get monthnames to title_text
+        move (length(title_text) / 12) to namelength
+        trim (mid(title_text,namelength,((wrk_month - 1) * namelength + 1))) ;
+            to title_text
+        set value of (title_box(current_object)) item 0 to (title_text + ', ' + string(wrk_year))
+
+        // set up buttons
+        set value of (button(current_object)) item 0 to ('F7=' + string(wrk_year - 1))
+        set value of (button(current_object)) item 1 to ('F8=' + string(wrk_year + 1))
+
+        // initialize calendar body
+        send init_body to (body(current_object)) period
+
+        // initialize week column
+        get work_day to remainder
+        move ((wrk_date - remainder + 1 - week0date) / 7) to period
+
+        // fill week column
+        move 52 to maxweek
+        set value of (weeks(current_object)) item 0 to (if(period,period,53))
+        for index from 1 to 5
+            increment period
+            if period eq 52 begin
+                if (value(body(current_object),(index * 7))) le 21 ;
+                    move 53 to maxweek
+            end
+            else if period gt maxweek move 1 to period
+            set value of (weeks(current_object)) item index to period
+        loop
+    end_procedure
+
+    // this gets called by calendar body due to an item change;
+    // updates some work properties
+    procedure newdate integer incr
+        set original_date to (original_date(current_object) + incr)
+        set work_date to (work_date(current_object) + incr)
+        set work_day to (work_day(current_object) + incr)
+    end_procedure
+
+    // go to previous month
+    procedure prev_month
+        local integer prevone wrk_day
+        local date org_date
+
+        get original_date to org_date
+
+        // cannot go to prev month if this is January of year 0
+        if org_date lt 31 procedure_return
+
+        // calculate previous month's number
+        get work_month to prevone
+        decrement prevone
+        if prevone lt 1 move 12 to prevone
+
+        // get previous month's size and adjust date
+        get array_value of (monthsize(current_object)) item prevone to prevone
+        move (org_date - prevone) to org_date
+
+        // find closest match if new month has fewer days than current month
+        get work_day to wrk_day
+        if wrk_day gt prevone move (org_date - wrk_day + prevone) to org_date
+
+        // keep new date
+        set original_date to org_date
+
+        // redo calendar display
+        send init_date false
+    end_procedure
+
+    // go to next month
+    procedure next_month
+        local integer thisone nextone wrk_day
+        local date org_date
+
+        get original_date to org_date
+
+        // get this month's number
+        get work_month to thisone
+
+        // get this month's size
+        get array_value of (monthsize(current_object)) item thisone to thisone
+
+        // calculate next month's number
+        get work_month to nextone
+        increment nextone
+        if nextone gt 12 move 1 to nextone
+
+        // get next month's size and adjust date
+        get array_value of (monthsize(current_object)) item nextone to nextone
+        move (org_date + thisone) to org_date
+
+        // find closest match if new month has fewer days than current month
+        get work_day to wrk_day
+        if wrk_day gt nextone move (org_date - wrk_day + nextone) to org_date
+
+        // keep new date
+        set original_date to org_date
+
+        // redo calendar display
+        send init_date false
+    end_procedure
+
+    // go to previous year
+    procedure prev_year
+        local integer adjustment year month
+        local date org_date
+
+        get original_date to org_date
+
+        // cannot go to prev year if this is year 0
+        if org_date lt 366 procedure_return
+
+        get work_year to year
+        get work_month to month
+
+        // check if current year is leapyear if we're in or past march
+        if month ge 3 move (leapyear(current_object,year)) to adjustment // set to 1 if leapyear
+
+        // adjust date
+        move (org_date - 365) to org_date
+        decrement year
+
+        // check if new year is leapyear if we're in or before february
+        if month le 2 move (leapyear(current_object,year)) to adjustment // set to 1 if leapyear
+
+        // adjust date if necessary
+        move (org_date - adjustment) to org_date
+
+        // keep date
+        set original_date to org_date
+
+        // redo calendar display
+        send init_date false
+    end_procedure
+
+    // go to next year
+    procedure next_year
+        local integer adjustment year month
+        local date org_date
+
+        get original_date to org_date
+        get work_year to year
+        get work_month to month
+
+        // check if current year is leapyear if we're in or before february
+        if month le 2 move (leapyear(current_object,year)) to adjustment // set to 1 if leapyear
+
+        // adjust date
+        move (org_date + 365) to org_date
+        increment year
+
+        // check if new year is leapyear if we're in or past march
+        if month ge 3 move (leapyear(current_object,year)) to adjustment // set to 1 if leapyear
+
+        // adjust date if necessary
+        move (org_date + adjustment) to org_date
+
+        // keep date
+        set original_date to org_date
+
+        // redo calendar display
+        send init_date false
+    end_procedure
+
+    // this exports a selected date to the calling object's current item
+    procedure move_value_out
+        local integer obj# adjust
+        local date export_date
+
+        get original_date to export_date
+
+        // adjust to original # of year digits if necessary
+        get work_adjust to adjust
+        if adjust move (export_date - (adjust * 36525)) to export_date
+
+        // set calling object's current item value
+        get invoking_object to obj#
+        set value of obj# item current to export_date
+        set item_changed_state of obj# item current to true
+
+        // go away
+        send activate to obj#
+    end_procedure
+
+    // this moves the calendar popup under cursor & mouse control;
+    // it makes use of the rubberband inside the system button to do all
+    // the dirty work
+    procedure move_calendar
+        local integer complex row col
+        local string achar
+
+        // set new mouse location; tie it to upper-lefthand corner of popup
+        get location to complex
+        move (hi(complex)) to row
+        move (low(complex)) to col
+        set absolute_mouse_location to row col true
+
+        // display the rubberband
+        send popup to (rubberband(sysbutton(current_object)))
+
+        // keep asking for keys
+        repeat
+            inkey achar
+
+            // was any of the mouse keys pressed?
+            indicate key.mouse as flexkey eq 53
+
+            // abort the move
+            [key.escape] send deactivate to (rubberband(sysbutton(current_object)))
+
+            // check for valid key (up, down, left, right, or mouse)
+            [not key.escape] indicate key.ok group any [key.left key.right key.up] ;
+                or any [key.down key.mouse]
+
+            // process valid keys only
+            [not key.escape key.ok] begin
+                // get current mouse location
+                get absolute_mouse_location to complex
+                move (hi(complex)) to row
+                move (low(complex)) to col
+
+                // Note: it's important to inquire the mouse's location every time 
+                // around, since dragging the rubberband may cause the mouse's
+                // location to be justified when trying to drag the
+                // rubberband off the screen (ie. outside of the desktop object).
+
+                // process arrow keys
+                [key.left] decrement col
+                [key.right] increment col
+                [key.up] decrement row
+                [key.down] increment row
+
+                // set new mouse location
+                set absolute_mouse_location to row col true
+
+                // redraw rubberband at mouse location
+                send drag_me to (rubberband(sysbutton(current_object)))
+                // this MAY also adjust the mouse's location; see note above
+            end
+
+            // moving done; drop popup at rubberband location
+            [key.return] send drop_me to (rubberband(sysbutton(current_object)))
+
+        // keep going until escape or enter is pressed
+        [not key.escape not key.return] loop
+    end_procedure
+end_class
+

@@ -1,0 +1,79 @@
+/SELECT                              CLEAROFF.RPT
+                              HOT CHECK SYSTEM
+                           Clear Warrant/Summaons Date Info
+
+						   
+						   
+						   
+						   
+		   Reprint Warrant or Summons _  (W/S)
+		   
+           Enter the date you wish to look for: __/__/____
+/info
+
+Recompiled 01-19-2000 by Jeff March
+        Recognize new backspace command in calcdate.inc
+          
+/*
+//----------------- Cannot Run Program From Command Line (DOS)
+use y2k.pkg
+Read_dfini "df23ini.cfg"
+
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+#include calcdate.inc
+#include macs.frm
+
+OPEN OFFENSE INDEX.4
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+String scrSelection 1
+DATE TODAY COMPDATE
+SYSDATE TODAY
+
+PAGE SELECT
+ACCEPT SELECT.1
+ACCEPT SELECT.2
+REPORT OFFENSE BY INDEX.4
+
+           INDICATE SELECT AS OFFENSE.ACTIVE EQ ''
+[~ SELECT] GOTO END.OF.REPORT
+If Select.1 EQ 'W' Begin
+   Move 'W' to scrSelection	
+  [SELECT] INDICATE SELECT AS OFFENSE.WARR_DATE EQ SELECT.2
+  END
+ELSE IF Select.1 EQ 'S' Begin
+  Move 'S' to scrSelection 	
+  [SELECT] INDICATE SELECT AS OFFENSE.SUM_DATE EQ SELECT.2
+  END
+ELSE BEGIN
+  INDICATE SELECT FALSE	
+END
+
+SECTION BODY
+        reread offense
+		IF scrSelection EQ 'W' MOVE '        ' TO OFFENSE.WARR_DATE
+		IF scrSelection EQ 'S' MOVE '        ' TO OFFENSE.SUM_DATE
+        SAVERECORD OFFENSE
+        unlock
+REPORTEND
+IF scrSelection EQ 'W' CHAIN 'WARRANT'
+IF scrSelection EQ 'S' CHAIN 'SUMMONS'
+
+ABORT
+
+
+
+

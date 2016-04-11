@@ -1,0 +1,3 @@
+use viewclnt
+define View_Client0 for View_Client
+define U_View_Client0 for U_View_Client

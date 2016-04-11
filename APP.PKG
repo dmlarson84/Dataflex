@@ -1,0 +1,5 @@
+use ui
+use clwindow
+
+class application is a client_window
+end_class

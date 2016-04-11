@@ -1,0 +1,221 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// CodePick.pkg
+// Version: 1.0 beta
+//  Sat  03-20-1993  Created
+//
+// Author: John J. Tuohy
+//
+// 05-09-1993  Add Auto_Locate_State support
+// 05-19-1993  Add Allow_Blank_State Support
+// 05-22-1993  Add Error_Number and Error_Message properties
+// 05-22-1993  Add Match_Length# property
+// ---ver 1.1 -------
+// 03/17/94    Add new param to validate_code to support silence (no error)
+// 09/01/94    change default_code to not set changed_state
+//
+// 05/25/95  JJT  Added use clear_mx for compiler
+// 08/30/95  JJT  Changed Value to Entry_Value to support better matching
+//                of numeric item values. Strips the .0000 if needed
+//************************************************************************
+
+
+// Class: Code_Pick_List <----Pick_list
+//
+//  Supports concept of an ID and a Description all on one line
+//
+//  Public Properties:
+//    Integer Default_Item         Default 0  The default guess for a new item
+//    Integer Description_Offset          Default 0  Offset in item string to Name
+//                                            e.g. O Open (offset is 2)
+//                                            If 0 there is no name, the
+//                                            whole thing is one string
+//    Integer Description_Item_Offset     Default 1  Item offset for the Id's Name.
+//                                            It will usually be 1 (the next
+//                                            item in the object).
+//
+//  Public Handlers
+//
+//      Function Crnt_Description String Typ Returns String
+//           Pass ID and Return the Name
+//
+//      Procedure Display_Crnt_Description Integer Obj# Integer Item#
+//           Set ID name into the Item window. Item position will be
+//           the offset to this item.
+//
+//      Procedure Default_Id Integer Obj# Integer Item#
+//           Check object, If the Id is blank fill in the default Id and
+//           the default name
+//
+//      Procedure Validate_Code Integer Obj# Integer Item# Integer Verbal Returns Integer
+//           Check if ID value is a valid Item. If not returns error
+//
+//
+
+use ui
+Use PickList // standard picklist support
+use Code_DEO // code list deo support
+use Clear_mx
+
+Class Code_Pick_List is a Pick_List
+
+   Procedure Construct_Object Integer Img#
+     Forward Send Construct_Object Img#
+     Property Integer Default_Item             Public 0   // The default guess
+     Property Integer Export_Description_State Public False
+     Property Integer Description_Offset       Public 0   // Offset for name. If 0 All
+     Property Integer Description_Item_Offset  Public 1   // Item of second Name.
+     Property Integer Should_Save              Public 0   // required because its a DEO
+     Property Integer Allow_Blank_State        Public False
+     Property Integer Error_Number             Public 15
+     Property String  Error_Message            Public ". Press F4 to see Valid options"
+     // How much is required for a valid 'match?
+     // 0  : Any part is valid
+     // +n : match number of letters
+     // -1 : match entire item (up to description offset-1 if offest >0)
+     Property Integer Match_Length             Public -1
+
+     Set Select_mode to Auto_Select
+     // by default this is a popup
+     //Set Popup_State to TRUE
+     //Set Focus_Mode to NO_ACTIVATE
+     Set Auto_Locate_State to TRUE
+   End_Procedure  // Construct_Object
+
+   Function Crnt_Description String Typ Returns String
+      Local Integer item# Offset Match# Len
+      Local String rVal SearchStr
+      if Typ gt "" Begin
+         move 0 to item#
+         Get Match_Length to Match#
+         //  Match_Length Rules:
+         //    if 0  : Match any part
+         //    if >1 : Match up to length value
+         //    if -1 : If (export_Desciption_State=False) Match Entire String
+         //            Else if Description_Offset is 0 Match any part
+         //                  else match up to offset-1
+         //                       (e.g. C Closed, offset=2 match 1 or "C")
+         If (Export_Description_State(Current_Object) AND Match#=-1) Begin
+            Get Description_Offset to Offset
+            Move (if(Offset,Offset-1,0)) to Match#
+         End
+         Move Typ to SearchStr
+         If Match# gt -1 Begin
+            Length SearchStr to Len
+            If Len lt Match# Append SearchStr (repeat('.',Match#-Len))
+            Append SearchStr '*'
+         End
+         get item_matching SearchStr item#
+         If Item# ge 0 Begin
+           Get Value Item Item# to RVal
+           Move (Mid(RVal,255,Offset+1)) to rVal
+         End
+      End
+      Function_Return rVal
+   End_Function
+
+   Procedure Display_Description Integer Obj# Integer Item#
+     Local String Val
+     If (Export_Description_State(Current_Object)) Begin
+        Get Entry_Value of Obj# item Item# to val
+        Set Value of Obj# Item (Item#+Description_Item_Offset(Current_Object)) ;
+            to (Crnt_Description(Current_Object,Val))
+     End
+   End_Procedure
+
+   Procedure Default_Code Integer Obj# Integer Item#
+     Local String Val Dflt_Item#
+     If ( (not(Item_Changed_State(Obj#,Item#)) AND Value(Obj#,Item#)="")) Begin
+        Get Default_Item to Dflt_Item#
+        // 09/01/94 - changed to default value
+        Set Default_Value of Obj# Item Item# to (Value(Current_Object,Dflt_Item#))
+        Send Display_Description Obj# Item#
+     End
+   End_Procedure
+
+   //
+   //   Validate the item for an entry_item. If bad send an error
+   //   message and return non-zero value
+   //
+   Function Validate_Code Integer Obj# Integer Item# Integer verbal Returns Integer
+     Local Integer RVal
+     Local String Typ
+     Get Entry_Value of Obj# item item# to Typ
+     If (Typ='' AND Allow_Blank_State(Current_Object)) Move 0 to rVal
+     Else Move (Crnt_Description(Current_Object,Typ)="") to Rval
+     If RVal Begin
+        If Verbal Error (Error_Number(Current_Object)) (Error_Message(Current_Object))
+     End
+     Else Send Display_Description Obj# Item#
+     Procedure_Return RVal
+   End_Procedure
+
+  //procedure entry_display integer mfile# integer flag
+  //end_procedure
+
+  //Procedure Entry_Update integer file# integer flag
+  //End_Procedure
+
+  Function Server Returns Integer // never allow a server here
+  End_Function
+
+   //
+   // Overriden to find the current value and go to that value
+   //
+   Procedure Entering
+     Local Integer pscope item#
+     Local string val
+     Get invoking_object_id to pscope
+     if (pscope>Desktop AND Auto_Top_Item_State(Current_Object)=0) begin
+        get entry_value of pscope item CURRENT to val
+        move 0 to item#
+        if val gt "" get item_matching (val+"*") item#  //item# passed & returned
+        if item# lt 0 Get Default_Item to Item#
+        set current_item to item#
+     end
+   end_procedure
+
+   //
+   //  Overridden to return value to item and then attempt
+   //  to return Name to the name display item
+   //
+   Procedure Move_Value_Out
+     local integer obj# Crnt
+     local string val
+     get value item CURRENT to val
+     get Invoking_Object_ID to obj#
+     If Obj# Gt 0 Begin
+        Get Current_Item of Obj# to Crnt
+        set value of obj# item CRNT to val
+        set item_changed_state of obj# item CRNT to TRUE
+        Send Display_Description Obj# CRNT
+     End
+   End_Procedure
+
+
+   //
+   // Augment to see if items have been added. If they have see if they
+   // they exceed the rows on the image. If not remove the scrollbar.
+   //
+   Procedure End_construct_Object
+     Local Integer Itm lmt
+     Get Item_limit to Lmt
+     Get Item_Count to Itm
+     If (Itm > 0 AND ;
+        Itm/Lmt <= (Display_size(Current_Object)/lmt)) Begin
+           Set Scroll_Bar_Visible_State To True
+           Set visible_state of (Scrollbar(Current_Object)) to FALSE
+     End
+     Forward Send End_construct_Object
+   End_Procedure // End_construct_Object
+
+End_Class
+

@@ -1,0 +1,81 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// CodeSel.pkg
+// Version: 1.0 beta
+//
+// Sat  03-20-1993  Created
+// 01/14/94    Brought up to date for DAF
+//             Modifed to support leave space for radio buttons if set
+// 04/21/94    renamed to CodeSel (it just makes more sense).
+// 09/13/94    Changed Types to CodeMast
+//
+// 05/25/95    Added clear_mx for compiler
+//
+// Author: John J. Tuohy
+//
+//************************************************************************
+
+// -----------------------------------------------------------------
+// Object package which creates a global code selection list. The list
+// should be named Type_list (the default name).
+//
+//
+// -----------------------------------------------------------------
+
+use ui
+Use CodeSlc   // code selection list class support
+Use SelBtn
+Use Clear_mx
+
+Open "CodeMast" as CodeMast
+
+/Type_Image
+ษอออออออออออออออออออออออออออออออออออออออออออป
+บ___________________________________________บ
+บ   Id      Description                     บ
+วฤฤฤฤฤฤฤฤฤฤยฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+/Type_Image1
+บ__________ณ______________________________  บ
+บ__________ณ______________________________  บ
+บ__________ณ______________________________  บ
+บ__________ณ______________________________  บ
+บ__________ณ______________________________  บ
+บ__________ณ______________________________  บ
+บฤฤฤฤฤฤฤฤฤฤมฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤบ
+บ                                           บ
+ศอออออออออออออออออออออออออออออออออออออออออออผ
+/Type_Btn_Image
+ __________  ____________
+/*
+
+Object Code_Selection_List_Obj is a Type_List_Client Type_Image POPUP
+
+    Object Type_DS is a Type_Data_Set NO_Image Main_File CodeMast
+      Begin_Constraints
+         Constrain CodeMast.Type eq (Type_Value(Current_Object))
+      End_Constraints
+    End_Object
+
+    Object Type_List is a Type_Selection_List Type_Image1 ;
+      Using (Type_DS(Current_Object)) by Index.1
+      Set Location to 4 0 Relative
+      Set Allow_Move_State to False
+      Begin_row
+        Entry_Item CodeMast.Code          { AutoClear }
+        Entry_Item CodeMast.Description
+      End_row
+
+      Object b is a selList_Button Type_Btn_Image
+      End_Object
+    End_Object
+
+End_Object
+

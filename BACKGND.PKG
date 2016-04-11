@@ -1,0 +1,122 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Backgnd.Pkg
+// Version: 1.0
+//  05-15-1992 : Created
+//
+// Author: John J. Tuohy
+//
+// Creates a background object and title image which can
+// be placed on the screen without placing it in the focus_tree.
+//
+//************************************************************************
+
+//
+// This creates an object named Background. It will be used as follows:
+//
+// Send Paint_Desktop to (Background(Current_Object)) {Ttl_String}
+// Set Title_Name of (Background(Current_Object)) to Ttl_String
+// Send Deactivate to (Background(Current_Object)) // rarely used
+// 
+
+//
+// BackGround_Class Class
+//
+// Creates a CUA Background image which is paged at 2 0 and a title
+// which is paged at 0 0 (we expect an action bar at 1 0). When the object
+// is created BOTH a background and a title image should be declared on the
+// object command line:
+//     Object Background is a Background_Class Back_Img Title_Img
+//
+// Public Interface:
+//
+//  Send Paint_Desktop {Ttl}
+//
+//    Displays the Background and the Title image. If a Ttl (a title)
+//    string is passed the string will be made the title (centered).
+//    These objects are not added to the focus tree. The gets them out of
+//    the way of navigation.
+//
+//  Set Title_Name to Ttl
+//    Set the title to the string value Ttl. Can be used to change the title
+//    name.
+//
+//  Send Deactivate
+//
+//    Remove the background and title from the screen.
+//
+//
+
+use ui
+
+Class Background_Class is a Title
+
+  Procedure Construct_Object Integer Img# Integer Ttl_Img#
+    Forward Send Construct_Object Img#
+    Set Location To 2 0 Absolute
+    Object oTitle is a Title Ttl_Img#
+        Set Location To -2 0 Relative
+        Set Center_State Item 0 to TRUE
+    End_Object
+  End_Procedure  // Construct_Object
+  
+  Procedure Paint_Desktop String Ttl
+     If Num_Arguments gt 0 Set Title_Name to Ttl
+     Send Page_Object True
+     Send Page_Object to (oTitle(Current_Object)) TRUE
+  End_Procedure
+  
+  Procedure SET Title_Name String Ttl
+    Set Value of (oTitle(Current_Object)) to Ttl
+  End_Procedure
+  
+End_Class
+
+//
+// Create images for a background object
+//
+
+/Background_Client_Title
+_______________________________________________________________________________
+/*
+
+/BACKGROUND_Client
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같같
+/*
+
+//
+// Create a background object named Background
+//
+Object Background is a BackGround_Class ;
+   Background_Client Background_Client_Title // pass two iamge names
+End_Object    
+

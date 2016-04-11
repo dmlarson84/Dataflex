@@ -1,0 +1,22 @@
+        FILE DEFINITION LISTING FOR FILE #23
+*************************************************** 
+        FILE ROOT NAME     = ATRAIL
+        USER DISPLAY NAME  = VRS Audit Trail
+        DATAFLEX FILE NAME = ATRAIL
+*************************************************** 
+        RECORD LENGTH = 256  (USED = 227)
+        MAX NUMBER OF RECORDS = 100000  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       3   DATE           0     0     0     CHANGE_DATE
+   2       4       5   ASCII          0     0     0     CHANGE_TIME
+   3       9       8   ASCII          0     0     0     OPERATOR
+   4      17       8   ASCII          0     0     0     FILE_NAME
+   5      25       3   ASCII          0     0     0     OLD_OR_NEW
+   6      28     200   ASCII          0     0     0     RECORD_IMAGE
+ 
+

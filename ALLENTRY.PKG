@@ -1,0 +1,99 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1996 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Allentry.Pkg
+// Version: 1.0
+//  02-16-1993 : Created
+//
+// Author: John J. Tuohy
+//
+//************************************************************************
+//  3-20-1996  Scott-P  changed use help_chn to use help
+//
+//
+//
+//************************************************************************
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+// Defaults you might want to set here.
+
+// If true pressing the letter on a highlight or action bar will
+// cause the item to auto-execute. This is not the way to used to work.
+// Change this to false to get the old behavior
+define DEFAULT$AUTO$EXECUTE for 1 // defaults to TRUE
+
+// Default color for highlight character (assuming none is set in DFINI).
+// If you want to disable highlight characters in action bars and pulldowns
+// set this to 0 (it will work like the old pulldowns).
+//
+define DEFAULT$HIGHLIGHT$COLOR for 116
+
+// Symbol for highlight replacement (must be 1 character) and override
+// highlight (must be two character). Some people are using "~" in which case
+// you should create a "~" and a "\~". Note that the new pulldown .INC files
+// all have the "&" imbedded in them. You'd have to change these as well.
+//
+define HIGHLIGHT$SYMBOL   for '&'
+define HIGHLIGHT$OVERRIDE for '&&'
+
+// The defines the width of a pulldown. The default is 4 which assumes 
+// that your pulldowns contain a border, space, ..item.., space border. 
+// If your default images are different adjust this default
+//
+define DEFAULT$TOTAL$BORDER$WIDTH for 4
+
+// The define for the default Smart_Filemode_State in Data_Sets. The
+// (original) default leaves this FALSE for backward compatibility. Changing
+// the default to TRUE can dramatically increase performance by reducing
+// the minimizing the number of files that are locked during saves and,
+// deletes (also reduucing multi-user lock contention), but can also cause
+// Attempt to edit/create/delete proteted record errors in programs that
+// modify files that are listed as a Main_File or a an Updating (Parent)
+// File.
+
+define DEFAULT$SMART$FILEMODE$STATE for FALSE
+
+// The define for the default Cascade_Delete_State in Data_Sets. The
+// (original) default leaves this TRUE for backward compatibility. Changing
+// the default to FALSE implies that you have added all the correct files to
+// the Client_File lists in ALL your Data_Sets (The Client_File list indicates
+// which files relate to the Main_File of each Data_Set and are checked to make
+// sure no related records exist for the Main_File record before allowing a
+// (non-cascading) delete.)
+
+define DEFAULT$CASCADE$DELETE$STATE for TRUE
+
+//
+// Use all of the standard data entry packages
+//
+
+use cd_stuff    // Object Create/Destroy command support
+
+use enterr      // Defines Error class & object
+
+// set Verbose_State of Error_Info_Object to FALSE
+
+use help        // Help
+use viewclnt    // Defines View_Client class
+use enclient    // Defines Entry_Client, Entry_View_Client,
+                //   & Selection_List_Client classes
+use data_set    // Defines Data_Set class
+use menu        // Defines Menu classes: Action_Bar_Menu & Pull_Down_Menu
+Use text_win    // Defines Text Window class
+use sellist     // Defines Selection List class
+use table       // Defines Table class
+use entryfrm    // Defines Entry_Form class
+use picklist    // Defines Pick_List class
+
+// new version 1.1 support
+use enradio    //  Radio Box support

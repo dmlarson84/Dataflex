@@ -1,0 +1,133 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Confirm.Pkg
+// Version: 1.0
+//  04-01-1993 : Created and extended from DAC confirm.pkg
+//  08-16-1993 : Removed sub_page so mouse image dragging would work.
+// 10-11-1993  : Added confirm class message to replace confirmation
+// 06/01/95 LS - Changed panel to 3.1 style
+// 06/06/95 JJT - kExit_application now sends cancel 
+// 03/20/96 JLK - Send Exit_Client to cancel in all cases.
+//
+// Author: John J. Tuohy
+//
+//************************************************************************
+
+// Confirmation popups.
+//
+// Creates confirm objects and funtions. All fucntions return 0 if OK and
+// non-zero if not Ok. To be used by DEOs by setting the Verify_???_MSG to
+// these GET_<function_name> values.
+// Supports following functions:
+//
+//  Confirm String <confirmation prompt> - general confirm. Pass prompt
+//  Save_Confirmation                        
+//  Delete_Confirmation
+//  Line_Save_Confirmation                        
+//  Line_Delete_Confirmation
+//  Data_Loss_Confirmation
+//  Exit_Loss_Confirmation  - only prompts if data loss would occur
+//  No_Confirmation         - no prompt..always returns ok. 
+//
+
+Use dfmisc
+Use clwindow // this will make this object movable
+
+/Confirm_image
+ษอออออออออออออออออออออออออออออออออออออออออป
+บ_________________________________________บ
+บ                                         บ
+บ                                         บ
+บ _______________________________________ บ
+บ                                         บ
+บ                                         บ
+บ                                         บ
+ศอออออออออออออออออออออออออออออออออออออออออผ
+/confirm_Button_Image
+_______   ____________
+/*
+
+object confirm_object IS a Client_Window confirm_image
+  send Locate_In_Center_Of_Screen
+  // Views set this true, we don't want this for popup type objects
+  Set Attach_Parent_State to False
+  Set Value to "Confirm"
+  Set Center_State item 1 to True
+  
+  Object confirm_button IS A BUTTON confirm_button_image
+    Set Location to 7 11 relative
+    On_Key kSave_Record Send Ok
+    On_Key kCancel      Send Exit_Client
+    On_Key kExit_Application Send Exit_Client
+    Item_list
+       On_item "<F2=OK>"      Send ok
+       On_item "<Esc=Cancel>" Send Exit_Client
+    End_item_list
+  End_object
+  
+  Function confirm String item_name Returns Integer
+    Local Integer return_value
+    Local String old_prompt
+    // do this to allow this object to be called recursively. It
+    // does happen!
+    Move (trim(Value(Current_Object,1))) to old_prompt
+    Set value item 1 TO item_name
+    // ui_accept temporarily enforces block_mouse_state
+    UI_Accept Current_Object to return_value
+    Set Value item 1 to old_prompt
+    Function_Return (return_value=msg_cancel)
+  End_function
+End_object
+
+
+//  This is here for historical reasons. It was in the original
+//  confirm.pkg. It doesn't really make sense to make this the
+//  only global function. Use the confirm function instead
+Function confirmation Global String item_name Returns Integer
+  Function_return (confirm(confirm_object(Current_Object),Item_Name))
+End_function
+
+// General purpose confirm function. Added to all classes
+//
+Function confirm FOR DESKTOP String item_name Returns Integer
+  Function_return (confirm(confirm_object(Current_Object),Item_Name))
+End_function
+
+Function Save_Confirmation Returns integer
+  Function_return (confirm(Current_Object,"Save this record?"))
+End_function
+
+Function Delete_Confirmation Returns integer
+  Function_return (confirm(Current_Object,"Delete this record?"))
+End_function
+
+Function Line_save_confirmation Returns integer
+  Function_return (confirm(Current_Object,"Save this Line?"))
+End_function
+
+Function Line_delete_confirmation Returns integer
+  Function_return (confirm(Current_Object,"Delete this Line?"))
+End_function
+
+Function Data_Loss_Confirmation Returns integer
+  Function_return (confirm(Current_Object,"Abandon Changes?"))
+End_function
+
+Function Exit_Loss_Confirmation Returns integer
+  local integer tmp
+  Get Should_Save to tmp
+  if tmp eq 0 broadcast Recursive get Should_save to tmp
+  if tmp ne 0 Function_return (confirm(Current_Object,"Changes Exist. Exit this window?"))
+End_function
+
+Function No_Confirmation Returns integer
+End_function
+

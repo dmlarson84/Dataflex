@@ -1,0 +1,265 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Confidential Trade Secret.
+// Copyright 1987-1994 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//      
+// Module: 
+//      action.pkg
+//      
+// Purpose:
+//      Defines Action_Bar_Menu class.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      3-13-1992
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+//
+// Added character highlight support (3.0 by Doug Goldner) - Ken Ross 07/20/92
+// 07/12/94 (LS) changed behavior of alt+key's; now they work
+//          in the action bar and pull down menus.
+// 07/13/94 (LS) added definition of assign_action_bar_keys procedure for
+//          arrays to avoid key assignments in these objects.
+// 07/19/94 (LS) Recent changes only made it work if action bar was nested
+//          in an entry_client. Now sending define_access_keys during
+//          activation of action bar (as per JT's actnfix.pkg). I suspect
+//          another hole still exists: if pulldowns are created on-the-fly
+//          (after the action bar is activated) they won't get the key defs.
+//          C'est la vie! maybe next rev...
+// 07/20/94 (LS) Added Keys_Defined_State to prevent unnecessary redefinition
+//          of accelerator keys because 1) it's a little expensive to redefine
+//          the accelerator keys every time the action bar is activated, and
+//          2) the runtime merely adds keys, it never overwrites; so we
+//          gobble up a little more memory every time we redefine the keys.
+// 07/20/94 (LS) Added Auto_Execute_State: choose item immediately if a
+//          highlighted char key is pressed.
+// 07/25/94 (JJT) Created DEFAULT$AUTO$EXECUTE token
+// 09/26/94 (LS) Using define command; edited to conform to DAC code style.
+// 03/10/95 (JJT) Change popup check to block_mouse_state check which
+//          makes more sense. Popups are not automatically modal. This now
+//          works because list.pkg now sets block_mouse_state when the
+//          popup-state is set and not during activation.
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use UI
+
+// This may be already defined.
+define DEFAULT$AUTO$EXECUTE for 1
+
+use hilitemx
+
+register_procedure Activate_Pull_Down
+
+class Action_Bar_Menu is an ACTION_BAR
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        object Highlight_Array is an Array
+        end_object                        
+
+        Send Define_HighLight_Mixin       
+
+        property integer Action_Bar_Keys_Msg  Public 0 // used to assign alt-char keys
+        property integer Ignore_Exit_State    Public 0 // used to skip exit message
+        property integer Verify_Exit_Msg      Public 0
+        property integer Auto_Pull_Down_State Public 0 // activate pull_down on left/right arrow
+        property integer Keys_Defined_State   Public 0 // to prevent redefinition
+        property integer Auto_Execute_State   Public DEFAULT$AUTO$EXECUTE
+
+        set Attach_Parent_State to True
+        set Inverse_State       to True
+        set Scope_State         to True
+        set Skip_State          to True
+        set Wrap_State          to True
+
+        on_key kAction_Bar    send Return_To_Prior_Scope Private
+        on_key kCancel        send Request_Cancel        Private
+        on_key kDownarrow     send Choose                Private
+        on_key kNext_Item     send None                  Private
+        on_key kPrevious_Item send None                  Private
+    end_procedure
+
+    import_class_protocol Highlight_Mixin
+
+    function Action_Bar_Location returns integer
+        function_return (Location(Current_Object))
+    end_function
+
+    function Action_Bar_Width returns integer
+        function_return (Low(Size(Current_Object)))
+    end_function
+
+    procedure Choose
+        if (Message(Current_Object, Current)) EQ Msg_Activate_Pull_Down ;
+          send Key kEnter
+    end_procedure
+
+    procedure Entering returns integer
+        local integer Ret_Val
+
+        forward get Msg_Entering to Ret_Val
+
+        if Ret_Val ;
+            procedure_return Ret_Val
+
+        set Auto_Pull_Down_State to False
+
+        set Select_Count to 0    // de-select Current_Item for normal highlight
+    end_procedure
+
+define AREA_FLAG for 3 //scope AND popup
+
+    //
+    //  If there is nothing to exit to do an exit_application, otherwise
+    //  do a simple deactivate.
+    //  This way all program close downs go through exit_application.
+    //
+    procedure Exit_Area FOR ACTION_BAR_MENU
+      local integer Obj
+
+      get Prior_Level to Obj
+      // it was .. <<if Obj send Deactivate to Obj AREA_FLAG>>
+      if Obj gt Desktop send Deactivate to Obj AREA_FLAG
+      Else send Exit_Application
+    end_procedure
+
+    procedure Exit_Cascade // dummy for delegation from pull down
+    end_procedure
+
+    procedure Exiting_Scope integer New_Sco
+        local integer Nxt_Lvl
+
+        forward send Exiting_Scope New_Sco
+
+        get Next_Level to Nxt_Lvl
+        if Nxt_Lvl NE 0 ;
+            send Deactivate to Nxt_Lvl
+        set Current_Item to 0
+    end_procedure
+
+    procedure Mouse_Down integer W_Num integer C_Pos
+        forward send Mouse_Down W_Num C_Pos
+        send Mouse_Up W_Num C_Pos
+    end_procedure
+
+    procedure Request_Cancel
+        local integer Msg Ret_Val
+
+        send Return_To_Prior_Scope
+
+        if (Current_Scope(Desktop)) EQ Current_Object begin
+            get Verify_Exit_Msg to Msg
+
+            if Msg NE 0 ;
+                get Msg to Ret_Val
+
+            if Ret_Val EQ 0 ;
+                send Exit_Area
+        end
+    end_procedure
+
+    procedure Return_To_Prior_Scope
+        local integer Pri_Sco
+
+        if (Focus( Desktop )) NE Current_Object ;
+            send Activate
+
+        get Prior_Scope to Pri_Sco
+
+        if Pri_Sco EQ 0 ;
+            move Desktop to Pri_Sco
+        if (Active_State( Scope_Focus( Pri_Sco ) )) ;
+            set Current_Scope to Pri_Sco
+        else ;
+            set Current_Item to 0
+    end_procedure
+
+    procedure Key integer Key_Val returns integer
+        local integer Ret_Val
+
+        set Last_Highlight_Key to 0
+
+        forward get Msg_Key Key_Val to Ret_Val
+
+        if (not(Ret_Val) and Auto_Execute_State(current_object) and ;
+                (Last_Highlight_Key(current_object) <> 0)) ;
+            get Msg_Process_Key kEnter to Ret_Val
+
+        if Ret_Val NE 0 ;
+            procedure_return Ret_Val
+
+        if ((Key_Val = kRightArrow or Key_Val = kLeftArrow) and ;
+                Auto_Pull_Down_State( Current_Object ) and ;
+                Message( Current_Object, Current ) = Msg_Activate_Pull_Down) begin
+            get Msg_Process_Key kEnter to Ret_Val
+            procedure_return Ret_Val
+        end
+    end_procedure
+
+    function menu_system_object returns integer
+        function_return (TRUE)
+    end_function
+
+    // kind of lifted from JT's actnfix.pkg
+    Procedure Activating Returns Integer
+      Local Integer rVal Obj#
+
+      Move Current_Object to Obj#
+      send Define_Access_Keys Obj#
+
+      Forward Get MSG_Activating to rVal
+
+      Procedure_Return rVal
+    End_Procedure  
+
+    // could be sent from activating (above) or from parent...
+    procedure Define_Access_Keys integer Obj
+        if (Keys_Defined_State(Current_Object)) ;
+            procedure_return
+
+        forward send Define_Access_Keys Obj
+
+        set Keys_Defined_State to TRUE
+    end_procedure
+end_class
+
+function menu_system_object for desktop returns integer
+    function_return (FALSE)
+end_function
+
+procedure Assign_Action_Bar_Keys for Desktop integer Obj
+    local integer Msg
+
+    if ((Obj <> 0) and ((Focus_Mode(Current_Object) = Focusable) or ;
+            Popup_State(Current_Object))) begin
+        if not (menu_system_object(Current_Object)) ;
+            on_key kAction_Bar send Activate to Obj PRIVATE
+        get Action_Bar_Keys_Msg of Obj to Msg
+        if Msg NE 0 ;
+            send Msg Obj
+    end
+
+end_procedure
+
+procedure assign_action_bar_keys for array
+end_procedure
+
+procedure Define_Access_Keys for Desktop integer Obj
+    // JJT Change popup check to block_mouse_state check which
+    //     makes more sense. Popups now set block_mouse_state when the
+    //     popup_state is set so we can do this. Block-mouse use to get
+    //     set during activation.
+    //if ((Obj <> 0) and not(Popup_State( Current_Object ))) begin
+    if ((Obj <> 0) and not(Block_mouse_State( Current_Object ))) begin
+        send Assign_Action_Bar_Keys Obj
+        if (Child_Count( Current_Object ) > 0) ;
+          broadcast send Define_Access_Keys Obj
+    end
+
+end_procedure

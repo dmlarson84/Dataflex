@@ -1,0 +1,100 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Code_Deo.pkg
+// Version: 1.0 beta
+//  Sat  03-20-1993  Created
+//
+// Author: John J. Tuohy
+// --ver 1.1--
+// 03/17/94    Add new param to validate_code to support silence (no error)
+//             Added new message GET_Validate_Auto_Prompt. If validate fails
+//             during a save an error is reported. If not a save the list is
+//             auto-prompted.
+//
+//        (LS) Created mixin (Code_DEO_Mixin).
+// 09/21/95 JJT Added base_item to GET prompt_description so it works with tables.
+//************************************************************************
+
+Use UI
+//(JJT) Now in ent item  use AutoPrmp
+use EntItem
+
+// --------------------------------------------------------------------------
+//
+// Messages added to DEOs to support Code_Selection_List and Code_Pick_List
+// prompting, validate and default values. This gets included automatically
+// by CodeSel (actually CodeCSL) and CodePick. 
+// 
+// Message               Usage
+// ---------------       -----------------------------------
+// F Prompt_Description   Entry_Item (Prompt_Description(Current_Object,###))
+// P Default_Prompt       iEntry=MSG_Default_Prompt
+// F Validate_Prompt      iValidate=GET_Validate_Prompt
+// P Prompt_Description   iExit=MSG_Prompt_Description
+// F Validate_Auto_Prompt iValidate=GET_Validate_Auto_Prompt
+//
+// --------------------------------------------------------------------------
+
+//
+// //This adds the these messages to the MENU class (on up). We used menu 
+// //so both entry_forms and tables would understand this message. MENU is the
+// //first common superclass.
+// //
+// (LS) Above comment is now invalid. This stuff has been moved into a mixin.
+
+register_function Crnt_Description string Val returns string
+register_procedure Default_Code integer Obj# Item#
+register_function Validate_Code integer Obj# integer Item# ;
+        integer Flag returns integer
+register_procedure Display_Description integer Obj# integer Item#
+
+class Code_DEO_Mixin is a Message
+    Function Prompt_Description Integer Item# Returns String
+      Local Integer Obj#
+      Local String St
+      Get Prompt_Object Item Item# to Obj#
+      If Obj# Get Crnt_Description of Obj# ;
+                (Value(Current_Object,Item#+base_item(Current_Object))) to St
+      Function_return St
+    End_Function // Prompt_Description
+
+    Procedure Default_Prompt Integer Item#
+      Local Integer Obj#
+      Get Prompt_Object Item Item# to Obj#
+      If Obj# Send Default_Code to Obj# Current_Object Item#
+    End_Procedure
+
+    Function Validate_Prompt Integer Item# Returns Integer
+      Local Integer Obj# Rval
+      Get Prompt_Object Item Item# to Obj#
+      // 03/17/94 -- added verbal parameter
+      If Obj# Get Validate_Code of Obj# Current_Object Item# TRUE to Rval
+      Function_Return RVal
+    End_Function
+
+    // new function Validate_Auto_Prompt
+    Function Validate_Auto_Prompt Integer Item# Returns Integer
+      Local Integer Obj# Rval ValAll
+      Get Validate_All_Items_State to ValAll
+      Get Prompt_Object Item Item# to Obj#
+      If Obj# Get Validate_Code of Obj# Current_Object Item# ;
+                    ValAll to Rval
+      If (rVal AND ValAll=0) ;
+         Set Prompt_Entry_Mode to AUTO_PROMPT_ON // else...force an autoprompt
+      Function_Return RVal
+    End_Function
+    
+    Procedure Prompt_Description Integer Item#
+      Local Integer Obj# Rval
+      Get Prompt_Object Item Item# to Obj#
+      If Obj# ne 0 Send Display_Description to Obj# Current_Object Item#
+    End_Procedure
+end_class

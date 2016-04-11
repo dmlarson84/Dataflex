@@ -1,0 +1,18 @@
+        FILE DEFINITION LISTING FOR FILE #24
+*************************************************** 
+        FILE ROOT NAME     = COUNTY
+        USER DISPLAY NAME  = CM County
+        DATAFLEX FILE NAME = COUNTY
+*************************************************** 
+        RECORD LENGTH = 32  (USED = 15)
+        MAX NUMBER OF RECORDS = 75  (USED = 75)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1      15   ASCII          1     0     0     COUNTY
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   
+

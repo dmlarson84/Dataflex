@@ -1,0 +1,869 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Confidential Trade Secret.
+// Copyright 1987-1994 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//      
+// Module: 
+//      cmdarg.pkg
+//      
+// Purpose:
+//      Defines Command_Argument_Parser class and Command_Option_Parser and
+//      Command_Response_Parser subclasses. Cmd_Arg class reads command line
+//      arguments and allows the arguments to be parsed. Cmd_Opt parses
+//      arguments as options with parameters. Cmd_Rsp adds supports for
+//      response files.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      8/22/94
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+use seq_chnl
+use set
+use callback
+
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+//  
+//  cmd_arg array structure is 1-based (item 0 is ignored).
+//  cur_arg = -1 means end of args
+//  cur_arg = 0 means start of args
+//  cur_arg > 0 means arg item number
+//  
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+class Command_Argument_Parser is an Array
+    procedure Construct_Object
+        forward send Construct_Object
+
+        property integer Current_Argument PUBLIC 0
+        property integer Initial_Argument PUBLIC 0
+        property integer Argument_Count PUBLIC 0
+    end_procedure
+
+    procedure Parse
+        set Current_Argument to 0
+        set Argument_Count to 0
+        send Load_Array
+        set Current_Argument to 0
+    end_procedure
+    
+    function Read_Argument returns string
+        local string Arg
+
+        cmdline Arg
+        set Current_Argument to (Current_Argument(Current_Object) + 1)
+
+        function_return Arg
+    end_function
+
+    procedure Load_Array
+        local string Val
+        local integer Itm#
+
+        get Read_Argument to Val
+        get Current_Argument to Itm#
+
+        // double while loop for processing multiple command lines; arg of "" means eol;
+        // two args of "" means eof.
+        while Val GT ""
+            while Val GT ""
+                set Argument_Count to (Argument_Count(Current_Object) + 1)
+                set Array_Value item Itm# to Val
+                get Read_Argument to Val
+                get Current_Argument to Itm#
+            end
+
+            // make sure we weren't just at eol
+            get Read_Argument to Val
+            get Current_Argument to Itm#
+        end
+    end_procedure
+
+    function Argument_Value integer Itm# returns string
+        function_return (String_Value(Current_Object, Itm#))
+    end_function
+
+    function Next_Argument returns string
+        local integer Itm# Cnt
+        local string Val
+
+        get Current_Argument to Itm#
+        get Item_Count to Cnt
+
+        if ((Itm# >= 0) and (Itm# < Cnt)) ;
+            increment Itm#
+
+        if Itm# GE Cnt begin
+            move -1 to Itm#
+            move "" to Val
+        end
+        else ;
+            get String_Value item Itm# to Val
+
+        set Current_Argument to Itm#
+        function_return Val
+    end_function
+
+    function Peek_Next_Argument returns string
+        local integer Itm#
+
+        get Current_Argument to Itm#
+
+        if Itm# EQ -1 ;
+            function_return ""
+
+        increment Itm#
+
+        if Itm# GE (Item_Count(Current_Object)) ;
+            function_return ""
+        else ;
+            function_return (String_Value(Current_Object, Itm#))
+    end_function
+
+    function Scan_For_Argument string Arg returns integer
+        local integer Was_Arg Was_Init
+        local string Val
+
+        get Current_Argument to Was_Arg
+        get Initial_Argument to Was_Init
+
+        set Current_Argument to Was_Init
+        get Next_Argument to Val
+
+        while Val GT ""
+            if Val EQ Arg begin
+                set Current_Argument to Was_Arg
+                set Initial_Argument to Was_Init
+                function_return (Current_Argument(Current_Object))
+            end
+
+            get Next_Argument to Val
+        end
+
+        set Current_Argument to Was_Arg
+        set Initial_Argument to Was_Init
+
+        function_return 0
+    end_function
+
+    procedure Print_Argument_List
+        local integer Itm#
+        move 0 to Itm#
+
+        showln "Total Items: " (Item_Count(Current_Object))
+
+        while Itm# LT (Item_Count(Current_Object))
+            showln Itm# " '" (String_Value(Current_Object, Itm#)) "'"
+            increment Itm#
+        end
+    end_procedure
+end_class
+
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+//  
+//  cur_opt/parm = -1 means end of options/parms
+//  cur_opt/parm = 0 means start of options/parms
+//  cur_opt/parm > 0 means arg item number
+//  
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+class Command_Option_Parser is a Command_Argument_Parser
+    procedure Construct_Object
+        forward send Construct_Object
+
+        property string Option_Prefix PUBLIC "-"
+        property string Quote_Chars PUBLIC ('"' + "'")
+        property string Literal_Prefix PUBLIC "\"
+        property integer Case_Sensitive_Option_State PUBLIC TRUE
+        property integer Case_Sensitive_Parameter_State PUBLIC TRUE
+        property integer Parameter_Quote_State PUBLIC TRUE
+        property integer Current_Option PUBLIC 0
+        property integer Current_Parameter PUBLIC 0
+
+        // callback properties
+        property integer Original_Error_Object_Id PUBLIC 0
+        property integer Last_Operation_Aborted_State PUBLIC 0
+
+        object Option_List is a Set
+        end_object
+
+        object Option_Msg_List is an Array
+        end_object
+
+        object UC_Option_List is a Set
+        end_object
+
+        object UC_Option_Msg_List is an Array
+        end_object
+    end_procedure
+
+    function Callback string Val integer Type returns integer
+        local string Key_Val Ret_Val
+
+        if Type EQ CALLBACK_TYPE_COMPLETE ;
+            function_return 0
+
+        showln Val
+
+//        indicate Key.Escape FALSE
+//        inkey$ Key_Val
+//
+        move 0 to Ret_Val
+
+//        [Key.Escape] begin
+//            move 0 to Termchar
+//
+//            while Termchar NE 0 // flush key buffer in case user got impatient.
+//                inkey$ Key_Val
+//            end
+//
+//            get Interrupt to Ret_Val
+//        end
+//
+        function_return Ret_Val
+    end_function
+
+    procedure set Option_Msg string Option integer Msg
+        local integer Itm#
+
+        get MSG_Add_Element of (Option_List(Current_Object)) ;
+            Option to Itm#
+        set Array_Value of (Option_Msg_List(Current_Object)) ;
+            item Itm# to Msg
+
+        get MSG_Add_Element of (UC_Option_List(Current_Object)) ;
+            (uppercase(Option)) to Itm#
+        set Array_Value of (UC_Option_Msg_List(Current_Object)) ;
+            item Itm# to Msg
+    end_procedure
+
+    function Option_Msg string Option returns integer
+        local integer Itm#
+        local string ltrash
+
+        if (Case_Sensitive_Option_State(Current_Object)) begin
+            get Find_Element of (Option_List(Current_Object)) Option to Itm#
+            if Itm# EQ -1 ;
+                function_return -1
+            else ;
+                function_return ;
+                    (Integer_Value(Option_Msg_List(Current_Object), Itm#))
+        end
+        else begin
+            get Find_Element of (UC_Option_List(Current_Object)) ;
+                (uppercase(Option)) to Itm#
+            if Itm# EQ -1 ;
+                function_return -1
+            else ;
+                function_return ;
+                    (Integer_Value(UC_Option_Msg_List(Current_Object), ;
+                    Itm#))
+        end
+    end_function
+
+    function Strip_Option string Arg returns string
+        local integer Len
+        local string Pfx
+
+        get Option_Prefix to Pfx
+        length Pfx to Len
+
+        // does prefix match?
+        if (Left(Arg, Len)) EQ Pfx ;
+            function_return (right(Arg, length(Arg) - Len))
+        else ;
+            function_return Arg
+    end_function
+
+    function Is_Option string Option returns integer
+        local integer Prefix_Len
+        local string Pfx
+
+        get Option_Prefix to Pfx
+        length Pfx to Prefix_Len
+
+        // does prefix match?
+        if (Left(Option, Prefix_Len)) NE Pfx ;
+            function_return (FALSE)
+        else ;
+            // is it in the option list?
+            function_return (Option_Msg(Current_Object, ;
+                right(Option, length(Option) - Prefix_Len)) <> -1)
+    end_function
+
+    procedure Parse
+        forward send Parse
+        set Current_Option to 0
+        set Current_Parameter to 0
+    end_procedure
+
+    procedure Begin_Command_Line
+        set Initial_Argument to (Current_Argument(Current_Object))
+    end_procedure
+
+    procedure Process_Initial_Parameters
+    end_procedure
+
+    procedure Process_Option string Val
+        if (Case_Sensitive_Option_State(Current_Object)) ;
+            send (Option_Msg(Current_Object, Val)) Val
+        else ;
+            send (Option_Msg(Current_Object, Val)) (uppercase(Val))
+    end_procedure
+
+    procedure Process_Terminating_Parameters
+    end_procedure
+
+    procedure End_Command_Line
+    end_procedure
+
+    procedure Process_Arguments
+        local string Val
+        local integer Msg Itm#
+
+        // turn off error_object, just dump to screen
+        set Original_Error_Object_Id to Error_Object_Id
+        move 0 to Error_Object_Id
+
+        send Begin_Command_Line
+        send Process_Initial_Parameters
+
+        get Next_Option to Val
+
+        repeat
+            while Val GT ""
+                send Process_Option Val
+                get Next_Option to Val
+            end
+
+            send Process_Terminating_Parameters
+            send End_Command_Line
+
+            if (Peek_Next_Argument(Current_Object)) GT "" begin
+                send Begin_Command_Line
+                send Process_Initial_Parameters
+            end
+
+            get Next_Option to Val
+        until Val LE ""
+
+        // restore original error_object
+        get Original_Error_Object_Id to Error_Object_Id
+    end_procedure
+
+    function Next_Option returns string
+        local string Itm#
+        local string Val
+
+        set Current_Argument to (Current_Option(Current_Object))
+        get Next_Argument to Val // (re)sets cur_arg
+
+        // skip past parameters for last option
+        while ((Val > "") and not(Is_Option(Current_Object, Val)))
+            get Next_Argument to Val
+        end
+
+        if Val GT "" ;
+            get Strip_Option Val to Val
+
+        set Current_Option to (Current_Argument(Current_Object))
+        // no parameters read yet
+        set Current_Parameter to 0
+
+        if (Case_Sensitive_Option_State(Current_Object)) ;
+            function_return Val
+        else ;
+            function_return (uppercase(Val))
+    end_function
+
+    function Next_Parameter returns string
+        local integer Itm# Found_End
+        local string Val First_Char Last_Char Last_Two Nxt_Arg Qchars Cur_Arg
+
+        get Current_Parameter to Itm#
+
+        // if starting new set of parms, use current option as last parm pos
+        if Itm# EQ 0 ;
+            get Current_Option to Itm#
+
+        // no more options or no more parms
+        if Itm# EQ -1 begin
+            set Current_Parameter to -1
+            function_return ""
+        end
+
+        get Current_Argument to Cur_Arg
+        set Current_Argument to Itm#
+        get Next_Argument to Val
+
+        // if next arg is an option, no more parms
+        if ((Val > "") and Is_Option(Current_Object, Val)) begin
+            set Current_Argument to Cur_Arg
+            move -1 to Itm#
+            move "" to Val
+        end
+        // else found a parm; do quote stuff if nec.
+        else if (Parameter_Quote_State(Current_Object)) begin
+            left Val to First_Char 1
+
+            get Quote_Chars to Qchars
+
+            if First_Char in Qchars begin
+                replace First_Char in Val with ""
+                move Val to Nxt_Arg
+                move "" to Val
+     
+                while Nxt_Arg GT ""
+                    right Nxt_Arg to Last_Char 1
+                    move (Last_Char = First_Char) to Found_End
+
+                    // replace and keep reading if trailing quote is
+                    // "escaped" with a literal prefix char
+                    if Found_End begin
+                        right Nxt_Arg to Last_Two 2
+
+                        // is last quote is escaped?
+                        move (Last_Two <> (Literal_Prefix(Current_Object) + ;
+                            First_Char)) to Found_End
+
+                        if Found_End ;
+                            left Nxt_Arg to Nxt_Arg (length(Nxt_Arg) - 1)
+                        else ;
+                            move (remove(Nxt_Arg, length(Nxt_Arg) - 1, 1)) ;
+                                to Nxt_Arg
+                    end
+
+                    if Val GT "" ;
+                        move (Val + " " + Nxt_Arg) to Val
+                    else ;
+                        move Nxt_Arg to Val
+
+                    if Found_End ;
+                        move "" to Nxt_Arg
+                    else ;
+                        get Next_Argument to Nxt_Arg
+                end
+            end
+            else if ((First_Char = Literal_Prefix(Current_Object)) and ;
+                    (Qchars contains mid(Val, 1, 2))) ;
+                replace First_Char in Val with ""
+
+            get Current_Argument to Itm#
+        end
+
+        set Current_Parameter to Itm#
+
+        if ((Val <= "") or Case_Sensitive_Parameter_State(Current_Object)) ;
+            function_return Val
+        else ;
+            function_return (uppercase(Val))
+    end_function
+
+    function Scan_For_Option string Option returns integer
+        local integer Was_Arg Was_Option
+        local string Val Right_Case_Option
+
+        if (Case_Sensitive_Option_State(Current_Object)) ;
+            move Option to Right_Case_Option
+        else ;
+            uppercase Option to Right_Case_Option
+
+        get Current_Argument to Was_Arg
+        get Current_Option to Was_Option
+
+        set Current_Option to (Initial_Argument(Current_Object))
+        get Next_Option to Val
+
+        while Val GT ""
+            if Val EQ Right_Case_Option begin
+                set Current_Argument to Was_Arg
+                set Current_Option to Was_Option
+                function_return (Current_Option(Current_Object))
+            end
+
+            get Next_Option to Val
+        end
+
+        set Current_Argument to Was_Arg
+        set Current_Option to Was_Option
+
+        function_return 0
+    end_function
+
+    function Scan_For_Parameter string Parm returns integer
+        local integer Was_Arg Was_Parm
+        local string Val Right_Case_Parm
+
+        if (Case_Sensitive_Parameter_State(Current_Object)) ;
+            move Parm to Right_Case_Parm
+        else ;
+            uppercase Parm to Right_Case_Parm
+
+        get Current_Argument to Was_Arg
+        get Current_Parameter to Was_Parm
+
+        set Current_Parameter to (Current_Option(Current_Object))
+
+        get Next_Parameter to Val
+
+        while Val GT ""
+            if Val EQ Right_Case_Parm begin
+                set Current_Argument to Was_Arg
+                set Current_Parameter to Was_Parm
+                function_return (Current_Parameter(Current_Object))
+            end
+
+            get Next_Parameter to Val
+        end
+
+        set Current_Argument to Was_Arg
+        set Current_Parameter to Was_Parm
+
+        function_return 0
+    end_function
+
+    procedure Print_Option_List
+        local integer Obj Msg_Obj Cnt Itm#
+
+        if (Case_Sensitive_Option_State(Current_Object)) begin
+            move (Option_List(Current_Object)) to Obj
+            move (Option_Msg_List(Current_Object)) to Msg_Obj
+        end
+        else begin
+            move (UC_Option_List(Current_Object)) to Obj
+            move (UC_Option_Msg_List(Current_Object)) to Msg_Obj
+        end
+        
+        get Item_Count of Obj to Cnt
+        move 0 to Itm#
+
+        showln "Total Options: " Cnt
+
+        while Itm# LT Cnt
+            showln Itm# ": '" ;
+                (String_Value(Obj, Itm#)) "' (" (Integer_Value(Msg_Obj, ;
+                Itm#)) ")"
+            increment Itm#
+        end
+    end_procedure
+end_class
+
+class Command_Response_Parser is a Command_Option_Parser
+    procedure Construct_Object
+        forward send Construct_Object
+
+        property integer File_Input_State PUBLIC FALSE
+        property string  Response_Filename PUBLIC ""
+        property integer Response_File_Channel PUBLIC 0
+        property string  Response_Line PUBLIC ""
+        property string  Resp_Opt PUBLIC
+        property string  UC_Resp_Opt PUBLIC
+        property integer Max_Nesting_Level PUBLIC 15
+        property integer Current_Nesting_Level PUBLIC 0
+        property string  Max_Level_Opt PUBLIC
+        property string  UC_Max_Level_Opt PUBLIC
+        property integer End_Of_Line PUBLIC FALSE
+        property integer End_Of_File PUBLIC FALSE
+        property string  Continuation_Suffix PUBLIC ";"
+        property integer Continuation_State PUBLIC FALSE
+
+        set Response_File_Option to "r"
+        set Max_Nesting_Level_Option to "rn"
+    end_procedure
+
+    procedure set Response_File_Option string Val
+        set Resp_Opt to Val
+        set UC_Resp_Opt to (uppercase(Val))
+    end_procedure
+
+    function Response_File_Option returns string
+        if (Case_Sensitive_Option_State(Current_Object)) ;
+            function_return (Resp_Opt(Current_Object))
+        else ;
+            function_return (UC_Resp_Opt(Current_Object))
+    end_function
+
+    procedure set Max_Nesting_Level_Option string Val
+        set Max_Level_Opt to Val
+        set UC_Max_Level_Opt to (uppercase(Val))
+    end_procedure
+
+    function Max_Nesting_Level_Option returns string
+        if (Case_Sensitive_Option_State(Current_Object)) ;
+            function_return (Max_Level_Opt(Current_Object))
+        else ;
+            function_return (UC_Max_Level_Opt(Current_Object))
+    end_function
+
+    function Read_Next_Line returns string
+        local integer Chnl
+        local string Val
+
+        get Response_File_Channel to Chnl
+
+        readln channel Chnl Val
+        trim Val to Val
+
+        while ((Val <= "") and not(Seqeof))
+            readln Val
+            trim Val to Val
+        end
+
+        set End_Of_Line to FALSE
+        set End_Of_File to ((Val <= "") and Seqeof)
+
+        function_return Val
+    end_function
+
+    function Read_Argument returns string
+        local integer Msg Len Cpos Arg_Len Cur_Level Max_Level
+        local string Arg Val Char Max_Opt Rsp_Opt New_Line Prefix Suffix
+
+        // doing command line input
+        if not (File_Input_State(Current_Object)) ;
+            forward get Read_Argument to Arg
+
+        // doing response file input
+        else begin
+            // end-of-file case
+            if (End_Of_File(Current_Object)) ;
+                move "" to Arg
+            else begin
+                // end-of-line case
+                if (End_Of_Line(Current_Object)) begin
+                    get Read_Next_Line to Val
+                    set Response_Line to Val
+                    set Continuation_State to FALSE
+                end
+                else ;
+                    get Response_Line to Val
+
+                Length Val to Len
+
+                // if no more chars, eol
+                if Len LE 0 begin
+                    set End_Of_Line to TRUE
+                    move "" to Arg
+                end
+                else begin
+                    // find next space or eol
+                    pos " " in Val to Cpos
+
+                    if Cpos LE 0 begin
+                        move Val to Arg
+                        move "" to New_Line
+                    end
+                    else begin
+                        left Val to Arg (Cpos - 1)
+                        trim (right(Val, Len - Cpos)) to New_Line
+                    end
+
+                    // look for continuation
+                    get Continuation_Suffix to Suffix
+                    length Suffix to Len
+                    length Arg to Arg_Len
+
+                    if ((Arg_Len >= Len) and ;
+                            (right(Arg, Len) = Suffix)) begin
+                        get Literal_Prefix to Prefix
+                        move (Arg_Len - Len - length(Prefix) + 1) to Len
+
+                        if (mid(Arg, 1, Len)) EQ Prefix ;
+                            move (remove(Arg, Len, 1)) to Arg
+                        else begin
+                            trim (left(Arg, Len)) to Arg
+
+                            if Arg LE "" ;
+                                set End_Of_Line to TRUE
+
+                            // ignore comments after continuation
+                            move "" to New_Line
+
+                            set Continuation_State to TRUE
+                        end
+                    end
+
+                    set Response_Line to New_Line
+                end
+            end
+
+            if not (End_Of_Line(Current_Object) and ;
+                    Continuation_State(Current_Object)) ;
+                set Current_Argument to ;
+                    (Current_Argument(Current_Object) + 1)
+        end
+
+        if Arg GT "" begin
+            if (Case_Sensitive_Option_State(Current_Object)) ;
+                get Strip_Option Arg to Val
+            else ;
+                uppercase (Strip_Option(Current_Object, Arg)) to Val
+
+            get Max_Nesting_Level_Option to Max_Opt
+
+            if ((Max_Opt > "") and (Val = Max_Opt)) begin
+                forward get Read_Argument to Arg
+
+                // act as if the -rn level never happened.
+                set Current_Argument to ;
+                    (Current_Argument(Current_Object) - 2)
+
+                move Arg to Max_Level
+                if (Err) begin
+                    send Invalid_Max_Nesting_Level_Parameter Arg
+                    indicate Err FALSE
+                end
+                else ;
+                    set Max_Nesting_Level to Max_Level
+
+                get Read_Argument to Arg
+            end
+            else begin
+                get Response_File_Option to Rsp_Opt
+
+                if ((Rsp_Opt > "") and (Val = Rsp_Opt)) begin
+                    forward get Read_Argument to Arg
+
+                    // act as if the -r filename never happened.
+                    set Current_Argument to ;
+                        (Current_Argument(Current_Object) - 2)
+
+                    get Current_Nesting_Level to Cur_Level
+
+                    if (Cur_Level + 1) GT (Max_Nesting_Level(Current_Object)) ;
+                        send Max_Nesting_Level_Reached
+                    else begin
+                        set Current_Nesting_Level to (Cur_Level + 1)
+                        send Import_Response_File Arg
+
+                        // ignore end_of_file; just do end_of_line
+                        set Current_Argument to ;
+                            (Current_Argument(Current_Object) - 1)
+
+                        set Current_Nesting_Level to Cur_Level
+                    end
+
+                    // assume end-of-line; later, add support for
+                    // line-continuation
+                    move "" to Arg
+//                    get Read_Argument to Arg
+                end
+            end
+        end
+
+        function_return Arg
+    end_function
+
+    procedure Import_Response_File string Fname
+        local integer Was_File_Input Was_Pos Was_Eol Was_Eof
+        local integer Was_Seqeol Was_Seqeof Itm# Chnl
+        local string Was_Name Was_Line Arg Val
+
+        if ((Fname <= "") or Is_Option(Current_Object, Fname)) ;
+            send Response_Filename_Parameter_Expected
+        else begin
+            get File_Input_State to Was_File_Input
+
+            if Was_File_Input begin
+                get Response_File_Channel to Chnl
+                move (Seqeol) to Was_Seqeol
+                move (Seqeof) to Was_Seqeof
+                get_channel_position Chnl to Was_Pos
+                get Response_Filename to Was_Name
+                send Seq_Close_Channel Chnl
+            end
+
+            get Seq_Open_Input_Channel Fname to Chnl
+
+            if (Err or Seqeof) ;
+                send Cannot_Open_Response_File Fname
+            else begin
+                if Was_File_Input begin
+                    get End_Of_Line to Was_Eol
+                    get End_Of_File to Was_Eof
+                    get Response_Line to Was_Line
+                end
+
+// the following seq attributes are set by direct_input command
+//                indicate Seqeol FALSE
+//                indicate Seqeof FALSE
+//                set_channel_position 0 to 0
+
+                set File_Input_State to TRUE
+                set Response_Filename to Fname
+                set Response_File_Channel to Chnl
+
+// End_Of_Line and End_Of_File are set by Read_Next_Line
+//                set End_Of_Line to FALSE
+//                set End_Of_File to FALSE
+
+                // check for blank line at bof; means eol for
+                // previous cmd line
+                readln Val
+                trim Val to Val
+                
+                if Val LE "" begin
+                    get Current_Argument to Itm#
+
+                    // only insert eol if we've read at least one arg
+                    if Itm# GT 0 begin
+                        increment Itm#
+                        set Array_Value item Itm# to Val
+                        set Current_Argument to Itm#
+                    end
+
+                    get Read_Next_Line to Val
+                end
+                else begin
+                    set End_Of_Line to FALSE
+                    set End_Of_File to FALSE
+                end
+
+                set Response_Line to Val
+
+                send Load_Array
+
+                if Was_File_Input begin
+                    set Response_Filename to Was_Name
+                    set End_Of_Line to Was_Eol
+                    set End_Of_File to Was_Eof
+                    set Response_Line to Was_Line
+                end
+
+                set File_Input_State to Was_File_Input
+            end
+
+            send Seq_Close_Channel Chnl
+
+            if Was_File_Input begin
+                get Seq_Open_Input_Channel Was_Name to Chnl
+                indicate Seqeol as (Was_Seqeol)
+                indicate Seqeof as (Was_Seqeof)
+                if Chnl GE DF_SEQ_CHANNEL_MIN ;
+                    set_channel_position Chnl to Was_Pos
+            end
+        end
+    end_procedure
+
+    procedure Max_Nesting_Level_Reached
+    end_procedure
+
+    procedure Invalid_Max_Nesting_Level_Parameter string Arg
+    end_procedure
+
+    procedure Response_Filename_Parameter_Expected
+    end_procedure
+
+    procedure Cannot_Open_Response_File string Fname
+    end_procedure
+
+    procedure Print_Option_List
+        forward send Print_Option_List
+        showln "Response_File_Option: '" (Response_File_Option(Current_Object)) "'"
+        showln "Max_Nesting_Level_Option: '" (Max_Nesting_Level_Option(Current_Object)) "'"
+    end_procedure
+end_class

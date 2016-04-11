@@ -1,0 +1,312 @@
+//*************************************************************************
+//*
+//*  Copyright (c) 1993 Data Access Corporation, Miami Florida,
+//*  All rights reserved.
+//*  DataFlex is a registered trademark of Data Access Corporation.
+//*
+//*************************************************************************
+//*
+//*  Module Name:
+//*      DLL.PKG
+//*
+//*  Creator:
+//*      Data Access Corporation
+//*
+//*  Purpose:
+//*      Define the commands and replacements needed to call external
+//*      function in Dynamic Link Libraies.
+//*
+//*************************************************************************
+
+
+// Define the pointer data type as a DataFlex number.  This is a
+// flag that will tell the DLL calling code that the passed parameter
+// is a pointer and should be placed on the stack as a 4 byte value.
+// Note that DF integers are placed on the stack as short (2 bytes)
+// values.
+#REPLACE POINTER NUMBER     // Parameter is a POINTER
+#REPLACE DWORD NUMBER       // Parameter is a DWORD (32 bits)
+#REPLACE WORD INTEGER       // Parameter is a WORD (16 bits)
+#REPLACE BYTE INTEGER       // Parameter is a BYTE (8 bits)
+#REPLACE HANDLE DWORD       // Parameter is a HANDLE (32 bits)
+#REPLACE VOID_TYPE INTEGER  // Return type is  VOID
+
+// The following set of replacements define the type of load for the
+// DLL.  Each load type has the standard set of trade offs, speed
+// vs memory.  A lib that is loaded each time is probable the most memory
+// efficient, but suffers from load speed overhead.  However, large DLLs
+// that are retained in memory are not using system resources as
+// efficientry as possible.  Note that some DLLs are already in memory.
+// The Windows Kernel and USER libs are already loaded by Windows, and
+// do not take up more memory.
+
+#REPLACE LOAD_ON_EACH_USE 0     // Load and free on each call (slow)
+#REPLACE LOAD_LIBRARY     1     // Load Lib on definition
+#REPLACE DELETE_ENTRY     2     // Delete lib entry in reg DataBase
+#REPLACE FREE_LIBRARY     4     // Free lib in Reg DataBase
+#REPLACE LOAD_ON_USE      8     // Load lib on first use (call)
+
+// External function command declairs the external entry point to
+// The DF system.  The compiler creates a reference to the function
+// complete with return type and parameter information.  The macro
+// also generates code that retains the name of the function and the
+// name of the library in a runtime array.  This array is used when
+// the DLL is "loaded".
+
+
+#COMMAND SET_DEFAULT_CALLTYPE _R .
+  #IF (!1=16)
+    #SET ZK$ 1
+  #ELSE
+    #SET ZK$ 0
+  #ENDIF
+#ENDCOMMAND
+
+
+//External_Function FunctionName "FunctionName" DLLName {Parameters ...} Returns DataType
+#COMMAND EXTERNAL_FUNCTION
+    #IF !Zk=0
+      EXTERNAL$FUNCTION $54C LOAD_ON_USE GET_ !1 !2 !3 !4 !5 !6 !7 !8 !9
+    #ELSE
+      EXTERNAL$FUNCTION $54D LOAD_ON_USE GET_ !1 !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+#ENDCOMMAND
+
+#COMMAND EXTERNAL_PROCEDURE
+    #IF !Zk=0
+      EXTERNAL$FUNCTION $54C LOAD_ON_USE MSG_ !1 !2 !3 !4 !5 !6 !7 !8 !9
+    #ELSE
+      EXTERNAL$FUNCTION $54D LOAD_ON_USE MSG_ !1 !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+#ENDCOMMAND
+
+#COMMAND EXTERNAL_FUNCTION16
+    EXTERNAL$FUNCTION $54D LOAD_ON_USE GET_ !1 !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+#COMMAND EXTERNAL_PROCEDURE16
+    EXTERNAL$FUNCTION $54D LOAD_ON_USE MSG_ !1 !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+#COMMAND EXTERNAL_FUNCTION32
+    EXTERNAL$FUNCTION $54C LOAD_ON_USE GET_ !1 !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+#COMMAND EXTERNAL_PROCEDURE32
+    EXTERNAL$FUNCTION $54C LOAD_ON_USE MSG_ !1 !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+//External$Function Command Flag GET_|MSG_ FunctionName {"FunctionName"} DLLName {Parameters ...} Returns DataType
+#COMMAND EXTERNAL$FUNCTION _R _R "GET_""MSG_" TR RIDN
+  #IFTYPE !5 S
+    MESSAGE$ADDRESS !3!4
+    #DATA
+    #FREG !3!4 GLOBAL !7 !8 !9
+    #DPUSH !3!4      // Message ID
+    #DPUSH !2        // Load Type
+    #DPUSH |CS"!6"   // DLL Name
+    #DPUSH !5     // Function Name
+    GET$RETURN$TYPE !7 !8 !9  // Push Return Type
+    !A [] !1 |CI0 |VL
+  #ELSE
+    EXTERNAL$FUNCTION !1 !2 !3 !4 |CS"!4" !5 !6 !7 !8 !9
+  #ENDIF
+#ENDCOMMAND
+
+#COMMAND GET$RETURN$TYPE
+#IF !0=1
+  #IFSAME !1 INTEGER
+    #DPUSH |CI3
+  #ELSE
+    #IFSAME !1 STRING
+      #DPUSH |CI0
+    #ELSE
+      #IFSAME !1 NUMBER
+        #DPUSH |CI1
+      #ELSE
+        #IFSAME !1 REAL
+          #DPUSH |CI5
+        #ELSE
+          #IFSAME !1 DATE  // Pointer is a DWORD in 32 bit
+            #DPUSH |CI2
+          #ELSE
+            #DPUSH |CI3 // Push an int return value anyway
+            #ERROR 999 Unknown return type for external function
+          #ENDIF
+        #ENDIF
+      #ENDIF
+    #ENDIF
+  #ENDIF
+#ELSE
+  GET$RETURN$TYPE !2 !3 !4 !5 !6 !7 !8 !9
+#ENDIF
+#ENDCOMMAND
+
+// Define the sizes of the known data types
+#REPLACE DWORD_DTSIZE 4
+#REPLACE SHORT_DTSIZE 2
+#REPLACE DATE_DTSIZE 4
+#REPLACE NUMBER_DTSIZE 4
+#REPLACE HANDLE_DTSIZE 4
+#REPLACE INTEGER_DTSIZE 4
+#REPLACE CHAR_DTSIZE 1
+#REPLACE BYTE_DTSIZE 1
+#REPLACE WORD_DTSIZE 2
+#REPLACE INTEGER16_DTSIZE 2
+#REPLACE HANDLE16_DTSIZE 2
+
+#COMMAND TYPE
+  #PUSH !Zo
+  #SPUSH !$             // save the old STRING
+  #SET ZO$ 1
+  #SET $$ !1                // retain the name of the TYPE
+#ENDCOMMAND
+
+#COMMAND END_TYPE
+  #PUSH !q
+  #SET Q$ (!Zo - 1)
+  #REPLACE !$_SIZE !q
+  #POP Q$
+  #SPOP
+  #POP ZO$
+#ENDCOMMAND
+
+#COMMAND FIELD _R "AS" _R _D .
+  #PUSH !q
+  #IF (!0>3)
+    #SET Q$ (!3_DTSIZE * !4)
+  #ELSE
+    #SET Q$ !3_DTSIZE
+  #ENDIF
+  #REPLACE !1 !Zo !q
+  #SET ZO$ (!Zo + !q)
+  #POP Q$
+#ENDCOMMAND
+
+// Since DF allows the imbedding of binary zeros in strings, strings
+// passed back to DF (via reference pointers) often need to be sized
+// based on the position of the zero terminator.  This function will
+// a valid DF string from a 'C' string.
+
+Function CString Global String Buffer Returns String
+    Local Integer TermPos
+    Pos (Character(0)) in Buffer to TermPos
+    Function_Return (left(buffer,termpos-1))
+End_Function
+
+
+Function DWORDtoBytes Global Integer aDWORD Returns String
+    Function_Return ( ;
+          character(low(aDWORD) iand 255) + ;
+          character(low(aDWORD) / 256) + ;
+          character(hi(aDWORD) iand 255) + ;
+          character(hi(aDWORD) / 256) )
+End_Function
+
+Function SHORTtoBytes Global Integer SHORT Returns String
+    Function_Return ( ;
+          character( SHORT iand 255) + ;
+          character( SHORT / 256) )
+End_Function
+
+Function BytesToSHORT Global String Buffer Integer Offset Returns Integer
+    local integer in1 in2
+    ascii (mid(Buffer,1,Offset)) to in1
+    ascii (mid(Buffer,1,Offset+1)) to in2
+    move ( in1 + (in2*256) ) to in1
+    if in2 gt 127 Move (in1 - 65536) to in1
+    function_return ( in1 )
+End_Function
+
+Function BytesToDWORD Global String Buffer Integer Offset Returns Integer
+    Local integer in1 in2 in3 in4
+
+    ascii (Mid( Buffer, 1, offset )) to in1
+    ascii (Mid( Buffer, 1, offset+1 )) to in2
+    ascii (Mid( Buffer, 1, offset+2 )) to in3
+    ascii (Mid( Buffer, 1, offset+3 )) to in4
+
+    move (in1 + (in2*256) + (in3*65536) + (in4*16777216)) to in1
+    function_return in1
+End_Function
+
+Function CVTtoBytes Global Integer iValue Integer Offset Integer DSize String Host Returns String
+    Local String Buff
+    if      DSize eq 2 Move (SHORTtoBytes(iValue)) to Buff
+    Else if DSize eq 4 Move (DWORDtoBytes(iValue)) to Buff
+    Else               Move (Character(iValue))    to Buff
+    Function_Return (OverStrike(Buff, Host, Offset))
+End_Function
+
+Function BytestoCVT Global String sValue Integer Offset Integer DSize Returns Integer
+    Local Integer iValue
+    if      DSize eq 2 Move (BytestoShort(sValue,Offset)) to iValue
+    Else if DSize eq 4 Move (BytestoDWORD(sValue,Offset)) to iValue
+    Else               Move (Ascii(mid(sValue,1,Offset))) to iValue
+    Function_Return (iValue)
+End_Function
+
+Function StringtoBytes Global String sValue Integer Offset Integer DSize String Host Returns String
+    local string  Buff
+    local integer Len
+    length sValue to Len
+    If      Len lt DSize Move (sValue+(repeat(character(0),DSize-Len))) to Buff
+    Else if Len gt DSize Move (left(sValue,DSize)) to Buff
+    Else                 Move sValue to Buff
+    Function_Return (OverStrike(Buff, Host, Offset))
+End_Function
+
+#COMMAND PUT R "TO" R "AT" R // value to dest at address
+    Move (CVTtoBytes(!1,!5,!6,!3)) to !3
+#ENDCOMMAND
+
+#COMMAND PUT_STRING R "TO" R "AT" R R // value to dest at address
+    Move (StringtoBytes(!1,!5,!6,!3)) to !3
+#ENDCOMMAND
+
+#COMMAND GETBUFF "FROM" R "AT" R R "TO" R // From Buff at address to value
+    Move (BytestoCVT(!2,!4,!5)) to !7
+#ENDCOMMAND
+
+#COMMAND GETBUFF_STRING "FROM" R "AT" R R "TO" R // From Buff at address to value
+    Move (Mid(!2,!5,!4)) to !7
+#ENDCOMMAND
+
+#COMMAND FILLTYPE R "WITH" R "TO" R
+    Move (Repeat( Character(!3), !1_SIZE )) to !5
+#ENDCOMMAND
+
+#COMMAND ZEROTYPE R "TO" R
+    Move (Repeat( Character(0), !1_SIZE )) to !3
+#ENDCOMMAND
+
+#COMMAND ZEROSTRING R "TO" R
+    Move (Repeat( Character(0), !1 )) to !3
+#ENDCOMMAND
+
+#COMMAND OFFSET_OF_FIELD R R "TO" R
+    Move !1 to !4
+#ENDCOMMAND
+
+#COMMAND SIZE_OF_FIELD R R "TO" R
+    Move !2 to !4
+#ENDCOMMAND
+
+Function AddBitValue GLOBAL integer iBitValue integer iSource RETURNS integer
+    Function_Return (iSource IOR iBitValue)
+End_Function
+
+Function RemoveBitValue GLOBAL integer iBitValue integer iSource RETURNS integer
+    if (iSource IAND iBitValue) eq iBitValue Begin
+        Function_Return (iSource - iBitValue)
+    End
+    Else Function_Return iSource
+End_Function
+
+// The GetAddress Command returns the memory address of a DF string
+// variable.  The command is necessary where external function require
+// The address of a string to be passed.
+
+#COMMAND GETADDRESS "OF" R "TO" R
+  !A [] $54B !2 !4
+#ENDCOMMAND

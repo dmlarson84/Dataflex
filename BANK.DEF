@@ -1,0 +1,31 @@
+        FILE DEFINITION LISTING FOR FILE #36
+*************************************************** 
+        FILE ROOT NAME     = Bank
+        USER DISPLAY NAME  = GL Bank Code Table
+        DATAFLEX FILE NAME = BANK
+*************************************************** 
+        RECORD LENGTH = 128  (USED = 89)
+        MAX NUMBER OF RECORDS = 50  (USED = 2)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       2   ASCII          1     0     0     CODE
+   2       3      30   ASCII          0     0     0     NAME
+   3      33       2   NUMERIC   0    0     0     0     GL_ACCOUNT
+   4      35       3   ASCII          0     0     0     GL_DIST
+   5      38       2   ASCII          0     0     0     GL_DIV
+   6      40      15   ASCII          0     0     0     ACCOUNT_ID
+   7      55      10   ASCII          0     0     0     BANK_ID
+   8      65       3   NUMERIC   0    0     0     0     NEXT_CHECK_NUM
+   9      68       4   NUMERIC   2    0     0     0     CURRENT_BAL
+  10      72       4   NUMERIC   2    0     0     0     STMT_BAL
+  11      76       4   NUMERIC   2    0     0     0     CLEARED
+  12      80       3   DATE           0     0     0     LAST_DEP_DATE
+  13      83       3   NUMERIC   0    0     0     0     LAST_RCPT
+  14      86       4   NUMERIC   2    0     0     0     PRIOR_STMT_BAL
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   
+

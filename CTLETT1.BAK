@@ -1,0 +1,267 @@
+/HEADER                              CTLETT1.RPT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/BODY
+     __/__/____
+        ______________________________
+        ______________________________
+        ______________________________
+        ________________________________
+
+        Re:  Your check no ________         
+             Dated         __/__/____
+             In Amount of  _____.__
+             Payable to    _______________________________
+
+             YOUR TOTAL AMOUNT DUE $ ______.__
+
+           A complaint has been made to this office that you have violated the
+   Arkansas "Hot Check Law" (Ark. Code Ann. 5-37-302 et. seq.).  Violations of
+   this law are punishable by  fine and/or  imprisonment in the county jail or
+   state penitentiary.
+
+           The purpose  of this letter is to give you  the opportunity to make
+   restitution on the following  check(s) and all other bad checks by __/__/____
+   or a summons  or  warrant for your  arrest  will be  issued by  the  Court.
+   NO PERSONAL CHECKS OR CASH WILL BE ACCEPTED. RESTITUTION  MUST BE PAID BY
+   MONEY ORDER OR CASHIER`S CHECK MADE PAYABLE TO  THE PROSECUTING ATTORNEY.
+   The amount of restitution required is the amount of the check, plus a $__.__
+   service  charge  for  the  merchant  and  a  collection  fee  for  the
+   Prosecuting Attorney as indicated below. Restitution must be made in person
+   or mailed to:                              PROSECUTING ATTORNEY
+                                              _________________________
+   YOUR TOTAL AMOUNT DUE $ ______.__          ___________________  __________
+   O F F I C E   H O U R S: _________________________________________________
+           After a summons or warrant has been issued IT WILL NOT BE RECALLED.
+   You will have to appear in court  personally,  and we will proceed with the
+   prosecution.
+
+           This is the  ONLY  notice  you will receive.   If other  checks are
+   referred to this office, a summons or  warrant  will be issued immediately.
+   It is your  responsibility  to review  your  own  records  and see that all
+   other checks are paid.
+
+   ____________________________            Sincerely,
+   ____________________________
+   ____________________________
+   ____________________________
+   ____________________________            ______________________________
+   ____________________________            ______________________________
+   ____________________________
+   ____________________________
+/TOTAL
+
+
+
+
+
+    TOTAL OF ALL OFFENSES IN LETTER BATCH OF __/__/____       _$,_____.__
+/DATE_SCRN
+__/__/____
+/SELECT
+                          WORTHLESS CHECK SYSTEM
+                         DEFENDANT WARNING LETTERS 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+          Enter H to use handfed paper     _
+
+          Print the Prosecutor Fees table? (Y/N)  _
+
+/NOSETUP
+                             * * W A R N I N G * *
+
+         There is no record in the HOT CHECK SETUP TABLE for ____ !!
+
+
+    You MUST add a record to the Setup Table (option 7 on the Master Menu)
+    and/or check that the system date is correct.
+
+
+
+
+
+                          Press any key to continue _
+
+/INFO
+    CHANGE MADE 08-17-95 By Gary Grooms
+       Added prosecutor address zip code field and office hours field
+    Change made 3-2-99 by Herta Jesse
+       Modified program to comply with y2k - 4 digit years and changed
+       save routines to comply with v3.1d re-read, save, unlock etc.
+       edited the sysdate command to sysdate4 command (new v3.1d)
+
+/*
+Read_dfini "df23ini.cfg"
+//----------------- Cannot Run Program From Command Line (DOS)
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+#include Calcdate.inc
+#include macs.frm
+OPEN SETUP
+OPEN DEFENDNT
+OPEN OFFENSE INDEX.7
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+NUMBER TOTAMT SUBAMT
+INTEGER WHERE LGTH
+DATE TODAY TENDAY
+INDICATOR PTAB
+STRING LNAME 20 FNAME 30 LINE 
+STRING CITY 20 CSZ 32 BLNK 1
+STRING TABLE1 28 TABLE2 28 TABLE3 28 TABLE4 28 TABLE5 28
+STRING TABLE6 28 TABLE7 28 TABLE8 28
+STRING YEAR 4 SHORT_YR 2 BLANKS
+SYSDATE4 DATE_SCRN.1
+RIGHT DATE_SCRN.1 TO SHORT_YR 2
+MOVE '19' TO YEAR
+APPEND YEAR SHORT_YR
+
+CLEAR SETUP
+MOVE AYEAR TO SETUP.YEAR
+FIND EQ SETUP BY INDEX.1
+[FINDERR] GOSUB NOSETUP
+IF SETUP.PROSNAME LE '' GOSUB NOSETUP
+IF SETUP.LAST_CHECK LE 0 GOSUB NOSETUP
+
+
+SYSDATE4 TODAY
+MOVE (TODAY + 10) TO TENDAY
+OUTFILE 
+MOVE 0 TO PAGEFEED
+MOVE 22 TO PAGEEND
+
+INDICATE PTAB FALSE
+BLANKFORM BODY
+
+ACCEPT SELECT.1
+IF SELECT.1 IN 'Hh' MOVE -1 TO PAGEFEED
+MOVE 'N' TO SELECT.2
+ACCEPT SELECT.2
+IF SELECT.2 IN 'Yy' BEGIN
+    INDICATE PTAB TRUE
+    MOVE '    PROSECUTING ATTORNEY    ' TO TABLE1
+    MOVE '      COLLECTION FEES       ' TO TABLE2
+    MOVE '  AMOUNT OF CHECK       FEE ' TO TABLE3
+    MOVE '$  0.00 - $  10.00    $ 5.00' TO TABLE4
+    MOVE '$ 10.01 - $ 100.00    $10.00' TO TABLE5
+    MOVE '$100.01 - $ 300.00    $30.00' TO TABLE6
+    MOVE '$300.01 - $ 500.00    $50.00' TO TABLE7
+    MOVE '$500.01 -   over      $75.00' TO TABLE8
+END
+MOVE 0 TO TOTAMT
+MOVE 0 TO SUBAMT
+
+REPORT OFFENSE BY INDEX.7
+         
+           INDICATE SELECT AS OFFENSE.ACTIVE EQ ''
+[~ SELECT] GOTO END.OF.REPORT
+[SELECT]   INDICATE SELECT AS OFFENSE.LETDT EQ ''
+         
+SECTION HEADER
+        OUTPUT HEADER
+SECTION BODY
+        POS "," IN DEFENDNT.NAME TO WHERE
+        LEFT DEFENDNT.NAME TO LNAME (WHERE-1)
+        RIGHT DEFENDNT.NAME TO FNAME (30-WHERE)
+        TRIM FNAME TO FNAME
+        APPEND FNAME " " LNAME
+
+        GOTOXY 12 12
+        SHOW 'Processing letter to ' FNAME '            '
+
+        TRIM SETUP.CITY TO CITY
+        APPEND CITY ", AR"
+        TRIM DEFENDNT.CITY TO CSZ
+        APPEND CSZ ", " DEFENDNT.ST "   " DEFENDNT.ZIP
+        PRINT TODAY  
+
+        BLANKFORM BODY.2 THRU BODY.5
+        IF DEFENDNT.ADDR2 GT ' ' IF DEFENDNT.ADDR GT ' ' BEGIN
+          PRINT FNAME TO BODY.2
+          PRINT DEFENDNT.ADDR  TO BODY.3
+          PRINT DEFENDNT.ADDR2 TO BODY.4
+        END
+        ELSE BEGIN
+          PRINT FNAME TO BODY.3
+          IF DEFENDNT.ADDR  GT ' ' PRINT DEFENDNT.ADDR  TO BODY.4
+          IF DEFENDNT.ADDR2 GT ' ' PRINT DEFENDNT.ADDR2 TO BODY.4
+        END
+
+        AUTOPAGE BODY 5
+        PRINT CSZ 
+        PRINT OFFENSE.CKNO
+        PRINT OFFENSE.CKDT
+        PRINT OFFENSE.CKAMT
+        PRINT OFFENSE.NAME
+        PRINT OFFENSE.TOTAL
+        PRINT TENDAY
+        PRINT OFFENSE.MFEE
+        PRINT SETUP.ADDR
+        PRINT OFFENSE.TOTAL
+        PRINT CITY
+        PRINT SETUP.ZIP
+        PRINT SETUP.HOURS
+        [PTAB] BEGIN
+              PRINT TABLE1
+              PRINT TABLE2
+//              PRINT
+              PRINT TABLE3
+              PRINT TABLE4
+              PRINT TABLE5
+              PRINT TABLE6 TO BODY.24
+              PRINT TABLE7 TO BODY.26
+              PRINT TABLE8 TO BODY.27
+        END
+        PRINT SETUP.SIGNS_DEFLTR    TO BODY.23
+        PRINT SETUP.DL_SIGNERS_TITL TO BODY.25
+
+        OUTPUT BODY
+        Reread Offense
+        MOVE TODAY TO OFFENSE.LETDT
+        SAVERECORD OFFENSE
+        Unlock
+SECTION TOTAL
+         PRINT TODAY
+         SUBTOTAL BODY.10
+         OUTPUT TOTAL
+REPORTEND
+FORMFEED
+ABORT
+
+KEYPROC KEY.ESCAPE
+ABORT
+
+NOSETUP:
+      MOVE YEAR TO NOSETUP.1
+      ACCEPT NOSETUP.2
+      ABORT
+RETURN

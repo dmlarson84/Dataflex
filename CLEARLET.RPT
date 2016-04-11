@@ -1,0 +1,67 @@
+/SELECT                                    CLEARLET.RPT
+                              HOT CHECK SYSTEM
+                           Clear Letter Date Info
+
+
+           Enter the letter date you wish to look for: __/__/__
+/SELECT2
+                              HOT CHECK SYSTEM
+                           Clear Letter Date Info
+
+
+         Enter:    S to print single letters, 
+                   A for aggregated letters, or 
+                   N for no letters right now.
+
+                             _
+
+/*
+//----------------- Cannot Run Program From Command Line (DOS)
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+OPEN OFFENSE INDEX.4
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+DATE TODAY COMPDATE
+SYSDATE TODAY
+
+//FORMAT SELECT2.1 {CAPSLOCK,CHECK='SAN'}
+
+PAGE SELECT
+ACCEPT SELECT.1
+
+REPORT OFFENSE BY INDEX.4
+
+           INDICATE SELECT AS OFFENSE.ACTIVE EQ ''
+[~ SELECT] GOTO END.OF.REPORT
+[SELECT]   INDICATE SELECT AS OFFENSE.LETDT EQ SELECT.1
+
+SECTION BODY
+        MOVE '' TO OFFENSE.LETDT
+        SAVERECORD OFFENSE
+REPORTEND
+
+//MOVE 'N' TO SELECT2.1
+//ACCEPT SELECT2.1 
+//IF SELECT2.1 EQ 'S' CHAIN 'CTLETT1'
+//IF SELECT2.1 EQ 'A' CHAIN 'CTLETT3'
+CHAIN 'CTLETT3'
+ABORT
+
+
+
+
+
+

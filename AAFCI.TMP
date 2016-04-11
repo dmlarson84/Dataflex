@@ -1,0 +1,3 @@
+CLEANUP     Duplicate data was detected in file DEPOSITS, index 1.  Cleanup must be run.
+BADORDUP    Bad or duplicate data was detected.
+ENDSORTLOG  

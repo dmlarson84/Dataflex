@@ -1,0 +1,130 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Clear_mx.Pkg
+// Version: 1.0
+//  07/18/94 - Created
+//
+// Author: John J. Tuohy
+//
+// Augmentations:
+//    Entry_Clear
+//    Entry_Clear_all
+//
+// mixin package DEOs (table, entry_form) to support defaults after a
+// a clear (either through retains or Entry_Defaults). Added to
+// enform0.pkg and table0.pkg
+//
+// 09/11/94 - added same support to entry_clear_all (whoops forgot)
+//
+// 12/22/94 JJT - Removed Change_disabled_state (to server)
+//                Changed_state augmentation in server
+//
+// 05/25/95 JJT - Entry_clear/clear_all only passes one param (not two)
+// 08/29/95 JJT - Modified entry_clear and entry_clear_all to only send
+//                entry_defaults when the server's main-file was part
+//                of the clear. Entry_defaults was getting called too
+//                often.
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+//************************************************************************
+
+use ui
+
+Class Clear_Defaults_Mixin is a message
+
+  Procedure Define_Clear_Defaults
+
+     // Defined for backwards compatability. If you don't like the new
+     // behavior, set this property to false. This only effects retains.
+     // Avoid using this if possible.
+     Property Integer Retain_no_Change_state Public TRUE
+  End_Procedure // Define_Clear_Defaults
+
+  Procedure Entry_Clear Integer fg1
+     Local integer Oldst srvr file#
+     Get Change_Disabled_State to OldSt
+     If (Retain_no_Change_state(Current_Object)) Begin
+        Set Change_Disabled_State to TRUE
+        Forward Send Entry_Clear fg1
+        set Change_Disabled_State to OldSt
+        set Changed_State to False
+     End
+     Else Forward Send Entry_Clear fg1
+     //
+     // only do entry-defaults if a dso is used and the
+     // dso's main-file was cleared.
+     Get Server to srvr
+     if srvr begin
+        get main_file of srvr to file#
+        is_file_included file# 0
+        [found] begin
+          Set Change_Disabled_State to TRUE // for Entry_defaults
+          Send Entry_Defaults
+          Set Change_Disabled_State to OldSt
+        end
+     end
+  End_Procedure
+
+
+  //   Augmented to do the same tricks as entry_Clear
+  //
+  Procedure Entry_Clear_all Integer fg1
+     Local integer Oldst srvr file#
+     Get Change_Disabled_State to OldSt
+     If (Retain_no_Change_state(Current_Object)) Begin
+        Set Change_Disabled_State to TRUE
+        Forward Send Entry_Clear_all fg1
+        set Change_Disabled_State to OldSt
+        set Changed_State to False
+     End
+     Else Forward Send Entry_Clear_all fg1
+     //
+     // only do entry-defaults if a dso is used and the
+     // dso's main-file was cleared.
+     Get Server to srvr
+     if srvr begin
+        get main_file of srvr to file#
+        is_file_included file# 0
+        [found] begin
+          Set Change_Disabled_State to TRUE // for Entry_defaults
+          Send Entry_Defaults
+          Set Change_Disabled_State to OldSt
+        end
+     end
+  End_Procedure
+
+
+  //  Public Hook: Set Defaults after a clear. Should be augmented
+  //               Should NOT be sent.
+  //
+  Procedure Entry_Defaults
+  End_Procedure // Entry_Defaults
+
+  // Set an item's value and item_changed_state. This just happens so often
+  // that it is worth creating a message for
+  //
+  Procedure Set Changed_Value integer Item# String Val
+     Set Value Item Item# to Val
+     Set Item_Changed_State Item Item# to TRUE
+  End_Procedure // Set Changed_Value
+
+  // Set an item's value and item_changed_state without changing the
+  // object's changed_state. Good for setting defaults without triggering
+  // a data-loss condition.
+  //
+  Procedure Set Default_Value integer Item# String Val
+     Local integer Oldst
+     Get Change_Disabled_State to OldSt     // As it was in the beginning
+     Set Change_Disabled_State to TRUE      // though changed by the tides
+     Set Changed_Value Item Item# to Val    //
+     Set Change_Disabled_State to OldSt     // it will be as it was. Amen
+  End_Procedure // Set Entry_Value
+
+End_Class

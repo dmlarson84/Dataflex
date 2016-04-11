@@ -1,0 +1,136 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\chmrclnt.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: chmrclnt.pkg,v $
+//Revision 2.1  1993/08/25  17:47:19  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:02  james
+//Initial revision
+//
+//Revision 1.3  92/05/14  16:39:25  SWM
+//Updated Copyright slug.
+//
+//Revision 1.2  92/03/09  19:00:46  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:19:54  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: ChMrClnt.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: May 23, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Change-Margin pop-up object for the
+// Text_Editor class.
+//
+// This package implements a pop-up object for margin changing within a
+// text-editor object
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+Use UI
+
+
+/chgmrgnImg
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³                                        ³
+³  Right Margin... ___   <__>  <______>  ³
+³                                        ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+/*
+Sub_Page ChgValImg FROM ChgMrgnImg 1
+Sub_Page MrgnOKImg FROM ChgMrgnImg 2 3
+
+
+//
+// Description
+//
+//   This is a form to enter the new right margin value into.
+//
+// Assumptions/Preconditions
+//
+//   The Text_Editor which invoked this object is the prior_level in the
+//   focus tree.
+//
+// Exceptions
+//
+//   None.
+//
+// Notes
+//
+//   None.
+//
+object Change_Margin_Form is a CLIENT chgMrgnImg
+  set location to 1 5 relative
+  set DELEGATION_MODE to DELEGATE_PRIOR_LEVEL
+  set BLOCK_MOUSE_STATE to true
+  set SCOPE_STATE to TRUE
+  set exit_msg to cancel_scope
+  procedure cancel_scope
+    send deactivate 3
+  end_procedure
+  on_key kCancel        SEND cancel_scope
+  on_key kExit_Function SEND cancel_scope
+  object Change_Margin_Window is a FORM ChgValImg
+    item_list
+      on_item "" SEND Change_Margin
+    end_item_list
+  end_object
+  object OK_Button_Area is a BUTTON MrgnOKImg
+    item_list
+      on_item "OK"     SEND Finis
+      on_item "CANCEL" SEND cancel_scope
+    end_item_list
+  end_object
+  procedure Finis
+    send Change_Margin
+    send cancel_scope
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure resets the right margin of the prior focus object
+  //   to the value of this object's item.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure Change_Margin
+    set right_margin of (prior_level(current_object)) ;
+        to (value(Change_Margin_Window(current_object),0))
+  end_procedure
+end_object
+

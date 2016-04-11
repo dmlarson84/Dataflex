@@ -1,0 +1,112 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Autolcmx.Pkg
+// Version: 1.0
+//  05-17-1993 : Created
+//
+// Author: John J. Tuohy
+//
+// mixin package DEOs to support auto locate of popup items
+//
+// 08-15-1993 Moved activating out of mixin and placed them back in the
+//            sub-class. Activating is too important of a message to get
+//            hidden in a mixin class. 
+//
+// ----v1.1---------
+// 03/17/94   Stripped the offset (1024) to locate_object to insure that the
+//            suggested best guess offset is never 0 (which also means the
+//            the location is ok.
+// 04/05/94   Added Set Offset_Location to set Col, row relative offset
+//************************************************************************
+
+use ui
+Use clmovemx // we need the Allow_move desktop function
+
+Class Auto_Locate_Mixin is a message
+
+  Procedure Define_Auto_Locate
+    Property Integer Auto_Locate_state Public FALSE
+    Property Integer Row_Offset     Public 1  // down 1
+    Property Integer Column_Offset  Public 2  // right 2
+  End_Procedure 
+
+  Procedure Set Offset_Location integer Row# Integer Col#
+     Set Row_Offset    to Row#
+     Set Column_Offset to Col#
+  End_Procedure // Set Offset_Location
+
+  // Procedure Auto_Locate
+  //
+  // Locate current_object based on the location of the passed Object Id.
+  // If the passed object is item based, attempt to locate the object
+  // one line down and two columns to the right of the window location
+  // of the current_item. If the invoking id is not item based (editors) 
+  // locate the object down one line and right one column to the upper left
+  // location of the invoking object. If the desired, location doesn't fit
+  // do the best you can.
+  //
+  // This message should be sent by the activating procedure.
+  //
+  Procedure Auto_Locate Integer Invoking_Obj#
+    Local Integer Itm# BC
+    If Invoking_Obj# Begin
+      Get Base_Class of Invoking_Obj# to BC
+      If (BC=MENU_CLASS OR BC=LIST_CLASS) ;  // if a list with items
+         Get Current_Item of Invoking_Obj# to Itm#
+      Else Move -1 to Itm# // if non-item based tell it no items
+      Send Locate_Object Invoking_Obj# Itm# ;
+           (Row_Offset(Current_Object)) (Column_Offset(Current_Object))
+    End
+  End_Procedure   
+  
+  // Procedure Locate_Object
+  //
+  // Pass: Obj# - ID of object to be located relative to
+  //       Itm  - item# of item to located relative to, if -1 no item
+  //              exists, use top,left screen as relative point
+  //       Row_Offset# - number of lines down to place new location
+  //       Col_Offset# - number of lines Right to place new location
+  //
+  // Note that we pass the desired location. This may not fit on the 
+  // screen. If it doesn't, we will relocate the object as needed
+
+  Procedure Locate_Object Integer Obj# Integer Itm# ;
+                        Integer Row_offset# Integer Col_Offset#
+    Local Integer Loc# Row# Col# Len# wid# rval pRow# pCol
+    // loc#= location target (complex: Hi(loc)=row Low(Loc#)=Column)
+    // Row#= desired absolute row
+    // Col#= desired absolute Column
+    Move (Location(Obj#)+(if(itm#<0,0,window_location(Obj#,Itm#+1))) ) to loc#
+    Move ( hi(loc#)+row_offset#) to Row#
+    Move ( (low(loc#)+col_offset#) MAX 0) to Col#
+    Set location to 0 0 // we have to start with the image being somewhere
+    Repeat
+    
+      // Note that the function Allow_Move is a function created in the
+      // clmovemx.pkg file. It is a desktop function (meaning that it is
+      // a message added to the ultimate super-class, the object class,
+      // meaning that it is understood by all classes).
+      // When it fails it passes back a complex variable suggesting a better
+      // offset to try. 
+      Get Allow_Move row# col# 0 to rval // Is this location OK?
+      If rval Begin                      // No!
+         // 03/16/94 1.1 fix: We have a 1024 offset that must first be removed.
+         //                   (Yes I know there must be a better way.)
+         Move (hi(rVal)-1024) to row#    // adjust row
+         Move (low(rVal)-1024) to col#   // and column
+      End   
+    until rval eq 0                      // and keep trying until we succeed
+    
+    set location to row# col#            // now set the valid location
+  End_Procedure
+
+End_Class
+

@@ -1,0 +1,151 @@
+/PAGE1                                   combmers.rpt
+                          WORTHLESS CHECK SYSTEM
+                        Combine 2 Merchants into 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ORIGINAL:   (THE ONE THAT WON'T BE CHANGED)
+
+      Merchant No: [_____.]      Name: [______________________________]
+                              Address: _________________________ 
+                                 City: _______________, __    _________
+                           Salutation: _________________________ 
+                                Phone: ______________
+/PAGE2
+
+DUPLICATE:    (THE ONE THAT WILL CHANGE)
+
+      Merchant No: [_____.]      Name: [______________________________]
+                              Address: _________________________ 
+                                 City: _______________, __    _________
+                           Salutation: _________________________ 
+                                Phone: ______________
+/HEADER
+/BODY RESIDENT
+MERCHANT FOR OFFENSE _____.-_. HAS BEEN CHANGED
+/DISBS
+    MERCHANT FOR DISBURSEMENT _____.-__ HAS BEEN CHANGED
+/TOTAL
+/*
+
+//----------------- Cannot Run Program From Command Line (DOS)
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+
+NUMBER MER1 MER2 
+STRING PAUSE 1 MERNAME1 30 MERNAME2 30
+
+PAGE SET PAGE1 AT  0 0
+PAGE SET PAGE2 AT 13 0
+
+OPEN MERCHANT
+OPEN OFFENSE INDEX.2
+OPEN DISBURSE INDEX.6
+OPEN RECHANGE
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+CLEARSCREEN
+OUTFILE 'CON:'
+
+ENTERGROUP 
+    AUTOPAGE PAGE1
+    ENTRY MERCHANT.IDNO                   {AUTOFIND}
+    ENTRY MERCHANT.NAME                   {AUTOFIND}
+    ENTRY MERCHANT.ADDR                   {SKIPFOUND}
+    ENTRY MERCHANT.CITY                   {SKIPFOUND}
+    ENTRY MERCHANT.ST                     {SKIPFOUND}
+    ENTRY MERCHANT.ZIP                    {SKIPFOUND}
+    ENTRY MERCHANT.SALUTATION             {SKIPFOUND}
+    ENTRY MERCHANT.PHONE                  {SKIPFOUND}
+ENDGROUP
+MOVE PAGE1.1 TO MER1
+MOVE PAGE1.2 TO MERNAME1
+
+
+ENTERGROUP 
+    AUTOPAGE PAGE2
+    ENTRY MERCHANT.IDNO                   {AUTOFIND}
+    ENTRY MERCHANT.NAME                   {AUTOFIND}
+    ENTRY MERCHANT.ADDR                   {SKIPFOUND}
+    ENTRY MERCHANT.CITY                   {SKIPFOUND}
+    ENTRY MERCHANT.ST                     {SKIPFOUND}
+    ENTRY MERCHANT.ZIP                    {SKIPFOUND}
+    ENTRY MERCHANT.SALUTATION             {SKIPFOUND}
+    ENTRY MERCHANT.PHONE                  {SKIPFOUND}
+ENDGROUP
+MOVE PAGE2.1 TO MER2
+MOVE PAGE2.2 TO MERNAME2
+CLEARSCREEN
+
+OFFS:
+CLEAR OFFENSE
+MOVE MERNAME2 TO OFFENSE.NAME
+MOVE MER2 TO OFFENSE.MERCHANT
+
+FIND GE OFFENSE BY INDEX.2
+[FOUND] WHILE OFFENSE.MERCHANT EQ MER2
+    KEYCHECK
+    [KEYPRESS] GOSUB ESCAPE_KEY
+    AUTOPAGE BODY
+    REREAD
+        PRINT OFFENSE.IDNO
+        PRINT OFFENSE.CTRLNO
+        MOVE MER1 TO OFFENSE.MERCHANT
+        MOVE MERNAME1 TO OFFENSE.NAME
+        SAVERECORD OFFENSE
+    UNLOCK
+         CLEAR DISBURSE
+         MOVE OFFENSE.IDNO TO DISBURSE.IDNO
+         MOVE OFFENSE.CTRLNO TO DISBURSE.SEQNO
+         FIND EQ DISBURSE BY INDEX.5
+         [FOUND] BEGIN
+              REREAD
+                   PRINT DISBURSE.IDNO TO DISBS.1
+                   PRINT DISBURSE.SEQNO TO DISBS.2
+                   MOVE MER1 TO DISBURSE.MERCHANT_IDNO
+                   MOVE MERNAME1 TO DISBURSE.MERCHANT
+                   SAVERECORD DISBURSE
+              UNLOCK
+              CLEAR DISBURSE
+         END
+         OUTPUT BODY
+    CLEAR OFFENSE
+    MOVE MER2 TO OFFENSE.MERCHANT
+    MOVE MERNAME2 TO OFFENSE.NAME
+    FIND GE OFFENSE BY INDEX.2
+    [FINDERR] MOVE (MER2 + 1) TO OFFENSE.MERCHANT
+END
+
+CLEAR MERCHANT
+MOVE MER2 TO MERCHANT.IDNO
+FIND EQ MERCHANT BY INDEX.1
+[FOUND] BEGIN
+         REREAD
+              DELETE MERCHANT
+              CLEAR MERCHANT
+         UNLOCK
+END
+
+ABORT
+
+KEYPROC KEY.ESCAPE
+    ABORT
+
+ESCAPE_KEY:
+    GOTOXY 12 8
+    SHOW 'A KEY HAS BEEN PRESSED, DO YOU WANT TO STOP THIS REPORT (Y/N)? '
+    INKEY PAUSE
+    CLEARXY 12 0
+    SCREENMODE 1
+    IF PAUSE IN 'Yy' ABORT
+    RETURN

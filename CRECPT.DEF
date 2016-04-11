@@ -1,0 +1,33 @@
+        FILE DEFINITION LISTING FOR FILE #42
+*************************************************** 
+        FILE ROOT NAME     = CRECPT
+        USER DISPLAY NAME  = GL Receipts
+        DATAFLEX FILE NAME = CRECPT
+*************************************************** 
+        RECORD LENGTH = 64  (USED = 62)
+        MAX NUMBER OF RECORDS = 2000  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       2   ASCII          2     0     0     BANK_CODE
+   2       3       3   DATE           2     0     0     DATE
+   3       6       3   NUMERIC   0    2     0     0     SEQ_NUMBER
+   4       9       6   ASCII          0     0     0     CUST_ID
+   5      15      25   ASCII          0     0     0     CUST_NAME
+   6      40       1   ASCII          0     0     0     TYPE
+   7      41      10   ASCII          0     0     0     CHECK_NUM
+   8      51       4   NUMERIC   2    0     0     0     AMOUNT
+   9       1       5   OVERLAP        2    41     4     BANK_DATE
+  10       1       8   OVERLAP        2     0     0     BANK_DATE_SEQ
+  11      55       2   NUMERIC   0    0     0     0     LAST_SEQ
+  12      57       1   ASCII          3     0     0     UPDATE
+  13      58       2   ASCII          0    35     1     JR
+  14      60       3   NUMERIC   0    0     0     0     RECEIPT_NUM
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   <2>   <3>   
+INDEX 2:  FIELD SEGMENTS:  <10>   
+INDEX 3:  FIELD SEGMENTS:  <12>   <0>   
+

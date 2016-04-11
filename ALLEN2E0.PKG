@@ -1,0 +1,73 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Allen2e0.Pkg
+// Version: 1.0
+//  02-16-1993 : Created
+//
+// Author: John J. Tuohy
+//
+// 11/21/94 JJT   Changed /& to &&
+//************************************************************************
+//
+// Use all of the standard data entry packages
+//
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+Use allentry
+
+Use Pkg2e0      // 3.0 Macros
+
+// Defaults you might want to set here.
+
+// If true pressing the letter on a highlight or action bar will
+// cause the item to auto-execute. This is not the way to used to work.
+// Change this to false to get the old behavior
+DEFINE DEFAULT$AUTO$EXECUTE FOR 1 // defaults to TRUE
+
+// Default color for highlight character (assuming none is set in DFINI).
+// If you want to disable highlight characters in action bars and pulldowns
+// set this to 0 (it will work like the old pulldowns).
+//
+DEFINE DEFAULT$HIGHLIGHT$COLOR  FOR 116
+
+// Symbol for highlight replacement (must be 1 character) and override
+// highlight (must be two character). Some people are using "~" in which case
+// you should create a "~" and a "&~". Note that the new pulldown .INC files
+// all have the "&" imbedded in them. You'd have to change these as well.
+//
+DEFINE HIGHLIGHT$SYMBOL   FOR '&'
+DEFINE HIGHLIGHT$OVERRIDE FOR '&&'
+
+// The defines the width of a pulldown. The default is 4 which assumes 
+// that your pulldowns contain a border, space, ..item.., space border. 
+// If your default images are different adjust this default
+//
+DEFINE DEFAULT_TOTAL_BORDER_WIDTH FOR 4
+
+Use Client0     // Defines View_Client0 Class
+Use DataSet0    // Augmented data_set
+Use Menu        // Standard DAC
+Use Txt_win0    // Augmented Text Edit class
+Use Sellst0     // Augmented Selection List
+Use Table0      // Augmented Table support
+Use Picklst0    // Augmented PickList Support
+Use EnClnt0     // Augmented Entry_Client & Entry_View_Client0 & Sellist client
+Use EnForm0     // Augmented Entry_Form
+Use Help        // help
+Use Enterr      // error package
+Set Verbose_State of Error_Info_Object to False
+
+//Removed for DAF1.1 (change in action and pulldown)
+//Use ActnFix     // fix for hot key support in action bars
+
+// new version 1.1 support
+Use enRadio0    //  radio box support 

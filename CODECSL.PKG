@@ -1,0 +1,250 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// CodeCSL.pkg
+// Version: 1.0 beta
+//  Sat  03-20-1993  Created
+//
+// Author: John J. Tuohy
+//
+// 05-09-1993  Add Auto_Locate_State support
+// 05-19-1993  Add Allow_Blank_State Support
+// 01/14/94    Brought up to date for DAF
+// ---ver 1.1
+// 03/17/94    Add new param to validate_code to support silence (no error)
+// 05/27/94    Find_Code: If passed blank value, return an error
+// 09/01/94    Changed Default_code to use new message Default_Value
+// 05/25/95 JJT Added some register_functions for the compiler
+//
+// 08/30/95 JJT Popup, Validate_code and Display_Description now use
+//              entry_value (mixed in entitem) instead of value. This
+//              allows support of decimal field values. (0.00000 ->0)
+//************************************************************************
+
+//------------------------------------------------------------------------
+// Creates the Code_Selection_List Class. This class is not really a
+// selection_list. It redirects to a real selection_list. This single
+// selection_list supports all code list lookups. This way a single selection
+// object handles all non-relational lookups. This will probably not directly
+// included in a program. The package CodeSel.pkg (which creates the actual
+// selection_list will use this package.
+//
+//-------------------------------------------------------------------------
+
+use ui
+Use Code_DEO // code list deo support
+
+Register_Object Code_Selection_list_Obj
+Register_Function Cancelled_State Returns Integer
+
+// The following will be understood by the code-selection-list
+register_function Server returns integer
+register_function Find_Type_Code String Typ Integer Obj# Returns Integer
+register_procedure Set Invoking_Object_id integer id
+register_procedure Set default_Value integer Item# String val
+
+//
+// Class: Code_Selection_List
+//
+//  Public Interface
+//
+//  Property
+//     Type_Value: Code for lookup type. Displayed items are constrained
+//     to this value. This code is not displayed.
+//
+//     List_Title: Title for the selection list
+//
+//     Default_Code:  Default value to auto_fill in (used w/ iEntry in
+//     DEO)
+//
+//     Location:  Not needed if Auto_locate_State is used
+//
+//     Auto_Locate_State: Auto-Locate the image? Defaults to TRUE
+//
+//     Export_Description_State: Should description also be exported to DEO?
+//
+//     Description_Item_Offset: Position of description field in DEO
+//     relative to the actual code item. Defaults to 1 (next item).
+//
+//     Sel_List_Object: Object ID of actual selection_list object. This
+//     This object should be created before the current_object is created.
+//     This is normally not set and defaults to an object named
+//     Type_List.
+//
+//     Radio_State: Radio button support. Also set with RADIO object param.
+//
+//     Batch_State: Batch tables? (this can make sense). Also set with
+//     BATCH object param.
+//
+//     Select_Mode: Defaults to No_Select (Auto_Select for Radio).
+//     Single_Select might make sense. Multi_Select only if you want to
+//     get fancy. Noramly you will not set this.
+//
+//     Find_Search_State: Use non-incrmental search (Dflt=T). This works
+//     well with multi-character type codes. Try this with False for one
+//     character codes.
+//
+//     Search_Mode: Only matters if Find_search_state is false. The
+//     default is First_Character. Incrmental might also make sense.
+//
+//     Error_Number: Error number for validation failure
+//
+//     Error_Message: Additional error message text
+//
+// Procedures/Functions
+//
+//     Procedure Popup
+//        Pops up the list and allows selection.
+//
+//     Procedure Move_out_Codes Integer Obj#
+//        Called when the item is moved out. Passes object ID to move
+//        value out to.
+//
+//     Function Validate_Code   - check that code is valid
+//     Function Crnt_Description - get current code description
+//     Procedure Default_Code    - display the default code
+//     Procedure Display_Description - display the current description
+//
+//
+
+Class Code_Selection_List is a Edit STARTMAC CSL_Start
+
+   Procedure Construct_Object
+     Forward Send Construct_Object
+     Set Focus_mode to NO_ACTIVATE
+
+     // you MUST set the following public properties
+     Property String  Type_Value               Public '' // Constraint type.
+     Property String  List_Title               Public '' // Title of List
+
+     // You might set the following public properties
+     Property String  Default_Code             Public ''  // The default guess
+     Property Integer Export_Description_State Public False
+     Property Integer Allow_Blank_State        Public False
+     Property Integer Auto_Top_Item_State      Public False // always start at top?
+     Property Integer Find_Search_State        Public True
+     Property Integer Auto_Locate_State        Public True
+     Property Integer Radio_State              Public False
+     Property Integer Batch_State              Public False
+     Property Integer Select_Mode              Public NO_SELECT
+     Property Integer Search_Mode              Public FIRST_CHARACTER
+     Property Integer Error_Number             Public 15
+     Property String  Error_Message            Public ". Press F4 to see Valid options"
+     // You are less likely to set these
+     Property Integer Description_Item_Offset  Public 1  // offset second Name.
+     Property Integer Sel_List_Object          Public (Code_Selection_list_Obj(Current_Object))
+     // Protected properties. Set by System
+     Property String  Crnt_Code                Public '' // Crnt code
+     Property String  Crnt_Descr               Public '' // Crnt Description
+     Property String  Crnt_Search_Code         Public '' // Crnt code when search starts
+     // for current versions this makes more sense. This will probably get
+     // removed in the future.
+     // not needed with ver1.1 lists (if they make it)
+     //**Set Select_mode to Single_Select
+   End_Procedure  // Construct_Object
+
+   Function Find_Code String Code Returns Integer
+      Local Integer Obj# rVal
+      If Code eq '' Function_Return 1 // if blank code...an error -05/27/94
+      If (Code<>Crnt_Code(Current_Object)) Begin
+         Get Sel_list_Object to Obj#
+         If Obj# ;
+            Get Find_Type_Code of Obj# Code Current_Object to rVal
+         Else Move 1 to rVal
+         Function_return rVal
+      End
+   End_Function
+
+   Function Crnt_Description String Code Returns String
+      Local Integer item# Offset rVal
+      Get Find_Code Code to rVal
+      Function_return ( if(rVal=0, Crnt_Descr(Current_Object), "") )
+   End_Function
+
+   Procedure Display_Description Integer Obj# Integer Item#
+     Local String Val
+     If (Export_Description_State(Current_Object)) Begin
+        Get Entry_Value of Obj# item Item# to val
+        Set Value of Obj# Item (Item#+Description_Item_Offset(Current_Object)) ;
+             to (Crnt_Description(Current_Object,Val))
+     End
+   End_Procedure
+
+   Procedure Default_Code Integer Obj# Integer Item#
+     Local String Dflt
+     If ( Item_Changed_State(Obj#,Item#)=0 AND Value(Obj#,Item#)="") Begin
+        Get Default_Code to Dflt
+        // 09/01/94 - changed to default value
+        Set Default_Value of Obj# Item Item# to Dflt
+        Send Display_Description Obj# Item#
+     End
+   End_Procedure
+
+   //
+   //   Validate the item for an entry_item. If bad send an error
+   //   message and return non-zero value
+   //
+   Function Validate_Code Integer Obj# Integer Item# Integer Verbal Returns Integer
+     Local Integer RVal
+     Local String Typ
+     Get Entry_Value of Obj# item item# to Typ
+     If (Typ='' AND Allow_Blank_State(Current_Object)) Move 0 to rVal
+     Else Get Find_Code Typ to Rval
+     If RVal Begin
+        If Verbal Error (Error_Number(Current_Object)) (Error_Message(Current_Object))
+     End
+     Else Send Display_Description Obj# Item#
+     Procedure_Return RVal
+   End_Procedure
+
+   //
+   //
+   Procedure Popup
+     local integer obj# Crnt SObj# rVal
+     Get Focus to obj#             // who called us
+     Get Sel_List_Object to SObj#  // the real sel list object
+     If (Obj#>DESKTOP AND SObj#) Begin
+        Get Current_Item of Obj# to Crnt
+        Set Crnt_Search_Code to (Entry_Value(Obj#,Crnt))
+        // we must set list's invoking_object_id before we start
+        // the list. Note that this is NOT the object that pops up the
+        // list - it is this object (the pseudo selection-list)
+        Set Invoking_Object_ID of SObj# to Current_Object
+        Send Popup to SObj#
+        Start_UI
+        If not (Cancelled_State(SObj#)) Send Move_Out_Codes Obj#
+     End
+   End_Procedure
+
+   Procedure Move_Out_Codes Integer Obj#
+     Local Integer Crnt
+     If (Obj#>DESKTOP) Begin
+        Get Current_Item of Obj# to Crnt
+        Set Value of obj# item Crnt to (Crnt_Code(Current_Object))
+        Set item_changed_state of obj# item Crnt to TRUE
+        Send Display_Description Obj# Crnt
+     End
+   End_Procedure
+
+End_Class
+
+//
+// Support Commands
+//
+
+//
+// CSL_Start <class> { VIRTUAL | BATCH } { RADIO }
+//
+#COMMAND CSL_Start R R
+  FORWARD_BEGIN_CONSTRUCT !1 !2 !3 !4 !5 !6 !7 !8 !9
+  bind_Radio !2 !3 !4 !5 !6 !7 !8 !9
+  bind_batch !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+

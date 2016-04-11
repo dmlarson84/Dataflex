@@ -1,0 +1,124 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// CodeLoad.pkg   - Code loading data-set
+// Version: 1.1
+//  03/18/94 - created
+//  04/04/94 - modified and made more general
+//
+// Author: John J. Tuohy
+//
+//
+// Interface:
+//
+//  Procedure Initialize_File Integer File# Integer Index# Integer Code# ;
+//                            Integer Desc# Integer Type# String Type
+//
+//      This initializes the data-set for finding. You MUST pass all five
+//      parameters here. They are:
+//          File#  -  main file to use
+//         Index#  - Index to use for finding 
+//          Code#  - field number of the code
+//          Desc#  - field number of the code's description
+//          Type#  - field number of the constraining Type (0 if none)
+//           Type  - the constrain type value ('' = allow all records)
+//
+//      You MUST send this message before finding records. Alternately,
+//      you could set the individual properties and send rebuild_constraints
+//      and CLEAR to initalize the file (see code on how to do this).
+//
+//    Get Next_Code_record to ret_Int
+//
+//      Returns the next record number. 0 if no more. If record exists it
+//      sets the value of Current_Code and Crnt_Description.
+//
+//    Get Current_Code to Ret_String
+//    Get Crnt_Description to Ret_String
+//
+//      Returns the code and description of the last valid record found
+//      with the Next_Code_Record Message
+//
+//   Sample Usage:  This was created primarily to be used by the
+//                  radio-entry-form classes. In particular those using
+//                  the "code" look up file. Look at those packages if
+//                  you wish to use them yourself.
+//
+//   
+//   
+//************************************************************************
+
+use Data_Set
+
+
+Class Code_Loader_Data_Set is a Data_Set
+
+  Procedure Construct_Object Integer Img#
+      Forward Send Construct_Object Img#
+      // These should be set by the Initialize_File message
+      Property String  Type_Value          public '' // assume no defaults.
+      Property Integer Type_Field          public 0  // These values should be
+      Property Integer Code_Field          public 0  // set by initialize_file
+      Property Integer Description_Field   public 0  //
+
+      // These are SET by Next_Code_Record. You may GET their values
+      Property String  Current_Code        public ''
+      Property String  Current_Description public ''
+  End_Procedure // Construct_Object
+  
+  // If a Type exists (not a '') and there is a type field and a
+  // main_file constrain to the type. Else no constraints
+  Begin_Constraints
+     Local String Type
+     Get Type_Value to Type
+     Get Main_File to FileNumber
+     Get Type_Field to FieldIndex
+     If (Type<>'' AND FileNumber<>0 AND FieldIndex<>0) ;
+        Constrain Indirect_File.Recnum eq Type
+  End_Constraints
+
+  //  This initializes the data-set for finding. You MUST pass all five
+  //  parameters here. They are:
+  //     File#  -  main file to use
+  //    Index#  - Index to use for finding 
+  //     Code#  - field number of the code
+  //     Desc#  - field number of the code's description
+  //     Type#  - field number of the constraining Type (0 if none)
+  //      Type  - the constrain type value ('' = allow all records)
+  //
+  Procedure Initialize_File Integer File# Integer Index# Integer Code# ;
+                            Integer Desc# Integer Type# String Type
+     // note: all params are required!
+     Set Main_File         to File#
+     Set Ordering          to Index#
+     Set Code_Field        to Code#
+     Set Description_Field to Desc#
+     Set Type_Field        to Type#
+     Set Type_Value         to Type
+     //
+     Send Rebuild_constraints // set up constraints
+     Send Clear               // initialize the file
+  End_Procedure
+
+  //  Find the next record: Return 0 if no record, 1 if record exists
+  //   if record exists set Current_Code and Current_Description
+  //
+  Function Next_Code_Record Returns Integer
+     Send Request_Find GT (Main_File(Current_Object)) (Ordering(Current_Object))
+     If not (Found) Function_Return 0
+     // Set properties Current_code and Current_Description
+     Get Main_File to FileNumber
+     Get Code_Field to FieldIndex
+     Set Current_Code to Indirect_File.Recnum
+     Get Description_Field to FieldIndex
+     Set Current_Description to Indirect_File.Recnum
+     Function_return 1
+  End_Function // Function
+
+End_Class

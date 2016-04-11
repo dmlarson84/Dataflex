@@ -1,0 +1,84 @@
+/BODY RESIDENT
+___. ______. _____. ______________________________ ______.__ __/__/____ _______. __/__/____ _____.__ _______. __/__/____ _____.__ ______________________________
+/nocomp
+
+ ___.-_____.   Not Found.
+/TOTAL
+RECORDS PRINTED = ______.
+/SELECTION
+PROGRAM TO OFFENSE INFORMATION FOR AUDITOR
+                                    
+ 
+Select records by OFFENSE.YEAR equal to ___.
+
+/*
+use y2k.pkg
+Read_dfini "df23ini.cfg"
+#include calcdate.inc
+#include macs.frmdfr
+
+OPEN DEFENDNT
+OPEN OFFENSE INDEX.6
+open restitut 
+open disburse index.5
+
+integer nth snum
+MOVE 10000000 TO PAGEEND
+direct_output "audoff.txt"
+
+//  PAGE SELECTION
+//  ACCEPT SELECTION.1
+	move 2014 to SELECTION.1
+    MOVE SELECTION.1 TO OFFENSE.YEAR //JUMP INTO INDEX
+  
+  move snum to offense.complaint_#
+
+REPORT OFFENSE BY INDEX.6
+             INDICATE SELECT AS OFFENSE.YEAR EQ SELECTION.1
+
+[NOT SELECT] RETURN
+
+SECTION BODY
+        PRINT OFFENSE.YEAR
+        PRINT OFFENSE.COMPLAINT_#
+        PRINT OFFENSE.IDNO
+        PRINT DEFENDNT.NAME
+        PRINT OFFENSE.CKAMT
+         print offense.warr_date
+         CLEAR DISBURSE
+         move offense.idno   to disburse.idno
+         move offense.ctrlno to disburse.seqno
+        
+   IF offense.active eq 'N' begin
+        find eq disburse BY index.5
+        			 
+             relate disburse
+             print restitut.seqno    to body.7
+             print restitut.recdt    to body.8
+             print restitut.resamt   to body.9
+             print disburse.chkno    to body.10
+             print disburse.dispdt   to body.11
+             print disburse.dispamt  to body.12
+             print disburse.merchant to body.13
+             
+    END
+    ELSE BEGIN
+        	     print ""    to body.7
+    	                 print ""    to body.8
+    	                 print ""   to body.9
+    	                 print ""    to body.10
+    	                 print ""   to body.11
+    	                 print ""  to body.12
+                print "" to body.13
+            
+   
+    END
+    
+    OUTPUT BODY
+
+    clear restitut
+    clearform body
+
+REPORTEND
+FORMFEED
+ABORT

@@ -1,0 +1,192 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+//      
+// Module:
+//      clwindow.pkg
+//      
+// Purpose:
+//      Defines Client_Window class. Used as generic container that
+//      supports a title and is movable.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      8/11/94
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+use ui
+use viewclnt
+
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+//  class Client_Window
+//
+//  Movable scoped client window
+//  Supports Value property as title under assumption of existence of title
+//      window.
+//  Supports Action_Bar_Id property. Broadcasts action_bar_id setting to
+//      all children.
+//  Supports Close_Client message, and defaults Cancel (Escape) key to send
+//      Close_Client (NOT private).
+//  Supports Exit_Client message, and defaults Exit Application (Alt+F4) key
+//      to send Exit_Client (NOT private).
+//  Supports Changed_State property by broadcasting get changed_state to
+//      children.
+//  Supports Active_Client property. Returns modal (outermost) Client_Window
+//      object for this client area.
+//
+//  Public protocol additions:
+//
+//  set/Value {item CURRENT} to <string>
+//      Displays/retrieves title in first item (item number 0). (Assumes
+//      first window exists and is meant for the title.)
+//
+//  set/get Action_Bar_Id to <obj_id>
+//      Determines which object is the action bar for this object (and its
+//      children). Also broadcasts action_bar_id setting to its children.
+//
+//  get Changed_State to <bool/int>
+//      Returns true if changed_state of any child is true.
+//
+//  send Close_Client
+//      Deactivates this object. Designed to be sent by children so client
+//      and all children are deactivated simulatneously. KCANCEL (Escape)
+//      defined to send this message - NOT private, so children acquire this
+//      key definition as well.
+//
+//  send Exit_Client
+//      Deactivates this object if it is modal (Block_Mouse_State = TRUE),
+//      otherwise delegates Exit_Client. Meant to be sent to close the
+//      current client area. KEXIT_APPLICATION (Alt+F4) defined to send this
+//      message - NOT private, so children acquire this key definition as
+//      well. This follows the design of typical CUA/Windows where the Exit
+//      Application key (Alt+F4) is used to close modal clients without
+//      closing the application.
+//
+//      NOTE: If this Client_Window object is NOT modal (Block_Mouse_State
+//      = FALSE), it's parent MUST support the Exit_Client message.
+//
+//  get Active_Client to <obj_id>
+//      Returns the object id of this object if it is active, 0 otherwise.
+//      Used to determine what (if any) client areas are active.
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+class Client_Window is a View_Client
+    register_procedure Assign_Action_Bar_Keys integer Obj
+
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        property integer Actbar_Id PUBLIC 0
+
+        set Allow_Move_State to TRUE
+        // Assume child object images are bounded by image of client window.
+        set Proper_Image_State to TRUE
+
+        on_key KCANCEL              send Close_Client
+        on_key KEXIT_APPLICATION    send Exit_Client
+    end_procedure
+
+    procedure set Value integer Itm# string Val
+        if Itm# EQ CURRENT begin
+            set Center_State item 0 to TRUE
+            forward set Value item 0 to Val
+        end
+        else ;
+            forward set Value item Itm# to Val
+    end_procedure
+
+    function Value integer Itm# returns string
+        local string Val
+
+        if Itm# EQ CURRENT begin
+            forward get Value item 0 to Val
+            trim Val to Val
+        end
+        else ;
+            forward get Value item Itm# to Val
+
+        function_return Val
+    end_function
+
+    procedure Define_Access_Keys integer Obj
+        if (not(Popup_State(Current_Object)) and (Obj NE 0) ;
+                and (Obj NE Actbar_Id(Current_Object))) begin
+            send Assign_Action_Bar_Keys Obj
+            broadcast send Define_Access_Keys Obj
+        end
+    end_procedure
+
+    procedure set Action_Bar_Id integer Obj
+        local integer Old_Id
+
+        if not (Block_Mouse_State(Current_Object)) begin
+            get Actbar_Id to Old_Id
+            broadcast set Action_Bar_Id to Obj
+
+            // only redefine keys if id is changing
+            if Obj NE Old_Id ;
+                send Define_Access_Keys Obj
+
+            set Actbar_Id to Obj
+        end
+    end_procedure
+
+    function Action_Bar_Id returns integer
+        function_return (Actbar_Id(Current_Object))
+    end_function
+
+    function Changed_State returns integer
+        local integer Val
+
+        broadcast get Changed_State to Val
+        function_return Val
+    end_function
+
+    procedure Close_Client
+        local integer Obj Ret_Val
+
+        if not (Active_State(Current_Object)) ;
+            procedure_return
+
+        get Msg_Deactivate to Ret_Val
+
+        if (Active_State(Current_Object)) begin
+            get Action_Bar_Id to Obj
+
+            if Obj NE 0 begin
+                send Activate to Obj
+                get MSG_Deactivate to Ret_Val
+            end
+            else ;
+                delegate get MSG_Deactivate to Ret_Val
+        end
+
+        procedure_return Ret_Val
+    end_procedure
+
+    function Active_Client returns integer
+        if (Active_State(Current_Object)) ;
+            function_return Current_Object
+        else ;
+            function_return 0
+    end_function
+
+    procedure Exit_Client
+        if (Block_Mouse_State(Current_Object) or ;
+            (Parent(Current_Object) = Desktop)) ;
+            send Close_Client
+        else ;
+            delegate send Exit_Client
+    end_procedure
+end_class
+
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+//  Active_Client function for Desktop
+//      Returns 0 to ensure broadcast search for Client_Window objects skips
+//      non-Client_Window objects.
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+function Active_Client for Desktop returns integer
+    function_return 0
+end_function

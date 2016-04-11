@@ -1,0 +1,205 @@
+//************************************************************************
+//     File Name: CkBox_Mx.Pkg
+// Creation Date: Thu  01-16-1992
+//     Author(s): John J. Tuohy
+// 12/13/93 05:50 pm  Major Reworking to work with DAF classes
+//
+// Class: Entry_CheckBox_Mixin  - mixin for checkbox support
+//        CBox_Array            - internal needed by ckbox
+//
+// This is a mixin class designed to be used by entry related classes
+// that need checkbox support. This supports table and entry-form classes.
+//
+// 03/15/94 - Optimized cBox so it is only created when it is needed
+// 07/21/94 - Removed set_checkbox command. Commands, we don't need to show
+//            you no stinking new commands.
+// 09/18/94 - entry_display gaurds against empty row in tables
+// 02/08/95 - JJT **JJT**(2) Modified entry_update logic. doall flag was
+//                over-doing it.
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+//************************************************************************/
+use ui
+
+// the object CBox has to get defined directly by the class. If not,
+// things get buggy (you can't create objects in mixin classes).
+
+
+Class CBox_Array is an Array
+  //
+  // Public Access Methods:
+  //
+  // Function  CheckBox_Value Integer Num Integer State Returns String
+  // Function  CheckBox_Item Integer Num Returns Integer
+  // Function  CBox_Item_Count Returns Integer
+  // Procedure CheckBox_Values Integer Itm String TrueValue String FalseValue
+  //
+  // 
+  // cbox is a three dimensional array.
+  // dimension: 0 - Integer : actual item number
+  //            1 - String  : True value for database
+  //            2 - String  : False value for database
+  //
+  Function CheckBox_Value Integer Num Integer State Returns String
+     Function_Return (String_Value(Current_Object,Num*3+if(State,1,2)))
+  End_Function
+  
+  Function CheckBox_Item Integer Num Returns Integer
+     Function_Return (Integer_Value(Current_Object,Num*3))
+  End_Function
+  
+  Function CBox_Item_Count Returns Integer
+     Function_Return (Item_Count(Current_Object)/3)
+  End_Function // CBox_Item_Count
+
+  Procedure CheckBox_Values Integer Itm String TrueValue String FalseValue
+    Local Integer ArryNum
+    Get Item_Count to ArryNum
+    Set Array_Value Item ArryNum to Itm
+    Increment ArryNum
+    Set Array_Value Item ArryNum to TrueValue
+    Increment ArryNum
+    Set Array_Value Item ArryNum to FalseValue
+  End_Procedure
+
+End_Class
+
+
+Class Entry_CheckBox_Mixin is a Message
+
+  Procedure Define_CheckBox_Support
+    // a bit of an optimization. The object will only be created if required.
+    // once created its ID will be defined here.
+    Property Integer CBox_Object Public 0
+    Set Select_mode to Multi_Select
+  End_Procedure  
+
+  // Bug fix: For some reasion setting select_mode changes
+  //          auto_top_item_state. We will make sure that doesn't
+  //          happen here.
+  Procedure Set Select_Mode Integer Mode
+     Local integer Old_Auto_top
+     Get Auto_top_item_state to old_auto_top
+     Forward Set Select_Mode to Mode
+     Set Auto_top_item_state to old_auto_top
+  End_Procedure // Set Select_Mode
+  
+  Procedure Entry_Display Integer File# Integer Flag
+    Local integer dFile i Limit State Item# Arry#
+    Local String  Itm CItm
+
+    Forward send Entry_Display File# Flag // do normal entdisplay
+    // no fancy stuff if no items exist
+    if (item_count(Current_Object)=0) Procedure_return
+    // now check for checkbox states and handle those guys a little
+    // differently
+    //
+    Get CBox_Object to Arry# // obj Id of ckbox array
+    //
+    //
+    If Arry# gt 0 Begin
+
+       // Limit has number of checkbox items in this form/row
+       Get CBox_Item_Count of Arry# to Limit
+       If Limit Begin         // do we have checkbox items?
+          Decrement Limit     // yeah..make count zero based
+          For i from 0 to Limit // for all checkbox items
+              Get CheckBox_Value of Arry# item i TRUE to CItm
+              If CItm ne '' Begin
+                Get CheckBox_Item of Arry# item i to Item# // the actual item number
+                Move (Item# + Base_item(Current_Object)) to Item#
+                // if a checkbox item plus that item is not just a 0 1
+                get data_file item item# to dFile
+                if dfile eq 0 indicate found FALSE
+                else if file# eq 0 is_file_included dFile 1
+                else indicate found as (file# = dFile OR flag = TRUE)
+                [FOUND] begin
+                   Move dFile  to FILENUMBER
+                   get data_Field Item Item# to FIELDINDEX
+                   move Indirect_File.RECNUM to Itm
+                   Set Select_State Item Item# to (Itm=CItm)
+                End
+              End
+          Loop
+       End
+    End
+  end_procedure
+  
+  // **JJT**(2) Modified so Flag is treated as a ignore changed_state
+  //            and not a doAll flag
+  //
+  procedure Entry_Update integer file# integer flag
+    local integer dFile CItm Limit State Item# Arry# Ok NP
+    Forward Send Entry_Update File# Flag // do standard update
+    // now do checkbox updates
+    Get CBox_Object to Arry# // id of cbox array
+    
+    If Arry# gt 0 Begin
+
+       Get CBox_Item_Count of Arry# to Limit
+       If Limit Begin            // do we have checkbox items?
+          Decrement Limit        // yeah..make count zero based
+          For CItm from 0 to Limit // check all items
+             // only process if we have a T/F value to set
+             If (CheckBox_Value(Arry#,CItm,TRUE)<>'') Begin
+                Get CheckBox_Item of Arry# item CItm to Item# // the actual item number
+                Move (Item#+Base_Item(Current_Object)) to Item# // The item with a row offset
+                get data_file item item# to dFile
+                // only proceed if we have a file to update
+                if dfile Begin
+                   if (file# = 0 AND flag = 3) Begin
+                     Get Item_Option Item Item# NOPUT NP
+                     If NP Indicate Found False
+                     else is_file_included dFile 1
+                   End
+                   else indicate FOUND as (file# = dFile OR file# = 0) // **JJT**(2)
+                   // This was wrong. Flag determines if item_changed_state should
+                   // be ignored.
+                   //else indicate FOUND as (file# = dFile OR flag = TRUE OR file# = 0) //**JJT**(2)
+                   Move (Found) to OK
+                   If Ok Begin
+                      move dFile  to FILENUMBER
+                      get data_Field Item Item# to FIELDINDEX
+                      // if we are updating a new record we want to move the
+                      // item in no matter what.
+                      // Flag can also be 3 (= save) **JJT**(2)
+                      //if ( Flag=0 AND Item_changed_State(current_object,Item#)=0) ;
+                      if ( Flag<>1 AND Item_changed_State(current_object,Item#)=0) ;
+                           If Status Indirect_File Move 0 to Ok
+                      If Ok Begin
+                         get Select_State Item Item# to State
+                         move (CheckBox_Value(Arry#,CItm,State)) to Indirect_File.Recnum
+                      End
+                   End
+                End
+             End  
+          Loop
+       End  
+    End
+  end_procedure
+
+  Procedure Set CheckBox_Item String ItemVal String TrueVal String FalseVal
+    Local Integer Item# Obj# CObj
+    // This is the object that has the items. With tables it is the proto-
+    // type row, with forms it is itself. This allows table and form support
+    Get ProtoType_Object to Obj#
+    Get Current_Item of Obj# to Item#
+    Set entry_state         of Obj# item Item# to False
+    Set checkbox_item_State of Obj# item Item# to True
+    Set Value               of Obj# item Item# to ItemVal
+    // If only 1 argument passed the T/F values are 0/1 which can be
+    // handled automatically.
+    If Num_Arguments gt 1 Begin
+       Get CBox_Object to CObj
+       // a bit of an optimization here. Only create the cBox object if needed.
+       // The first time the ID will be zero. When this occurs call the function
+       // to create the checkbox and then set the id
+       If CObj eq 0 begin                 // if no cbox object yet.
+          Get Create_CBox_Object to CObj  // create the object and
+          Set Cbox_Object to CObj         // set the property.
+       End
+       Send CheckBox_Values to CObj Item# TrueVal FalseVal
+    End
+  End_Procedure
+  
+End_Class
+

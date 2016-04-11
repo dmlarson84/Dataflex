@@ -1,0 +1,346 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\actionbr.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: actionbr.pkg,v $
+//Revision 2.1  1993/08/25  17:47:10  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:02  james
+//Initial revision
+//
+//Revision 1.6  92/06/19  16:31:34  james
+//Last minute changes made to correct problem with 
+//SWITCH_BACK
+//
+//Revision 1.5  92/05/29  14:04:32  lee
+//removed end_construct_* messages from mixins; now, classes that use the mixin
+//send the message that used to be sent by the end_construct_* message (for
+//efficiency).
+//
+//Revision 1.4  92/05/14  16:47:52  SWM
+//Updated Copyright slug.
+//
+//Revision 1.3  92/03/29  18:44:33  lee
+//added MSG_END_CONSTRUCT_OBJECT, moved ENDMAC macro stuff into END_CONSTRUCT-
+//OBJECT procedures (in .pkgs). moved Flag_ITems to list.pkg after generalizing
+//it based on PROTOTYPE_OBJECT instead of Whether or not it is a table-oriented
+//object. Moved define_access_keys mechanism completely into actionbr.pkg.
+//fixed two typos: import_class_protocol used !# instead of !3, and register-
+//procedure used !1 instead of !2.
+//
+//Revision 1.2  92/03/09  19:00:25  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:19:34  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: ActionBr.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: July 12, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module defines the support routines and properties required by
+// the action-bar interface, collected in the abstract class
+// Action_Bar_Mixin class.
+//
+// This file should be USEd prior to and IMPORTed within the scope of the
+// class definition by any user-interface (esp. data-entry) class which
+// must support the data-entry object standards.
+//************************************************************************/
+
+//************************************************************************/
+// 12/22/94 - JJT Changed activating so that sends a message named
+//                add_action_bar to do the action bar stuff. This way
+//                other activating can duplicate this (entry_client has
+//                to do this). Let's look for a better solution.
+// 03/10/95 (JJT) Change popup check to block_mouse_state check which
+//          makes more sense. Popups are not automatically modal. This now
+//          works because list.pkg now sets block_mouse_state when the
+//          popup-state is set and not during activation.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+class Action_Bar_Mixin is a message
+
+  //
+  // Description
+  //
+  //   This procedure defines the Action_Bar_ID property, which is required
+  //   to hold the object id of the action-bar associated with an object.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This procedure may only be invoked from the Construct_Object
+  //   procedure of a class definition.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   The property defined by this procedure is private; a function to access
+  //   it and a procedure to set it are defined below.
+  //
+  procedure define_action_bar
+    Property integer private.Action_Bar_ID PUBLIC 0
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This function returns the object identifier for the action-bar
+  //   associated with this object, if any.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   If no action-bar is associated with this object, 0 is returned.
+  //
+  // Notes
+  //
+  //   If this object does not have its own action-bar, it will return
+  //   the object id of its parent's action-bar, if any.
+  //
+  function Action_Bar_ID returns integer
+    local integer retval
+    get private.Action_Bar_ID to retval
+    if (retval = 0 AND Component_State(current_object)) ;
+        delegate get Action_Bar_ID to retval
+    function_return retval
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This procedure associates an action-bar with this object.
+  //
+  // Assumptions/Preconditions
+  //
+  //   newVal is a valid object id, or 0.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   This procedure sets the private property defined by define_action_bar.
+  //
+  procedure SET Action_Bar_ID integer newVal
+    set private.Action_Bar_ID to newVal
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure ensures that this object's action-bar, if any, is
+  //   in the focus list (on the screen) whenever this object is activated.
+  //   This procedure returns a non-zero value if the normal activating failed.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   If this object's normal Activating fails, no other action is taken.
+  //
+  // Notes
+  //
+  //   None.
+  // (JJT) Changed so that activating calls Add_action_bar instead of
+  // doing it itself.
+  //procedure activating returns integer
+  //  local integer dirt actbar#
+  //  forward get MSG_activating to dirt
+  //  if dirt eq 0 begin
+  //    get Action_Bar_ID to actbar#
+  //    if (actbar# <> 0 AND Active_State(actbar#) = 0) ;
+  //        send Add_Focus to actbar# current_object
+  //  end
+  //  procedure_return dirt
+  //end_procedure
+
+  procedure activating returns integer
+    local integer dirt actbar#
+    forward get MSG_activating to dirt
+    if dirt eq 0 ;
+       Send Add_action_bar
+    procedure_return dirt
+  end_procedure
+
+  procedure Add_action_bar
+    local integer actbar#
+    get Action_Bar_ID to actbar#
+    if (actbar# <> 0 AND Active_State(actbar#) = 0) ;
+      send Add_Focus to actbar# current_object
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure ensures that this object's action-bar, if any, does
+  //   not have the focus as the result of a group activation.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   If this object is a RINGed client with no focusable children, the
+  //   action-bar, if any, will have the focus on exit from this procedure,
+  //   as there would be no other objects to receive the focus.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure activate_group
+    local integer actbar#
+    forward send activate_group
+    get Action_Bar_ID to actbar#
+    if actbar# ne 0 move (object_id(actbar#)) to actbar#
+    if (actbar# <> 0 AND focus(desktop) = actbar# AND ;
+        next_object_id(actbar#,2) <> actbar#) send Switch to actbar#
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure ensures that this object's action-bar, if any, does not
+  //   have the focus after this object is placed on the screen and given the
+  //   focus.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   If this object is a RINGed client with no focusable children, the
+  //   action-bar, if any, will have the focus on exit from this procedure,
+  //   as there would be no other objects to receive the focus.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure Activate returns integer
+    local integer actbar# ret_val
+    forward get msg_activate to ret_val
+    get Action_Bar_ID to actbar#
+    if actbar# ne 0 move (object_id(actbar#)) to actbar#
+    if (actbar# <> 0 AND focus(desktop) = actbar# AND ;
+        next_object_id(actbar#,2) <> actbar#) send Switch to actbar#
+    function_return ret_val
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure defines accelerator keys for this object as dictated
+  //   by its action-bar, if any, and also causes this object's children to
+  //   define accelerator keys in the same manner.
+  //
+  // Assumptions/Preconditions
+  //
+  //   act# must be a valid object id or 0.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   This procedure relies on the global procedure assign_action_bar_keys.
+  //
+  register_procedure assign_action_bar_keys integer act#
+  procedure define_access_keys integer act#
+    local integer actp#
+    get private.action_bar_id to actp#
+    // JJT Change popup check to block_mouse_state check which
+    //     makes more sense. Popups now set block_mouse_state when the
+    //     popup_state is set so we can do this. Block-mouse use to get
+    //     set during activation.
+    //if (popup_state(current_object) and actp# = 0) procedure_return
+    if (block_mouse_state(current_object) and actp# = 0) procedure_return
+    if ((act# = 0 and actp# <> 0) or (actp# = 0 and act# <> 0)) begin
+      if act# eq 0 move actp# to act#
+      send assign_action_bar_keys act#
+      if (child_count(current_object) > 0) ;
+          broadcast send define_access_keys act#
+    end
+  end_procedure
+end_class
+
+
+//
+// Description
+//
+//   This macro finds the object-creation parameter ACTION_BAR in the
+//   command line, and, if found, associates the argument of ACTION_BAR
+//   with this object.
+//
+// Assumptions/Preconditions
+//
+//   If ACTION_BAR exists in the command-line, the argument after it must
+//   be either a valid object name, a valid object id, or an object-access
+//   expression.
+//
+// Exceptions
+//
+//   None.
+//
+// Notes
+//
+//   If the ACTION_BAR parameter does not appear in the command line, no
+//   action is taken.
+//
+#COMMAND bind_action_bar
+  #IF (!0>0)
+    #IFSAME !1 ACTION_BAR
+      #IFDEF !2
+        set action_bar_id to !2
+      #ELSE
+        set action_bar_id to !2.OBJ
+      #ENDIF
+    #ELSE
+      bind_action_bar !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+                                                                                                                       

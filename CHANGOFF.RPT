@@ -1,0 +1,90 @@
+/PAGE1                               CHANGOFF.RPT
+                          WORTHLESS CHECK SYSTEM
+                   Change outstanding offenses to Felonies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ID No: [_____.]                                                        
+Defendant Name: [______________________________]  (Last, First MI)
+Address: _________________________ City: _______________ St: __ Zip: _________
+Identification: Physical (Y/N) _ Driver's License ________ Soc Sec _________
+                Other ______________________________________________________
+Description: Sex _   Race _   DOB __/__/__   Height _.'_."   Weight __. lbs.
+Previous Credit: _____.__
+/HEADER
+    OUTSTANDING OFFENSES CHANGED TO FELONIES
+         
+       
+                      OLD        NEW
+       IDNO CTRLNO   OFFENSE    OFFENSE
+ 
+/BODY RESIDENT
+__________.  ____.          _          _ 
+/*
+
+//----------------- Cannot Run Program From Command Line (DOS)
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+
+OPEN DEFENDNT 
+OPEN OFFENSE INDEX.1
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+OUTFILE 'CON:'
+
+ENTERGROUP 
+    AUTOPAGE PAGE1
+    ENTRY DEFENDNT.IDNO                   {AUTOFIND}
+    ENTRY DEFENDNT.NAME                   {AUTOFIND}
+    ENTRY DEFENDNT.ADDR                   {SKIPFOUND}
+    ENTRY DEFENDNT.CITY                   {SKIPFOUND}
+    ENTRY DEFENDNT.ST                     {SKIPFOUND}
+    ENTRY DEFENDNT.ZIP                    {SKIPFOUND}
+    ENTRY DEFENDNT.PHYS                   {SKIPFOUND}
+    ENTRY DEFENDNT.LIC                    {SKIPFOUND}
+    ENTRY DEFENDNT.SOCSEC                 {SKIPFOUND}
+    ENTRY DEFENDNT.OTHER                  {SKIPFOUND}
+    ENTRY DEFENDNT.SEX                    {SKIPFOUND}
+    ENTRY DEFENDNT.RACE                   {SKIPFOUND}
+    ENTRY DEFENDNT.AGE                    {SKIPFOUND}
+    ENTRY DEFENDNT.FT                     {SKIPFOUND}
+    ENTRY DEFENDNT.IN                     {SKIPFOUND}
+    ENTRY DEFENDNT.LBS                    {SKIPFOUND}
+    ENTRY DEFENDNT.CREDIT                 {SKIPFOUND}
+ENDGROUP
+CLEARSCREEN
+MOVE PAGE1.1 TO OFFENSE.IDNO
+
+REPORT OFFENSE BY INDEX.1
+             INDICATE SELECT AS OFFENSE.IDNO EQ PAGE1.1
+[NOT SELECT] GOTO END.OF.REPORT
+             INDICATE SELECT AS OFFENSE.ACTIVE EQ ''
+[NOT SELECT] INDICATE SELECT AS OFFENSE.ACTIVE EQ 'L'
+SECTION HEADER
+        OUTPUT HEADER
+SECTION BODY
+        REREAD
+        PRINT OFFENSE.IDNO
+        PRINT OFFENSE.CTRLNO
+        PRINT OFFENSE.OFFEN
+        MOVE 'H' TO OFFENSE.OFFEN
+        PRINT OFFENSE.OFFEN
+        SAVERECORD OFFENSE  
+        UNLOCK
+        OUTPUT BODY
+SECTION TOTAL
+
+REPORTEND
+FORMFEED
+ABORT
+

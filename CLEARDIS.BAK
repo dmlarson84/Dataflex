@@ -1,0 +1,575 @@
+/SELECT                                  cleardis.rpt
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+                              HOT CHECK SYSTEM
+                           Clear Disburse Date Info
+
+
+           Enter the disburse date you wish to look for: __/__/____
+
+           Enter the starting check number ............: _____.
+           Enter the ending check number...............: _____.
+
+           <ESC> To exit to menu during the selection process
+
+
+
+/blank
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+                              HOT CHECK SYSTEM
+                           Clear Disburse Date Info
+
+/warn1
+ษอออ< warn1  scr  >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                             บ
+บ                                                                             บ
+บ  User ______________________________ is not authorized to reprint checks    บ
+บ                                                                             บ
+บ                                                                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/warn2                  resident
+ษอออ< warn2  scr  >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                             Please Standby                                  บ
+บ                                                                             บ
+บ      _________________________________________________ : _____. ____.       บ
+บ                                                                             บ
+บ                        Routine Cannot Be Stopped                            บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/warn3
+ษอออ< warn3  scr  >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                             บ
+บ   Bank Code "HC" was not updated.                                           บ
+บ           You must manually increase the bank balance by..{ ______.__       บ
+บ                                                                             บ
+บ                    Press Space Bar To Continue                              บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/warn4
+ษอออ< warn4  scr  >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                             บ
+บ         A disbursement date of __/__/____ could not be found.                 บ
+บ                                                                             บ
+บ                                                                             บ
+บ      Options:  R)estart,  Q)uit .....................{ _                    บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/warn5
+ษอออ< warn5  scr  >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ     The date you have entered (__/__/____) does not equal todays date !       บ
+บ        The date entered shows to be __. days or __. years off.              บ
+บ                                                                             บ
+บ                                                                             บ
+บ      Options:  A)ccept,   R)estart...................{ _                    บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/warn6
+ษอออ< warn6  scr  >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ The disbursement file shows a starting check # for this date  as { _____.   บ
+บ                                                                             บ
+บ You have entered a starting number of { _____.                              บ
+บ                                                                             บ
+บ      Options:  A)ccept the Disburse file #,   R)estart,  Q)uit.{ _          บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/warn6a
+ษอออ< warn6a  scr  >ออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ The disbursement file shows a starting check # for this batch as { _____.   บ
+บ                                                                             บ
+บ You have entered a starting number of { _____.                              บ
+บ                                                                             บ
+บ      Options:  A)ccept to the next batch,  R)estart,  Q)uit....{ _          บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/warn7
+ษอออ< warn7  scr  >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ The disbursement files shows the last check # within this batch as { _____. บ
+บ                                                                             บ
+บ You have entered an ending number of { _____.                               บ
+บ The ending check number will be changed to { _____.                         บ
+บ                    Press Space Bar To Continue                              บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/notes
+
+
+
+    change made   2/26/91 thru 2/28/91 by gary grooms
+
+      the addition of routines to reverse ledger journal entries, void
+      the bank reconciliation entries and to void the check register
+      entries.
+
+
+     Accum1 = the accumulation of total of checks in order that we can add
+              the total of checks deleted back to the bank account
+
+     Change on 3-2-99 by Herta Jesse
+        Modified program to comply with y2k - 4 digit years and changed save
+        routines to comply with v3.1d re-read, save, unlock etc. edited the 
+        sysdate command to sysdate4 command (new v3.1d)
+
+
+
+/EXIT            RESIDENT
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+
+
+
+
+
+
+              Please Standby, Closing Files and returning to the Menu
+
+/CHANGES
+                          WORTHLESS CHECK SYSTEM
+                        Record Changing Entry Screen
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+            Operator: ___                       Date: __/__/____
+
+            Changes: (What was changed and Why)
+
+            _______________________________________________________ |
+            _______________________________________________________ |
+            _______________________________________________________ |
+
+/*
+Read_dfini "df23ini.cfg"
+//----------------- Cannot Run Program From Command Line (DOS)
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+#include CALCDATE.inc
+#include macs.frm
+date_macro_init
+
+multi$ open recon checks distrib ledger journals ref bank setup
+OPEN DISBURSE INDEX.2
+open rechange
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.USER_NUMB
+FIND EQ USERX BY INDEX.1
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+integer count aday amonth ayear first_ck last_ck check_no
+integer bday bmonth byear pros_chk
+
+DATE TODAY
+SYSDATE4 TODAY
+STRING PAUSE 1  answ 1 year 4 short_yr 2
+number accum1
+
+indicator no_more one_rec first ok_pros ok_date ok_chk ok_batch
+
+
+page set warn1 at 6 0
+page set warn2 at 6 0
+page set warn3 at 6 0
+page set warn4 at 6 0
+page set warn5 at 6 0
+page set warn6 at 6 0
+page set warn6a at 6 0
+page set warn7 at 6 0
+
+//if userx.disb lt (4) begin
+//   screenmode 112 on
+//   display userx.user_name
+//   screenmode 1 on
+//   page warn1
+//  inkey answ
+//   abort
+//end
+
+
+
+start_accept:
+  repeat
+    ACCEPT SELECT.1
+      if select.1 eq '' loop
+        decompose_date today to aday amonth ayear
+        decompose_date select.1 to bday bmonth byear
+            if today ne  select.1 begin
+              display select.1 to warn5.1
+              calc (aday - bday) to warn5.2
+              calc (ayear - byear) to warn5.3
+              page warn5
+                repeat
+                  clearform warn5.4
+                  accept warn5.4
+                  uppercase warn5.4
+                  if ~ warn5.4 in "RA" loop
+                  if warn5.4 eq "R" clearform select
+                  if warn5.4 eq "R" goto start_accept
+            end
+            clear disburse
+            move select.1 to disburse.dispdt
+            find ge disburse by index.2
+           if disburse.dispdt ne select.1 indicate found false
+
+           [finderr] begin
+              display select.1 to warn4.1
+              page warn4
+                repeat
+                  clearform warn4.2
+                  accept warn4.2
+                  uppercase warn4.2
+                     if ~ warn4.2 in "RQ" loop
+                      if warn4.2 eq "R" begin
+                         clearform select
+                         clearform warn4
+                         goto start_accept
+                      end
+                      if warn4.2 eq "Q"gosub quit_routine
+           end
+
+
+redo_two:
+  repeat
+    clearform select.2
+    accept select.2
+      if select.2 eq (0) loop
+
+            if disburse.chkno gt select.2 begin
+redo_sel2a:
+              display disburse.chkno to warn6.1
+              display select.2 to warn6.2
+              repeat
+                clearform warn6.3
+                accept warn6.3
+                uppercase warn6.3
+                if ~ warn6.3 in "ARQ" loop
+                  if warn6.3 eq "R" goto redo_two
+                  if warn6.3 eq "Q" goto start_accept
+                  if warn6.3 eq "A" move disburse.chkno to select.2
+             end
+
+           if disburse.chkno lt select.2 begin
+           redo_sel2:
+              move disburse.pckno to pros_chk
+              display disburse.chkno to warn6a.1
+              display select.2 to warn6a.2
+              repeat
+                clearform warn6a.3
+                accept warn6a.3
+                uppercase warn6a.3
+                if ~ warn6a.3 in "ARQ" loop
+                  if warn6a.3 eq "R" goto redo_two
+                  if warn6a.3 eq "Q" goto start_accept
+                  if warn6a.3 eq "A" while disburse.chkno lt select.2
+                     find gt disburse by index.2
+                     [finderr] begin
+                        clearxy 23 0
+                        gotoxy 23 0
+                        show " No Records Within This Range. Press Space Bar To Continue "
+                        inkey answ
+                        clearform warn1
+                        clearform warn2
+                        clearform warn3
+                        clearform warn4
+                        clearform warn5
+                        clearform warn6
+                        clearform warn6a
+                        clearform warn7
+                        goto start_accept
+                      end
+                  end
+              if disburse.chkno lt select.2 goto redo_sel2
+              if disburse.chkno gt select.2 goto redo_sel2a
+             move disburse.chkno to select.2
+             end
+
+  repeat
+    clearform select.3
+    accept select.3
+      if select.3 lt select.2 loop
+        if select.3 ne disburse.pckno begin
+           display select.3 to warn7.2
+           display disburse.pckno to warn7.1
+           display disburse.pckno to warn7.3
+           page warn7
+             move '' to answ
+             inkey answ
+               if ~ answ in "|" move disburse.pckno to select.3
+        end
+page select
+repeat
+   clearxy 23 0
+    gotoxy 23 10
+    show " Are you sure of the starting and ending check numbers "
+    gotoxy 23 67
+    inkey answ
+    if ~ answ in "YyNn" loop
+    if answ in "Nn" begin
+      clearxy 23 0
+      goto start_accept
+    end
+    clearxy 23 0
+
+continue_on:
+
+move select.2 to first_ck
+move select.3 to last_ck
+
+
+right select.1 to short_yr 2
+move '19' to year
+append year short_yr
+   clear setup
+   move ayear to setup.year
+      find eq setup by index.1
+
+
+
+move (0) to accum1
+move (0) to count
+
+keyproc off
+
+
+clear disburse
+indicate one_rec false
+indicate first true
+MOVE SELECT.1 TO DISBURSE.DISPDT
+REPORT DISBURSE BY INDEX.2
+
+       INDICATE SELECT AS DISBURSE.DISPDT EQ SELECT.1
+       indicate no_more as [~ select]
+[~ SELECT] GOTO END.OF.REPORT
+[  SELECT] INDICATE SELECT AS DISBURSE.MANUAL EQ 'C'
+[  select] indicate select as disburse.chkno ge first_ck
+[  select] indicate select as disburse.chkno le last_ck
+SECTION BODY
+        [first] page warn2
+        [first] display "Clearing Disbursement records " to warn2.1
+        display disburse.chkno to warn2.2
+        display disburse.merchant_idno to warn2.3
+        indicate first false
+        indicate one_rec true
+        MOVE '' TO DISBURSE.DISPDT
+        MOVE 0 TO DISBURSE.PCKNO
+        MOVE 0 TO DISBURSE.CHKNO
+        SAVERECORD DISBURSE
+        CLEAR DISBURSE
+        MOVE SELECT.1 TO DISBURSE.DISPDT
+REPORTEND
+        [no_more][~ one_rec] gosub quit_routine
+        gosub xdisb
+        gosub del_recon
+        gosub xdisb
+        gosub del_check
+        gosub xdisb
+        gosub del_jr
+
+        display " Updating Support Files " to warn2.1
+        clearform warn2.2 thru warn2.3
+
+
+
+// update bank balance routine
+    clear bank
+    move "HC" to bank.code
+       find eq bank by index.1
+         [found] begin
+             [multiuser] reread bank
+             move (bank.current_bal + accum1) to bank.current_bal
+             saverecord bank
+             [multiuser] unlock
+         end
+         [finderr] begin
+            display accum1 to warn3.1
+            page warn3
+            inkey answ
+         end
+
+gosub record_change
+
+page blank
+
+GOTOXY 23 5
+SHOW 'Hit  Y to print checks or any other key to quit '
+INKEY PAUSE
+IF PAUSE IN 'Yy' CHAIN 'PTCHK'
+ELSE BEGIN
+        GOTOXY 23 5
+        SHOW 'When ready to print checks, choose -Print checks- from the menu'
+        GOTOXY 24 10
+        SHOW 'Hit any key to continue'
+        INKEY PAUSE
+END
+gosub quit_routine
+ABORT
+
+
+//====< Subroutines >==========================================================
+
+del_recon:
+
+    move first_ck to check_no
+  repeat
+    clear recon
+    move "HC" to recon.bank_code
+    move check_no to recon.check_number
+       find eq recon by index.1
+       [found] begin
+          [multiuser] reread recon
+          [first] display " Voiding bank reconciliation Register " to warn2.1
+          display recon.check_number to warn2.2
+          display recon.recnum to warn2.3
+          indicate first false
+          move "** Void **" to recon.payor
+          move (0.00) to recon.amount
+          move "Y" to recon.status
+          saverecord recon
+          [multiuser] unlock
+       end
+       [finderr]  move last_ck to check_no
+       increment check_no
+    until check_no gt last_ck
+    move (0) to check_no
+return
+
+
+
+del_check:
+    move first_ck to check_no
+	
+	    clearxy 24 0
+		gotoxy 24 20
+		show " HERE" check_no
+        inkey answ
+	
+	
+repeat
+    clear checks
+    move select.1 to checks.jr_date
+    move "HC" to checks.bank_code
+    move check_no to checks.check_num
+       find eq checks by index.4
+       [finderr] goto pass_checks
+       [found] begin
+             [multiuser] reread checks
+             [first] display " Voiding check register " to warn2.1
+             display checks.check_num to warn2.2
+             blankform warn2.3
+             indicate first false
+             move (accum1 + checks.chk_amt) to accum1
+             move (0) to count
+           repeat
+             clear distrib
+             move select.1 to distrib.jr_date
+             move checks.bank_code to distrib.bank_code
+             move checks.check_num to distrib.check_numb
+             move count to distrib.sequence
+                find eq distrib by index.4
+                [found] begin
+                   [multiuser] reread distrib
+                   display distrib.account to warn2.3
+                   move 9999 to distrib.account
+                   move (0.00) to distrib.amount
+                   move "X" to distrib.update
+                   move "***Void***" to distrib.description
+                   saverecord distrib
+                end
+                increment count
+            until count eq (2)
+	    clearxy 24 0
+		gotoxy 24 20
+		show " HERE 1"
+        inkey answ
+                   move (0.00) to checks.chk_amt
+                   move (0.00) to checks.mfee
+                   move (0.00) to checks.pfee
+                   move (0.00) to checks.hc_amt
+                   move "*** Void ***" to checks.reference
+                   move "*** Voided Check***" to checks.payee
+                   saverecord checks
+        end
+    increment check_no
+ until check_no gt last_ck
+pass_checks:
+[multiuser] unlock
+return
+
+
+
+del_jr:
+     decompose_date select.1 to aday amonth ayear
+     move first_ck to check_no
+repeat
+  repeat
+     clear journals
+     move "DC" to journals.jr
+     move ayear to journals.yr
+     move amonth to journals.mn
+     move aday to journals.dy
+     move check_no to journals.chk
+        find ge journals by index.1
+          [finderr] goto pass_jr2
+          [found] begin
+              [first] display " Updating Ledger Journals " to warn2.1
+              display journals.chk to warn2.2
+              display journals.recnum to warn2.3
+              indicate first false
+              if journals.chk ne check_no goto pass_jr
+              relate journals
+              move (amonth -1) to fieldindex
+              move ((journals.amount * (-1)) + ledger.tyjan&) to ledger.tyjan&
+              saverecord ledger
+              delete journals
+          end
+   loop
+pass_jr:
+   increment check_no
+until check_no gt last_ck
+pass_jr2:
+return
+
+
+quit_routine:
+  page exit
+  abort
+
+xdisb:
+   display " Moving to next step " to warn2.1
+   blankform warn2.2 thru warn2.3
+   indicate first true
+return
+
+
+record_change:
+   clear rechange
+   clearform changes
+   move user_numb to changes.1
+   if changes.2 eq " " move today to changes.2
+   Display "Checks Reprinted" to changes.3
+   move "Checks" to rechange.file
+     accept changes.3 to rechange.desc1
+     accept changes.4 to rechange.desc2
+     accept changes.5 to rechange.desc3
+  move changes.1 to rechange.operator
+  move changes.2 to rechange.date
+  save rechange
+return
+
+
+//======< key procedures >=====================================================
+
+
+
+keyproc key.escape
+  clearxy 24 0
+  gotoxy 24 20
+  show " Are you sure you want to quit ?  (Y/N)"
+  inkey answ
+  clearxy 24 0
+  if answ in "Yy" abort
+return

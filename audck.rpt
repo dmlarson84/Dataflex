@@ -1,0 +1,377 @@
+/body  5     RESIDENT
+______. __/__/____ ____________________________________________ ____,___.__ ____,___.__ ____,___.__ ___,___.__                               
+/SCRPRT
+อออออออ< Printing Check Registers >อออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+
+
+
+
+   Checks are printing between the dates of < __/__/____ > and < __/__/____ >
+
+            Drawn on the Bank of < ____________________________ >
+
+
+
+              Printing Check #...........{ __  ______.
+
+
+
+
+_________________________   ________________________________________  _
+
+/SCRPRT2
+ออออออออ< Print Check Register >อออออออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+
+
+
+
+
+
+
+
+
+           _________________________________________  _
+
+
+
+
+
+
+
+
+/SCRSELECT
+ออออออออ< Print Check Register >อออออออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+
+
+               Start Date................{ __/__/____
+
+               End Date..................{ __/__/____
+
+               Bank Code.................{ __
+
+
+
+
+
+
+
+
+      Output To F)ile,  C)onsole or A)bort.........{ _
+
+/info
+   changes made 06-08-91 by gary grooms
+        added year to date totals with accumulators and formatted
+        the $ fields with commas.
+        changed heading to read "check Type" instead of "ref"
+
+   change made 06-23-91 by Gary Grooms
+        added an indicator (do_tot) so that YTD totals will only
+        be printed if the begin date is 1/1/xx
+
+   Change 3-3-99 by Herta Jesse
+        Modified program to comply with y2k,4 digit years and changed
+        save routines to comply with v3.1d re-read, save, unlock etc.
+        edited the sysdate command to sysdate4.
+
+   change made 10/11/1999 by Jeff March
+        added direct_output to LPT1: for printing of check register.
+
+Recompiled 01-19-2000 by Jeff March
+        Recognize new backspace command in calcdate.inc
+          
+/*
+USE y2k.pkg
+Read_dfini "df23ini.cfg"
+
+#include calcdate.inc
+#include macs.frm
+
+
+
+//*******< Program Variables >*************************************************
+
+
+STRING ANSW 1 LONG 50 SHORT 50
+
+INDICATOR PRT UPDATE newmon first_time ok_pros ok_sub one_month  do_tot
+
+INTEGER COUNT LCOUNT TIMER ADAY AMONTH AYEAR SEQ month_
+integer ck_day ck_mon ck_yr prior_mon
+
+number accum1 accum2 accum3 accum4 accum5 accum6 accum7 accum8
+number accum9 accum10
+
+DATE TODAY TEMPDAY
+//*******< Initialize Variables and Set Page Screens >*************************
+
+
+move 0 to ck_mon
+move 0 to ck_day
+move 0 to ck_yr
+move 0 to prior_mon
+MOVE 0 TO COUNT
+MOVE 0 TO LCOUNT
+move 0 to month_
+move (0) to accum10
+MOVE '' TO ANSW
+MOVE '' TO LONG
+MOVE '' TO SHORT
+
+
+SYSDATE4 TODAY
+//*******< Open Files >********************************************************
+
+MULTI$ OPEN CHECKS REF months RECON JOURNALS ledger
+OPEN BANK INDEX.1
+OPEN DISTRIB
+
+//*******< Main Program >******************************************************
+DATE_MACRO_INIT
+
+FORMAT SCRSELECT.3        {CAPSLOCK}
+FORMAT SCRSELECT.4        {CAPSLOCK}
+
+START:
+//gosub clear_accums
+CLEAR BANK
+CLEAR DISTRIB
+CLEAR CHECKS
+clear ledger
+  move (100) to ledger.number
+  move ref.district to ledger.district
+  move "20" to ledger.division
+  find eq ledger by index.1
+  [finderr] begin
+    clearxy 24 0
+    gotoxy 24 0
+    show " Ledger Account 100 could not be found"
+    inkey answ
+    clearscreen
+    abort
+  end
+
+
+CLEARFORM SCRSELECT.1 THRU SCRSELECT.4
+FIRST_DAY_OF_MONTH TODAY TO TEMPDAY
+DISPLAY TODAY TO SCRSELECT.1
+LAST_DAY_OF_MONTH TODAY TO TEMPDAY
+DISPLAY TODAY TO SCRSELECT.2
+//PAGE SCRSELECT
+CHOICE:
+  MOVE 01/01/2014 to SCRSELECT.1
+  MOVE 12/31/2014 to SCRSELECT.2
+  
+   DECOMPOSE_DATE SCRSELECT.1 TO ADAY AMONTH AYEAR
+   indicate do_tot as amonth eq (1)
+   [do_tot] indicate do_tot as aday eq (1)
+
+
+//REPEAT
+
+
+display "HC" to  SCRSELECT.3
+   MOVE SCRSELECT.3 TO BANK.CODE
+      FIND EQ BANK BY INDEX.1
+      [FINDERR] BEGIN
+        CLEARXY 24 0
+        GOTOXY 24 0
+        SHOW " Incorrect or Missing Bank Code !!"
+        FOR TIMER FROM 0 TO 600
+         LOOP
+        CLEARXY 24 0
+        CLEAR BANK
+        CLEARFORM SCRSELECT.3
+      END
+  [FINDERR] abort
+
+REPEAT
+MOVE "F" TO SCRSELECT.4
+IF ~ SCRSELECT.4 IN 'FCA' LOOP       
+MOVE SCRSELECT.4 TO ANSW
+
+
+GOSUB SELECT_OUTPUT_REG
+
+
+
+MOVE 0 TO PAGECOUNT
+MOVE SCRSELECT.1 TO checks.JR_DATE
+MOVE SCRSELECT.3 TO checks.BANK_CODE
+  indicate first_time true
+
+
+REPORT checks BY INDEX.4 BREAK checks.seq_num
+INDICATE SELECT AS checks.JR_DATE GE SCRSELECT.1
+[SELECT] INDICATE SELECT AS checks.JR_DATE LE SCRSELECT.2
+[SELECT] INDICATE SELECT AS checks.BANK_CODE EQ SCRSELECT.3
+[~ select]  GOTO END.OF.REPORT
+
+decompose_date checks.jr_date to ck_day ck_mon ck_yr
+move ck_mon to fieldindex
+
+
+BLANKFORM SCRPRT.6 THRU SCRPRT.8
+[PRT] PAGE SCRPRT
+
+  DISPLAY SCRSELECT.1 TO SCRPRT.1
+  DISPLAY SCRSELECT.2 TO SCRPRT.2
+  DISPLAY BANK.NAME TO SCRPRT.3
+   display checks.bank_code to scrprt.4
+   display checks.check_num to scrprt.5
+
+
+
+
+
+//section body 3
+
+  PRINT CHECKS.CHECK_NUM   TO body.1
+  PRINT CHECKS.CK_DATE     TO body.2
+  
+  PRINT CHECKS.PAYEE       TO body.3
+  
+   
+  PRINT CHECKS.hc_amt      TO body.4
+  
+  PRINT CHECKS.mfee        TO body.5
+    
+  PRINT CHECKS.pfee        TO body.6
+  PRINT CHECKS.CHK_AMT     TO body.7
+    
+OUTPUT BODY
+
+
+
+RETURN
+
+RPT.KEYPRESS:
+  [PRT] BEGIN
+        DISPLAY ' A KEY HAS BEEN PRESSED' TO SCRPRT.6
+        DISPLAY ' DO YOU WISH TO ABORT THE REPORT? (Y/N) ' TO SCRPRT.7
+        DISPLAY 'N' TO SCRPRT.8
+        REPEAT
+         ACCEPT SCRPRT.8 TO ANSW
+         uppercase answ
+         IF ~ ANSW IN 'YN' BLANKFORM SCRPRT.8
+         IF ~ ANSW IN 'YN' LOOP
+         IF ANSW EQ 'Y' RETURN END$OF$REPORT
+      END
+  [~ PRT] BEGIN
+      REPEAT
+        SHOWLN ' A KEY HAS BEEN PRESSED.'
+        INPUT ' DO YOU WISH TO ABORT TH REPORT? (Y/N)' ANSW
+        UPPERCASE ANSW
+        IF ~ ANSW IN 'YN' LOOP
+        IF ANSW EQ 'Y' RETURN END$OF$REPORT
+      END
+
+
+RETURN RPT.LOOP
+
+     indicate one_month true
+     REPORTEND
+     FORMFEED
+     [MULTIUSER] DESPOOL
+     CLOSE_OUTPUT
+
+     [PRT] BEGIN
+     BLANKFORM SCRPRT.1 THRU SCRPRT.8
+     DISPLAY '               Options:' TO SCRPRT.6
+     DISPLAY 'R)eprint report,   Q)uit' TO SCRPRT.7
+     REPEAT
+     CLEARFORM SCRPRT.8
+     DISPLAY 'Q' TO SCRPRT.8
+     MOVE "Q" TO ANSW
+     UPPERCASE ANSW
+     IF ~ ANSW IN 'RQ' LOOP
+     IF ANSW EQ 'R' GOTO START
+
+     END
+
+
+     [~ PRT] BEGIN
+     DISPLAY 'PRINT ANOTHER REGISTER? (Y/N)' TO SCRPRT2.1
+     REPEAT
+     CLEARFORM SCRPRT2.2
+     DISPLAY 'N' TO SCRPRT2.2
+     ACCEPT SCRPRT2.2 TO ANSW
+     UPPERCASE ANSW
+     IF ~ ANSW IN 'YN' LOOP
+     IF ANSW EQ 'Y' GOTO START
+     END
+
+
+
+ ABORT
+
+
+
+
+
+
+
+
+
+
+
+
+////*******< Sub Routines >******************************************************
+
+SELECT_OUTPUT_REG:
+
+  IF ANSW EQ 'F' BEGIN
+     INDICATE PRT TRUE
+///     OUTFILE "LST:"
+     DIRECT_OUTPUT "audchk.txt"
+     MOVE 60 TO PAGEEND
+     MOVE 0 TO PAGEFEED
+     RETURN
+   END
+
+  IF ANSW EQ 'C' BEGIN
+     INDICATE PRT FALSE
+     OUTFILE "CON:"
+     MOVE 24 TO PAGEEND
+     MOVE -1 TO PAGEFEED
+     CLEARSCREEN
+     RETURN
+   END
+
+  IF ANSW EQ 'A' BEGIN
+      CLEARXY 24 0
+      GOTOXY 24 0
+      SHOW " Are You Sure You Want To Abort..(Y/N) "
+    REPEAT
+      GOTOXY 24 40
+      MOVE '' TO ANSW
+      INKEY ANSW
+      UPPERCASE ANSW
+      IF ~ ANSW IN 'YN' LOOP
+      IF ANSW EQ 'Y' ABORT
+      IF ANSW EQ 'N' RETURN START
+   END
+
+RETURN
+
+CENTER:
+   LENGTH SHORT TO LCOUNT
+   MOVE "" TO LONG
+    MOVE (50 - LCOUNT / 2 + (.5)) TO LCOUNT
+    FOR COUNT FROM 0 TO LCOUNT
+          APPEND LONG " "
+     LOOP
+    APPEND LONG SHORT
+RETURN
+
+
+
+

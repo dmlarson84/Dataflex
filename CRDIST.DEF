@@ -1,0 +1,31 @@
+        FILE DEFINITION LISTING FOR FILE #43
+*************************************************** 
+        FILE ROOT NAME     = CRDIST
+        USER DISPLAY NAME  = GL Distribution
+        DATAFLEX FILE NAME = CRDIST
+*************************************************** 
+        RECORD LENGTH = 32  (USED = 23)
+        MAX NUMBER OF RECORDS = 5000  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       2   ASCII          1     0     0     BANK_CODE
+   2       3       3   DATE           1     0     0     DATE
+   3       6       3   NUMERIC   0    1     0     0     SEQ_NUMBER
+   4       9       1   NUMERIC   0    1     0     0     CONTROL
+   5      10       2   NUMERIC   0    0     0     0     GL_ACCOUNT
+   6      12       3   ASCII          0     0     0     GL_DIST
+   7      15       2   ASCII          0     0     0     GL_DIV
+   8      17       4   NUMERIC   2    0     0     0     GL_AMOUNT
+   9       1       8   OVERLAP        1    42    10     BANK_DATE_SEQ
+  10       1       9   OVERLAP        1     0     0     BNK_DTE_SEQ_CTL
+  11      21       1   ASCII          3     0     0     UPDATE
+  12      22       2   ASCII          0     0     0     JR
+ 
+INDEX 1:  FIELD SEGMENTS:  <10>   
+INDEX 2:  FIELD SEGMENTS:  <1>   <2>   <3>   <4>   
+INDEX 3:  FIELD SEGMENTS:  <11>   <0>   
+

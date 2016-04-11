@@ -1,0 +1,82 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Cd_Stuff.Pkg
+// Version: 1.0
+//  01-11-1993 : Created
+//
+// Author: John J. Tuohy
+//
+// 08-19-1993 - Changed CD_Popup_Object to only start_UI if the object 
+//              that popup was sent to was activated. Could have had 
+//              problems if the popup failed.
+//************************************************************************
+
+use ui
+
+
+Register_Procedure Request_Destroy_Object
+
+#COMMAND ACTIVATE_VIEW R "AS""FOR" R
+   Register_Object !3
+   Procedure !1 for DESKTOP
+     If Current_Object NE DESKTOP Send !1 to desktop
+     Else Send Activate_Scope to (!3(Current_Object))
+   End_Procedure    
+#ENDCOMMAND  
+
+#COMMAND DEFERRED_VIEW R "AS""FOR" "OBJECT" 
+   Integer   !1_obj
+   Move 0 to !1_obj
+ 
+   Procedure !1 for DESKTOP
+     If Current_Object NE DESKTOP Send !1 to desktop
+     Else Begin
+       If !1_Obj eq 0 Gosub Create_!1
+       Send Activate_Scope to !1_Obj
+     End  
+   End_Procedure    
+   
+   [Found ~Found] Begin
+     Create_!1:
+        Object !4 !5 !6 !7 !8  !9
+           Move Current_Object to !1_Obj
+#ENDCOMMAND  
+
+define DEFERRED_OBJECT for DEFERRED_VIEW
+
+#COMMAND CD_POPUP_OBJECT R
+   Object !1 is a Client no_image
+     Set focus_mode to nonfocusable
+     Procedure Popup
+       Gosub !1_Sub
+       Register_Object !1_Cd
+       Send Popup to (!1_Cd(Current_Object))
+       // 08-19-1993 - Only start the UI if the popup activation
+       //              suceeded. Check Active_State
+       If (Active_State(!1_Cd(Current_Object))) Start_UI
+       Send Request_Destroy_Object to (!1_Cd(Current_Object))
+     End_Procedure  
+   End_Object
+
+   [Found ~Found] Begin
+     !1_Sub:
+        Object !1_cd !2 !3 !4 !5 !6 !7 !8  !9
+           Set Stop_UI_State to TRUE
+           Set Popup_State   to TRUE
+#ENDCOMMAND
+
+#COMMAND CD_END_OBJECT .
+        End_Object
+     Return
+   End
+#ENDCOMMAND  
+     
+

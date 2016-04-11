@@ -1,0 +1,453 @@
+/BODY	 resident
+______. __/__/____ _____.__ _______________ ___________________________________
+/SELECTION
+
+
+
+
+
+
+
+
+
+Select receipts by Received Date greater than or equal to __/__/____
+
+Select receipts by Received Date less than or equal to __/__/____   (Return for
+                                                                     today)
+
+
+
+
+
+<ESC> To Quit
+
+/RUNN       RESIDENT
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ    Please Standby :                                   บ
+บ                                                       บ
+บ       Now Printing/Updating Receipt : ____.-______.   บ
+บ                                                       บ
+บ                                                       บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออ1/4
+
+
+/STANDBY1
+==============================================================================
+
+
+
+
+
+
+               Please Standby - Checking Receipts
+
+
+/info
+
+        change made on 10/11/1999 by Jeff March
+                added direct_output to lpt1:
+
+        Change made on 11/08/1999 by Jeff March
+                Changed SAVERECORD LEDGER to SAVE LEDGER.
+
+Recompiled 01-19-2000 by Jeff March
+        Recognize new backspace command in calcdate.inc
+          
+/*
+
+Use y2k.pkg
+Read_dfini "df23ini.cfg"
+
+
+#include calcdate.inc
+#include macs.frm
+
+
+
+NUMBER JOURNAL NORMAL JOURNAL_TOTAL NORMAL_TOTAL TAPE
+NUMBER DEP_TOTAL
+INTEGER COUNT MONTH_NUM LASTRCPT ADAY AMONTH AYEAR
+STRING MONTH 20 ANSW 1
+DATE TODAY DEP_DATE
+INDICATOR CHECK_DEP NEWDEP DO_DEP INSEL INDEP INHOW INBAL PRT
+INDICATOR FIRST_TIME ADD_DEP NONE UPDAT
+
+DATE_MACRO_INIT
+
+SYSDATE4 TODAY
+
+//MOVE 100000000 TO PAGEFEED
+MOVE 10000000 TO PAGEEND
+
+//PAGE SET HOW AT 16 0
+PAGE SET RUNN AT 8 12
+//PAGE SET NON AT 8 12
+//PAGE SET DEP AT 6 0 
+//PAGE SET DEP2 AT 6 0 
+//PAGE SET DEP3 AT 6 0 
+
+
+OPEN DEFENDNT
+OPEN RESTITUT INDEX.3
+OPEN BANK 
+OPEN DEPOSITS
+OPEN CRECPT
+OPEN CRDIST
+OPEN LEDGER
+OPEN RECON2
+OPEN JOURNALS
+OPEN REF
+OPEN JRLIST
+
+
+CLEAR BANK
+MOVE 'HC' TO BANK.CODE
+  FIND EQ BANK BY INDEX.1
+
+START:
+//INDICATE NEWDEP FALSE
+//INDICATE DO_DEP FALSE
+//INDICATE CHECK_DEP FALSE
+INDICATE INSEL TRUE
+INDICATE INDEP FALSE
+INDICATE INHOW FALSE
+
+MOVE (0) TO LASTRCPT
+
+Direct_Output "audrecpt.txt" 
+
+//  PAGE SELECTION
+  
+
+
+  
+
+  
+  MOVE 01/01/2014 to SELECTION.1
+  MOVE 12/31/2014 to SELECTION.2
+//  IF SELECTION.2 EQ '' MOVE TODAY TO SELECTION.2
+  INDICATE INSEL TRUE
+  INDICATE INDEP FALSE
+  INDICATE INHOW FALSE
+ 
+
+
+PAGE STANDBY1
+
+MOVE SELECTION.1 TO RESTITUT.RECDT
+REPORT RESTITUT BY INDEX.3 BREAK RESTITUT.MONTH
+INDICATE SELECT AS RESTITUT.RECDT GE SELECTION.1
+INDICATE SELECT AS RESTITUT.RECDT LE SELECTION.2
+
+
+
+
+
+SECTION BODY
+        PAGE RUNN
+      
+        MOVE DEFENDNT.IDNO TO RUNN.1
+        MOVE RESTITUT.SEQNO TO RUNN.2
+        BLANKFORM BODY
+
+        //PRINT DEFENDNT.IDNO
+        PRINT RESTITUT.SEQNO 
+
+        //[CHECK_DEP] MOVE RESTITUT.SEQNO TO LASTRCPT
+        PRINT RESTITUT.RECDT 
+        PRINT RESTITUT.RESAMT 
+        IF RESTITUT.TYPE EQ "M" PRINT "Money Order    " TO BODY.4
+        IF RESTITUT.TYPE EQ "R" PRINT "Cashier's Check" TO BODY.4
+        IF RESTITUT.TYPE EQ "C" PRINT "Cash           " TO BODY.4
+        IF RESTITUT.TYPE EQ "X" PRINT "Credit Card    " TO BODY.4
+        IF RESTITUT.TYPE EQ "J" BEGIN
+           PRINT "Journal Entry  " TO BODY.4
+        //   CALC (RESTITUT.RESAMT + JOURNAL) TO JOURNAL
+        END
+        //ELSE CALC (RESTITUT.RESAMT + NORMAL) TO NORMAL
+        PRINT DEFENDNT.NAME TO BODY.5
+        //[DO_DEP] GOSUB CREATE_DEPOSIT
+        //[DO_DEP] BEGIN
+        //    reread restitut
+        //    MOVE DEP_DATE TO RESTITUT.DEP_DATE
+        //    MOVE 'X' TO RESTITUT.UPDATE
+        //    SAVERECORD RESTITUT
+        //    unlock
+        // END
+        //[PRT]
+        OUTPUT BODY
+        //INCREMENT COUNT
+REPORTEND
+
+
+
+
+
+
+CLEAR RESTITUT
+CLEAR DEFENDNT
+CLEAR BANK
+CLEAR DEPOSITS
+CLEAR CRECPT
+CLEAR CRDIST
+CLEARFORM SELECTION
+
+
+
+CLEARFORM BODY
+CLEARFORM RUNN
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

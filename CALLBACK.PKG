@@ -1,0 +1,398 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Confidential Trade Secret.
+// Copyright 1987-1994 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//      
+// Module: 
+//      callback.pkg
+//      
+// Purpose:
+//      Defines a generic Callback_Client class.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+use ui
+use dfmisc
+use clwindow
+use infowin
+
+// only defined in this package; not used in base runtime.
+define CALLBACK_TYPE_ABORT    for -3
+define CALLBACK_TYPE_BEGIN    for -2
+define CALLBACK_TYPE_COMPLETE for -1
+
+define CALLBACK_TYPE_TEXT           for DF_MESSAGE_TEXT
+define CALLBACK_TYPE_HEADING_MIN    for DF_MESSAGE_HEADING_1
+define CALLBACK_TYPE_HEADING_MAX    for DF_MESSAGE_HEADING_5
+define CALLBACK_TYPE_WARNING        for DF_MESSAGE_WARNING
+define CALLBACK_TYPE_PROGRESS_TITLE for DF_MESSAGE_PROGRESS_TITLE
+define CALLBACK_TYPE_PROGRESS_VALUE for DF_MESSAGE_PROGRESS_VALUE
+
+define CALLBACK_PROGRESS_VALUE_SEPARATOR for ","
+define CALLBACK_HEADING_INDENT for "  "
+
+/Callback_Client_Img
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ____________________________________________________________________________บ
+บ                                                                            บ
+บ ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ บ
+บ ณ                                                                        ณ บ
+บ ณ                                                                        ณ บ
+บ ณ                                                                        ณ บ
+บ ณ                                                                        ณ บ
+บ ณ                                                                        ณ บ
+บ ณ                                                                        ณ บ
+บ ณ                                                                        ณ บ
+บ ณ                                                                        ณ บ
+บ ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู บ
+บ                                                                            บ
+บ                                                                            บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/Callback_Interrupt_Message_Img
+____________________________________________________________________________
+/Callback_Interrupted_Button_Img
+               _____________      ___________      _________                
+/Callback_Button_Img
+                                    ____                                    
+/Callback_Meter_Img
+Percent Complete
+______________________________________________________________
+/*
+
+define CALLBACK_FULL_METER for ;
+    "0----10----20----30----40----50----60----70----80----90----100"
+
+define CALLBACK_METER_OFFSET for 1
+
+define CALLBACK_METER_SMALL_INCREMENT for 2
+define CALLBACK_METER_SMALL_WIDTH     for 1
+
+define CALLBACK_METER_LARGE_INCREMENT for 10
+define CALLBACK_METER_LARGE_WIDTH     for 6
+
+
+class Callback_Information_Window is an Information_Window
+    procedure Delete_Last_Line
+        send Goto_Line (Line_Count(Current_Object) - 1)
+        send Delete_Line
+    end_procedure
+end_class
+
+class Callback_Client is a Client_Window
+    procedure Construct_Object integer img
+        forward send Construct_Object img
+
+        property integer Original_Error_Object_Id     PUBLIC 0
+        property integer Last_Operation_Aborted_State PUBLIC FALSE
+        property integer Wait_For_OK                  PUBLIC TRUE
+        property integer Use_Progress_Meter           PUBLIC TRUE // FALSE
+        property string  Progress_Title               PUBLIC ""
+        property integer Last_Callback_Type           PUBLIC CALLBACK_TYPE_TEXT
+        property integer Meter_Display_Length         PUBLIC 0
+        property integer Indent_Level                 PUBLIC 0
+
+        set Attach_Parent_State to FALSE
+        set Popup_State to TRUE
+        set Block_Mouse_State to TRUE
+        send Locate_In_Center_Of_Screen
+
+        object Info is a Callback_Information_Window
+            set Size to 8 71
+            set Location to 4 3 RELATIVE
+            set Focus_Mode to NONFOCUSABLE
+
+            on_key KSAVE_RECORD send Continue
+            on_key KCANCEL send Abort
+            on_key KHELP send Help
+        end_object
+
+        object Interrupt_Message is a Message Callback_Interrupt_Message_Img
+            set Location to 14 1 RELATIVE
+            set Center_State item 0 to TRUE
+            set Value item 0 to "Press Escape to interrupt."
+        end_object
+
+        object Interrupted is a Button Callback_Interrupted_Button_Img
+            set Popup_State to TRUE
+            set Location to 14 1 RELATIVE
+
+            item_list
+                on_item "<F2=Continue>" send Continue
+                on_item "<Esc=Abort>" send Abort
+                on_item "<F1=Help>" send Help
+            end_item_list
+
+            on_key KSAVE_RECORD send Continue
+            on_key KCANCEL send Abort
+            on_key KHELP send Help
+        end_object
+
+        object Button is a Button Callback_Button_Img
+            set Popup_State to TRUE
+            set Location to 14 1 RELATIVE
+
+            item_list
+                on_item "<OK>" send Close_Client
+            end_item_list
+        end_object
+
+        set Key_Path to Desktop
+
+        on_key KEXIT_APPLICATION send None
+        on_key KSAVE_RECORD send Default_Key
+        on_key KHELP send Default_Key
+    end_procedure
+
+    procedure Activate
+        forward send Activate
+        send Mark_Off to (Info(Current_Object))
+    end_procedure
+
+    procedure Activating
+        send Initialize
+        forward send Activating
+    end_procedure
+
+    procedure Deactivating
+        send Deinitialize
+        forward send Deactivating
+    end_procedure
+
+    procedure Initialize
+        send Delete_Data to (Info(Current_Object))
+        set Last_Operation_Aborted_State to FALSE
+        set Original_Error_Object_Id to Error_Object_Id
+        move Current_Object to Error_Object_Id
+    end_procedure
+
+    procedure Deinitialize
+        get Original_Error_Object_Id to Error_Object_Id
+    end_procedure
+
+    function Meter_Display integer Cur_Val integer Max_Val returns string
+        local string Val
+        local Number Pct
+        local integer Lrg_Pct Sml_Pct Wid
+
+        if Cur_Val EQ Max_Val ;
+            function_return CALLBACK_FULL_METER
+
+        move (number(Cur_Val) / number(Max_Val) * 100.0) to Pct
+        move (Pct / CALLBACK_METER_LARGE_INCREMENT) to Lrg_Pct
+        move ((Pct - (Lrg_Pct * CALLBACK_METER_LARGE_INCREMENT)) / ;
+            CALLBACK_METER_SMALL_INCREMENT) to Sml_Pct
+
+        move (CALLBACK_METER_OFFSET + ;
+            (Lrg_Pct * CALLBACK_METER_LARGE_WIDTH) + ;
+            (Sml_Pct * CALLBACK_METER_SMALL_WIDTH)) to Wid
+
+        function_return (left(CALLBACK_FULL_METER, Wid))
+    end_function
+
+    procedure Error_Report integer Error_Info string Err_Msg
+        local string Extra_Err Full_Error_Text Ret_Val
+
+        trim (Error_Text(Desktop, hi(Error_Info))) to Full_Error_Text
+        send Add_Line to (Info(current_object)) ;
+            ("Error, Status " + string(hi(Error_Info)) + ": " + Full_Error_Text + " " + trim(Err_Msg))
+
+        if not (Last_Operation_Aborted_State(Current_Object)) begin
+            send Bell
+            get Interrupt to Ret_Val
+        end
+    end_procedure
+        
+    function Callback string Val integer Type returns integer
+        local string Key_Val Ret_Val Meter_Line
+        local integer Info_Obj Sep_Pos Cur_Prog Max_Prog This_Type Ind_Lev
+        local integer OLen MLen Cur_Obj
+
+        move (Info(Current_Object)) to Info_Obj
+        move Type to This_Type
+        get Indent_Level to Ind_Lev
+
+        if Type EQ CALLBACK_TYPE_BEGIN begin
+            if (Wait_For_OK(Current_Object)) begin
+                set Focus_Mode of (Info(Current_Object)) to NONFOCUSABLE
+
+                if (Active_State(Button(current_object))) ;
+                    send Deactivate to (Button(current_object))
+
+                if (not(Active_State(Interrupt_Message(current_object)))) begin
+                    move Current_Object to Cur_Obj
+                    send Add_Focus to (Interrupt_Message(Current_Object)) Cur_Obj
+                end
+            end
+
+            move 0 to Ind_Lev
+            send Add_Line to Info_Obj Val
+        end
+        else if Type EQ CALLBACK_TYPE_TEXT begin
+            send Add_Line to Info_Obj ;
+                (string(repeat(CALLBACK_HEADING_INDENT, Ind_Lev + 1)) + Val)
+        end
+        else if ((Type >= CALLBACK_TYPE_HEADING_MIN) and ;
+                (Type <= CALLBACK_TYPE_HEADING_MAX)) begin
+            move (Type - CALLBACK_TYPE_HEADING_MIN + 1) to Ind_Lev
+
+            send Add_Line to Info_Obj ;
+                (string(repeat(CALLBACK_HEADING_INDENT, Ind_Lev)) + Val)
+        end
+        else if Type EQ CALLBACK_TYPE_PROGRESS_TITLE begin
+            set Progress_Title to Val
+            send Add_Line to Info_Obj " "
+            move CALLBACK_TYPE_PROGRESS_VALUE to This_Type
+            set Meter_Display_Length to 0
+        end
+        else if Type EQ CALLBACK_TYPE_PROGRESS_VALUE begin
+            pos CALLBACK_PROGRESS_VALUE_SEPARATOR in Val to Sep_Pos
+
+            left Val to Cur_Prog (Sep_Pos - 1)
+            right Val to Max_Prog (length(Val) - Sep_Pos)
+            
+            get Indent_Level to Ind_Lev
+
+            if (Use_Progress_Meter(Current_Object)) begin
+                get Meter_Display Cur_Prog Max_Prog to Meter_Line
+                length Meter_Line to MLen
+
+                if (Last_Callback_Type(Current_Object)) EQ Type begin
+                    get Meter_Display_Length to OLen
+
+                    if MLen GT OLen ;
+                        send Add_Text to Info_Obj ;
+                            (right(Meter_Line, MLen - OLen))
+                end
+                else ;
+                    send Add_Line to Info_Obj ;
+                        (string(repeat(CALLBACK_HEADING_INDENT, Ind_Lev + 1)) + ;
+                        Meter_Line)
+
+                set Meter_Display_Length to MLen
+            end
+            else begin
+                if (Last_Callback_Type(Current_Object)) EQ Type ;
+                    send Delete_Last_Line to Info_Obj
+
+                if Cur_Prog EQ Max_Prog ;
+                    send Add_Line to Info_Obj ;
+                        (string(repeat(CALLBACK_HEADING_INDENT, Ind_Lev + ;
+                        1)) + string(Cur_Prog) + " " + ;
+                        Progress_Title(Current_Object))
+                else ;
+                    send Add_Line to Info_Obj ;
+                        (string(repeat(CALLBACK_HEADING_INDENT, Ind_Lev + ;
+                        1)) + string(Cur_Prog) + " of " + string(Max_Prog) ;
+                        + " " + Progress_Title(Current_Object))
+            end
+        end
+        else if Type EQ CALLBACK_TYPE_COMPLETE begin
+            move 0 to Ind_Lev
+            send Add_Line to Info_Obj Val
+            send Completed
+        end
+        else if Type EQ CALLBACK_TYPE_ABORT begin
+            move 0 to Ind_Lev
+            send Add_Line to Info_Obj Val
+            send Halt
+        end
+        else ; // type unknown, just show it
+            send Add_Line to Info_Obj Val
+
+        set Indent_Level to Ind_Lev
+        set Last_Callback_Type to This_Type
+
+        move 0 to Ret_Val
+
+        if (Active_State(Current_Object) and ;
+                (Type <> CALLBACK_TYPE_COMPLETE)) begin
+            indicate Key.Escape FALSE
+            inkey$ Key_Val
+
+            move 0 to Ret_Val
+
+            [Key.Escape] begin
+                move 0 to Termchar
+
+                while Termchar NE 0 // flush key buffer in case user got impatient.
+                    inkey$ Key_Val
+                end
+
+                get Interrupt to Ret_Val
+            end
+        end
+
+        function_return Ret_Val
+    end_function
+
+    procedure Continue returns integer
+        if (Active_State(Interrupted(Current_Object))) ;
+                procedure_return MSG_Continue
+    end_procedure
+
+    procedure Abort returns integer
+        if (Active_State(Interrupted(Current_Object))) ;
+            set Last_Operation_Aborted_State to TRUE
+        else ;
+            send Close_Client
+
+        procedure_return MSG_Abort
+    end_procedure
+
+    function Interrupt returns integer
+        local integer Ret_Val Cur_Obj
+
+        if (Active_State(Current_Object)) begin
+            Move Current_Object to Cur_Obj
+
+            set Focus_Mode of (Info(Current_Object)) to FOCUSABLE
+            send Deactivate to (Interrupt_Message(Current_Object))
+            send Popup to (Interrupted(Current_Object))
+            start_ui
+            move Strmark to Ret_Val
+            set Focus_Mode of (Info(Current_Object)) to NONFOCUSABLE
+
+            if Ret_Val EQ MSG_Abort ;
+                function_return (TRUE)
+            else begin
+                send Deactivate to (Interrupted(Current_Object))
+                send Add_Focus to (Interrupt_Message(Current_Object)) Cur_Obj
+                function_return (FALSE)
+            end
+        end
+        else ;
+            function_return (FALSE)
+    end_function
+
+    procedure Completed
+        if (Active_State(Current_Object)) begin
+            if (Wait_For_OK(Current_Object)) begin
+                set Focus_Mode of (Info(Current_Object)) to FOCUSABLE
+                send Deactivate to (Interrupt_Message(Current_Object))
+                send Popup to (Button(current_object))
+            end
+            else ;
+                send Close_Client
+        end
+    end_procedure
+
+    procedure Halt
+        if (Active_State(Current_Object)) begin
+            send Bell
+            send Deactivate to (Interrupt_Message(current_object))
+            send Popup to (Button(current_object))
+        end
+    end_procedure
+
+    procedure Close_Client
+        set Focus_Mode of (Info(Current_Object)) to NONFOCUSABLE
+        forward send Close_Client
+    end_procedure
+end_class

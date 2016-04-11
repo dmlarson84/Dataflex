@@ -1,0 +1,245 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// CodeSlc.pkg
+// Version: 1.0 beta
+//  Sat  03-20-1993  Created
+//
+// Author: John J. Tuohy
+//
+// 05-09-1993  Add Auto_Locate_State support
+// 01/14/94    Brought up to date for DAF
+// 04/21/94    renamed to CodeSlC (Code selection list class support)
+// 09/13/94    Changed Types to CodeMast
+// 03/08/95 JJT Changed Fieldnumber to fieldindex in Find_Code
+// 09/07/95 JJT Removed Relate_main_file bug fix (no longer required).
+//************************************************************************
+
+use ui
+Use CodeCSL     // Code_Selection_List Support
+Use Sellistr    // selection list row support
+Use Data_Set    // data_set Support
+Use EnClient    // Selection_list_Client Support
+
+//------------------------------------------------------------------------
+// To create a type_selection_list you must assemble three objects
+// based on the classes provided here. The classes are:
+//
+// Type_List_Client    <---Selection_List_Client
+// Type_Data_Set       <---Data_Set
+// Type_Selection_List <---Selection_List_Row
+//
+// Objects should be structured as follows:
+//
+//   Object Type_Client is a Type_List_Client Image
+//
+//     Object Type_DS is a Type_Data_Set NO_Image Main_File CodeMast
+//        Begin_Constraints
+//          Constrain CodeMast.Type eq (Type_Value(Current_Object))
+//        End_Constraints  
+//     End_Object
+//
+//     Object Type_List is a Type_Selection_List Type_Image1 ;
+//         Using (Type_DS(Current_Object)) by Index.1
+//         Set Location to 4 0 Relative // if needed
+//         Begin_row
+//           Entry_Item CodeMast.Code          { AutoClear }
+//           Entry_Item CodeMast.Description
+//         End_row
+//     End_Object   
+//    
+// End_Object
+//
+//
+//
+//-------------------------------------------------------------------
+
+
+// Class: Type_Data_Set  <---Data_Set
+//
+// Modify this Class in Order to make record finding as fast as
+// possible. To do this we shut off all relates.
+// We kill attaches so that finding works properly.
+//
+
+Class Type_Data_Set is a Data_Set
+
+  Procedure Construct_Object Integer Img#
+    Forward Send Construct_Object Img#
+    
+    // shut this off for speed considerations
+    Set No_relate_State to True
+  End_Procedure  // Construct_Object
+  
+  // This way we can find directly on file.field. If we don't do this
+  // and there is a relation between FILE.TYPE and that parent file is
+  // being used we will have an attach problem.
+  Procedure Attach_Main_File
+  End_Procedure  // Attach_Main_File
+  
+End_Class
+
+// Type_List_Client:
+//
+// Public Properties: These are the suggested defaults
+//                        Type_field  1
+//                        Code_field  2
+//                 Description_Field  3
+//                          Ordering  1 // search Index
+//                  Allow_Move_State  True
+//
+Class Type_List_Client is a Selection_List_Client
+
+    Procedure Construct_Object Integer Img#
+        Forward Send Construct_Object Img#
+        // public properties
+        Property Integer Type_Field          Public 1
+        Property Integer Code_Field          Public 2
+        Property Integer Description_Field   Public 3
+        Property Integer Ordering            Public 1
+        Set Allow_Move_State to TRUE
+        // these are all protected...maintained by the object
+        Property String  Crnt_Code           public ''                 
+        Property Integer Invoking_Object_ID  public 0
+        Property String  Type_Value          Public ''
+        Property Integer Cancelled_State     Public False
+        Property Integer Sel_List_Obj        Public  0
+        Set Stop_UI_State to TRUE
+    End_Procedure  // Construct_Object
+    
+    Procedure Popup
+      Local Integer Obj# rVal var AutoLocate SObj#
+      // This MUST get set by the object that invoked this. This will
+      // most likely be a Code_Selection_List0 object. 
+      Get Invoking_Object_Id to Obj#
+      If Obj# le DESKTOP Procedure_Return // this can't be!
+      Get Sel_List_Obj to SObj# // id of selection_list object
+      
+      Set Type_Title to (List_Title(Obj#)) // title for client
+      Set Type_Value to (Type_Value(Obj#))
+      Set Crnt_Code to (Crnt_Search_Code(Obj#))
+      Get Auto_locate_state of Obj# to AutoLocate // do we auto locate?
+      Set Auto_Locate_State to AutoLocate  // if so set property..its done
+      If not AutoLocate Begin              // else manually set location
+         Get Location of Obj# to var
+         Set Location to (HI(var)) (LOW(var))
+      End   
+      Set Find_Search_State of SObj# to (Find_Search_state(Obj#))
+      Set Batch_State of SObj#       to (Batch_state(Obj#))
+      Set Radio_State of SObj#       to (Radio_State(Obj#))
+      Set Select_mode of SOBj#       to (Select_mode(Obj#))
+      Set Search_mode of SOBj#       to (Search_mode(Obj#))
+      Send Flag_Items to SOBj#
+      Send Rebuild_Constraints to (Server(Current_Object))
+      If Not (Auto_Top_Item_State(Obj#)) ;
+           Get Find_Code (Crnt_Code(Current_Object)) to rVal
+      Else Get Find_Code '' to rVal
+      Forward Send Popup
+    End_Procedure
+
+    Procedure Set Type_Title String Val
+       Set Center_State Item 0 to TRUE
+       Set Value        Item 0 to Val
+    End_Procedure // Set Type_Title
+    
+    Function Find_Type_Code String Typ Integer Obj# Returns Integer
+      Local Integer rVal
+      Set Type_Value to (Type_Value(Obj#))
+      Get Find_Code Typ to rVal
+      If Not rVal Send Move_Out_Codes Obj#
+      Function_Return rVal
+    End_Function  
+     
+    Procedure Move_Out_Codes Integer Obj#
+       Get Main_FIle of (Server(Current_Object)) to FileNumber
+       Move 0 to FieldNumber
+       Move (Code_Field(Current_Object)) to FieldIndex
+       Set Crnt_Code  of Obj# to Indirect_File.Recnum&
+       Move (Description_Field(Current_Object)) to FieldIndex
+       Set Crnt_Descr of Obj# to Indirect_File.Recnum&
+    End_Procedure
+   
+    Function Find_Code String Typ Returns Integer
+       Get Main_File of (server(Current_Object)) to FileNumber
+       //Move 0 to FieldNumber // 03/08/95 JJT - should be fieldindex
+       Move 0 to FieldIndex    //
+       Clear Indirect_File
+       Move (Type_Field(Current_Object)) to FieldIndex
+       Move (Type_Value(Current_Object)) to Indirect_File.Recnum&
+       Move (Code_Field(Current_Object)) to FieldIndex
+       Move Typ to Indirect_File.Recnum&
+       vFind FileNumber (Ordering(Current_Object)) EQ
+       Function_Return ( not (Found) )       
+    End_Function
+
+    Procedure Move_Value_Out
+       Local Integer Obj#
+       Get Invoking_Object_ID to Obj#
+       If Obj# gt DESKTOP Send Move_Out_Codes Obj#
+    End_Procedure  
+
+End_Class
+
+// Class: Type_Selection_List <---Selection_List_Row
+//
+// Objects based on this class MUST be placed inside of a
+// Type_List_Client object. In addition, the object should connect
+// to a data_set that is a sibling (also inside the object).
+//
+//
+// 1. Augment OK and Cancel to Set Cancelled_State accordingly
+// 2. Override Move_Value_Out to Delegate to parent object
+// 3. Augment End_Construct_Object to set parent's server property
+//    to the selection list's server.
+//
+// If you don't want row_mode selection set the property
+//   Row_Display_Mode to 0
+//
+
+Class Type_Selection_List is a Selection_List_Row
+
+   Procedure Construct_Object Integer Img#
+     Forward Send Construct_Object Img#
+     Set Seed_List_State to False
+     // Comment this out until this property is supported (DAF rev2 maybe)
+     //Set Initial_row to -1 // bottom is the best guess (see as much as possible)
+   End_Procedure  // Construct_Object   
+
+   Procedure OK
+     Forward send OK
+     Set Cancelled_State to False
+   End_Procedure
+   
+   Procedure Cancel
+     Forward send Cancel
+     Set Cancelled_State to True
+   End_Procedure
+   
+   Procedure Move_Value_Out
+     Local String Typ rVal Item#
+     Get First_Selected_Item to Item#
+     If Item# ne -1 Begin
+       If (Batch_State(Current_Object)) ;
+          send find_record (Record_number(Current_Object,row(current_object,item#)))
+       Else ;
+          send find_record Item#
+     End
+     Delegate Send Move_Value_Out
+   End_Procedure  
+   
+   Procedure End_Construct_Object
+     Local Integer Obj#
+     Move Current_Object to Obj# 
+     Forward Send End_Construct_Object
+     Delegate Set Server to (Server(Obj#))
+     Delegate Set Sel_list_Obj to Obj#
+   End_Procedure
+   
+End_Class

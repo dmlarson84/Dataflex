@@ -1,0 +1,53 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Codeenrd.pkg   - Code_Radio_entry_Form
+// Version: 1.1
+//  03/18/94 - created
+//  04/04/94 - modifed.
+//
+// Author: John J. Tuohy
+//
+//
+// This is a radio_entry_Form sub-class that loads it values from the
+// DAF types code list. The code type is set by setting the property
+// Type_Value (e.g.,  Set Type_Value to "TEST" ). This list will be
+// automatically loaded.
+// 
+// Sample Usage:
+//
+//      To create a object that loads its data from the CODEMAST file
+//      where we only want SHIPPING types:
+//
+//        Object e1 is a Code_Radio_entry_Form E1_Img FOR Order.Shipping
+//          Set Type_Value to "SHIPPING"
+//        End_Object
+//
+//
+// 09/13/94    Changed Types to CodeMast
+//************************************************************************
+
+use ui
+Use EnRadld
+
+Open "CodeMast" as CodeMast // Use open AS so we don't need CODEMAST in your filelist
+
+Class Code_Radio_entry_Form is a Radio_Entry_Form_Load
+
+   Procedure Construct_Object Integer Img#
+      Forward Send Construct_Object Img#
+      Set Code_File to CodeMast.File_Number   // name of file is CODEMAST
+      Set Code_Index to 1                  // Index 1: Types x Code
+      Set Type_Field to 1                  // Fld 1: Type
+      Set Code_Field to 2                  // Fld 2: Code
+      Set Description_Field to 3           // Fld 3: Description
+   End_Procedure // Construct_Object
+
+End_Class

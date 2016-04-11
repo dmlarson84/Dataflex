@@ -1,0 +1,701 @@
+/HEADER									                           AuditTrl.rpt
+Note: In all finance sections old values are on left, new values are on right.
+Report Date: __/__/____                       Operator initials and #: ___ / __
+                 Arkansas Office of the Prosecutor Coordinator
+                               Hot Check System
+                Audit Trail Report for __________ to __________
+					 
+   Date     ID#   Ctrl#   File   Oper | Check Amount  | Pros Fee  | Merch Fee |
+/BODY RESIDENT
+__/__/____ ______ _____ ________ ____ |____.__ ____.__|__.__ __.__|__.__ __.__|
+Rest: ____.__| ____.__ |_______________________________________________________
+Disb:_____.__|_____.__ |_______________________________________________________
+Cred:_____.__|_____.__ |_______________________________________________________
+-------------------------------------------------------------------------------
+/USERINITIALS
+                 Arkansas Office of the Prosecutor Coordinator
+                               Hot Check System
+                              Audit Trail Report
+
+                       PLEASE ENTER YOUR INITIALS:  ___
+
+/TYPE
+                 Arkansas Office of the Prosecutor Coordinator
+                               Hot Check System
+                              Audit Trail Report
+
+    Display Audit Trail Report for (D)ate range or for (A)ll saved records? _
+
+
+/DATERANGE
+                 Arkansas Office of the Prosecutor Coordinator
+                               Hot Check System
+                              Audit Trail Report
+
+                Display audit trail report from __/__/____ 
+				
+                                             to __/__/____
+
+									  
+/PURGE
+                 Arkansas Office of the Prosecutor Coordinator
+                               Hot Check System
+                              Audit Trail Report
+
+        Would you also like to purge the Record Change file (Y/N)?  __
+		
+	WARNING: If you select (Y)es, you will not be able to retrieve the file
+    yourself. If you purge your file by mistake, please contact PCO as soon
+	as possible for restoration.
+
+/OPERATORLIST
+           PCO Hot Check System
+            Audit Trail Report
+
+     ___ ______________________________
+     ___ ______________________________
+     ___ ______________________________
+     ___ ______________________________
+     ___ ______________________________
+     ___ ______________________________
+     ___ ______________________________
+     ___ ______________________________
+
+     Use up & down arrow keys to scroll
+          Press <Enter> to accept
+
+/STAND
+____________________
+/SOUTPUT
+                 Arkansas Office of the Prosecutor Coordinator
+                               Hot Check System
+                              Audit Trail Report
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~						
+								
+  Enter P to send ledger to printer or S to save the ledger to a file. (P/S) _
+					
+/EXIT            RESIDENT
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+
+              Please Standby, Closing Files and returning to the Menu
+
+
+
+
+		  
+/INFO
+Dataflex doesn't allow for comments in the page definition section, so we use an "Info" section for revision notes and general comments.
+An INFO page used in this way should never be displayed to the user.
+		
+8-4-2015 Don Larson
+	Updated Changes.rpt to Changes2.rpt. (This .flx was based on Changes.rpt.)
+	Changes include:
+			Updated Dataflex configuration file 3.1 from 2.3 ("df23ini.cfg" to "df31ini.cfg").
+			Completely redid the print layout.
+				Wrote new subroutines that save space and paper in output files.
+			Removed option to hand feed paper into printer while printing.
+			Added option to create Audit Trail Reports for specific date ranges.
+			Removed option to Purge RECHANGE table for Audit Trail Reports that were created with a date range.
+			Commented code to reduce bus factor.
+			Added operator number to page header and replaced operator initials with operator number in the RECHANGE entry when purged.
+10-13-2015 Don Larson
+	Changed file name to Audit.rpt at some point in development. Currently on the 9th revision (Audit9.rpt).
+	Probably done revising this report for the time being. Numerous changes were implemented that I'll remark on later.
+			
+10-27-2015 Don Larson
+	Finished Audit9.rpt. Resaving as AuditTrailReport.rpt (and flx) to better imply what the file is actually for. In version 10 I plan on going 
+	through this report and adding some Quality of Life (QOL) changes and finishing touches on comments.
+			
+11-28-2015 Don Larson
+	More comments added. Took some old unused/unnecessary vars out.
+	
+12-3-2015 Don Larson
+	More comments in, more junk out. Considering this version final unless something comes up to give me reason to expect otherwise.
+   
+12-8-2015 Don Larson
+	Requested to add functionality to send report straight to printer. Tried to find a solution to allow the report to be printed in landscape,
+	but couldn't find one. Redesigned printed report. Removed the old split/merged description distinction section; rationale for that can be 
+	found with the code for it on the bottom of the page, where I commented it out. Also adjusted some other minor things.
+
+/EXPLANATIONS
+    *****  This Page will never be displayed to the screen  *****
+   
+  INTEGERS :    User_numb..........{ Must be first integer defined in each
+                                     program.  User_numb keeps track of person
+                                     logged on to system.
+                
+                Row_num............{ Used in scroll routine to keep track of
+                                     the current row of the array.
+
+                Scroll$row$num.....{ Same as row_num except that it may have a
+                                     different value at the same time, they
+                                     are used concurrently.
+
+                Scroll$Extra.......{ Used as a counter in routine to clear
+                                     unused array lines.
+
+                Stop_num...........{ Used in Scroll routine to stop execution
+                                     of some loops.
+
+                User_access........{ Holds the currently logged user's program
+                                     access level.
+
+                First_rec..........{ Used in Scroll routine to hold the very 
+                                     first record loaded into the array used in
+                                     error message routine.
+
+                Last_rec...........{ Reverse of First_rec.
+
+                Size_defend......{  Holds the number of records in Victim Restitution 
+									defendant file. Used to give operator option of 
+									transferring data if there is any data in the file.
+/*  
+//----------------- Cannot Run Program From Command Line (DOS) -----------------
+USE Y2K.PKG
+Read_dfini "df23ini.cfg"			// using Dataflex version 3.1 causes PageUp and PageDown to no longer scroll up and down. F7 and F8 work instead.
+
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------------------------
+#include calcdate.inc
+#include macs.frm
+
+//========< Declare Variables >==============================================
+
+STRING ANSW 1 YR 4
+STRING USER 30
+STRING SCROLL$ANS 1
+
+STRING LINE PAUSE 1				// Both strongs are used in the Purge subroutine.
+
+INTEGER USER_ACCESS										// Putting this on its own line because I'm not sure of the point of it.
+INTEGER ROW_NUM SCROLL$ROW$NUM SCROLL$EXTRA STOP_NUM 
+INTEGER COUNTER FIRST_REC LAST_REC
+INTEGER ADAY AMONTH AYEAR					// Used to split the date into multiple vars for the file renaming subroutine.
+STRING filterNum
+string outputSelection 1					// Used to track if the user is going to be printing or saving to a file.
+string outputFile 200
+
+INDICATOR P_CK NEWMERCH NEWDEF NEWOFF DEL_NOW CHANGE_MADE
+INDICATOR PASS_CHANGE INSCROLL TOPP BOT TRANSFER //START$_NAME
+INDICATOR CASE VICTIM HOLD_SCROLL DO$_CHANGE
+INDICATOR NOGO INACT DEL_ACT REDO_DATE react Blank$
+
+// ~~~~~ Indicators used by the report section to filter the text ~~~~~~~~~~~~~
+INDICATOR scrollChoice 						// Indicator to track whether or not the scroll bar is being used to make a choice, or if the report is for all Operators.
+INDICATOR includeNulls						// Indicator to determine whether or not null Operator values will be included.
+Indicator yesRange							// These two Indicators describe whether user will be using date range or not.
+Indicator noRange
+
+DATE TODAY
+
+//==========< Initialize Variables >==========================================
+SYSDATE TODAY				// This was SYSDATE4 TODAY before, but I don't know the difference between SYSDATE4 and SYSDATE.
+MOVE 0 TO USER_ACCESS
+
+//===========< Open Files >===================================================
+OPEN DEFENDNT
+OPEN USERX
+OPEN REF  
+OPEN RECHANGE INDEX.1
+
+//==========< Track Logged On User and Their Access Level >===================
+CLEAR USERX
+MOVE USER_NUMB TO USERX.USER_NUMB
+FIND EQ USERX BY INDEX.1             // or FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER         // or MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER_ACCESS  // or MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+
+//================================================================================
+// Program begins ================================================================
+//================================================================================
+Start:	
+	PAGE USERINITIALS        //Displays the initials entry screen to the user. First screen of the report.
+	ACCEPT USERINITIALS.1
+
+	PAGE SOUTPUT
+	ACCEPT SOUTPUT.1 {CHECK='PpSs'}
+	move SOUTPUT.1 to outputSelection
+	gosub determineOutput
+
+	CLEARXY 24 0
+    [KEY.ESCAPE]  BEGIN
+		RETURN START
+    END
+    SCREENMODE 248 ON
+    DISPLAY '  *   STANDBY   *  ' TO STAND.1
+    PAGE STAND
+    SCREENMODE 248 OFF
+    KEYPROC OFF
+    CLEAR USERX
+    MOVE 0 TO FIRST_REC
+    MOVE 99999 TO LAST_REC
+    FIND GT USERX BY INDEX.1
+    [FOUND] MOVE USERX.User_Numb TO FIRST_REC
+    CLEAR USERX
+    FIND LT USERX BY INDEX.1
+    [FOUND] MOVE USERX.User_Numb TO LAST_REC
+    CLEAR USERX
+    GOSUB SCROLL_DEFEND
+
+//================================================================================
+// Purge Prompt and Preparing the Report =========================================
+//================================================================================
+AGAIN:
+	PAGE TYPE											// Displays the page that will ask the user whether 
+	ACCEPT TYPE.1 {CHECK='DdAa'}						// they will be using the date range or not.
+	IF TYPE.1 IN 'Dd' INDICATE yesRange true 			// Then, grabs the input from the user and 
+	else if TYPE.1 IN 'Aa' INDICATE noRange true		// updates the booleans from above. 
+
+	//If the user will not be using a date range, displays the Purge screen. If user types "Y"
+	//or "y" for yes, it will display a verification Y/N message before changing a boolean that
+	//will be used by the purge function later.
+WillPurge:
+	[noRange] PAGE PURGE
+	[noRange] ACCEPT PURGE.1 {CHECK='YyNn'}
+	[noRange] IF PURGE.1 IN 'Yy' BEGIN
+		GOTOXY 14 25
+		SHOW 'ARE YOU SURE (Y/N)?'
+		INKEY PAUSE
+		CLEARXY 24 0
+		SCREENMODE 1
+		IF NOT PAUSE IN 'Yy' GOTO WillPurge
+		INDICATE doPurge AS PURGE.1 IN 'Yy'
+	END
+	
+	//If user will be using a date range, display the DATERANGE page and take the two date inputs.
+	KEYPROC ON
+	[yesRange] PAGE DATERANGE
+	[yesRange] accept DATERANGE.1
+	[yesRange] accept DATERANGE.2
+
+//	MOVE 0 TO PAGEFEED
+
+//============================================================================
+// Report section begins =====================================================
+//============================================================================
+	REPORT RECHANGE BY INDEX.1
+
+		[yesRange] INDICATE SELECT AS RECHANGE.DATE GE DATERANGE.1
+		[yesRange] [SELECT] INDICATE SELECT AS RECHANGE.DATE LE DATERANGE.2
+		[yesRange] [scrollChoice] [SELECT] INDICATE SELECT AS filterNum MATCH RECHANGE.Operator
+		[yesRange] [includeNulls] [SELECT] INDICATE SELECT AS '' MATCH RECHANGE.Operator
+
+		[noRange] [scrollChoice] INDICATE SELECT AS filterNum MATCH RECHANGE.Operator
+		[noRange] [includeNulls] INDICATE SELECT AS '' MATCH RECHANGE.Operator
+
+		SECTION HEADER
+			PRINT TODAY
+			PRINT USERINITIALS.1
+			PRINT USER_NUMB
+			[yesRange] print DATERANGE.1 to HEADER.4
+			[yesRange] print DATERANGE.2 to HEADER.5
+			[noRange] print "none given" to HEADER.4
+			[noRange] print "none given" to HEADER.5
+			OUTPUT HEADER
+			
+		SECTION BODY
+			print RECHANGE.DATE
+			print RECHANGE.ID_NUMBER
+			print RECHANGE.CONTROL_NUMBER
+			print RECHANGE.FILE
+			print RECHANGE.OPERATOR
+			print RECHANGE.OLD_CKAMT
+			print RECHANGE.NEW_CKAMT
+			print RECHANGE.OLD_PFEE
+			print RECHANGE.NEW_PFEE
+			print RECHANGE.OLD_MFEE
+			print RECHANGE.NEW_MFEE
+			print RECHANGE.OLD_RESAMT
+			print RECHANGE.NEW_RESAMT
+			print RECHANGE.DESC1
+			print RECHANGE.OLD_DISPAMT
+			print RECHANGE.NEW_DISPAMT
+			print RECHANGE.DESC2
+			print RECHANGE.OLD_CREDIT
+			print RECHANGE.NEW_CREDIT
+			print RECHANGE.DESC3
+			OUTPUT BODY
+	REPORTEND
+	FORMFEED
+
+	
+//==> Purging Occurs Here <==============================================================
+	[doPURGE] BEGIN							
+    ZEROFILE RECHANGE
+		CLEAR RECHANGE
+		MOVE TODAY TO RECHANGE.DATE
+		MOVE USER_NUMB TO RECHANGE.OPERATOR
+		MOVE 'PURGE' TO RECHANGE.FILE
+		MOVE 'FILE LAST PURGED ON ' TO LINE
+		APPEND LINE TODAY
+		MOVE LINE TO RECHANGE.DESC1
+		SAVE RECHANGE
+	END
+ABORT
+
+//============================================================================
+// Scroll list subroutines ===================================================
+//============================================================================
+SCROLL_DEFEND:
+    BLANKFORM OPERATORLIST                                               
+    GOSUB SCROLL$FORWARD$ROUTINE    								
+    MOVE 0 TO WINDOWINDEX
+    MOVE 1 TO ROW_NUM
+    GOSUB SET_HIGHLIGHT
+    PAGE OPERATORLIST                         
+    REPEAT   
+		MOVE ((ROW_NUM - 1) * 2 ) TO WINDOWINDEX
+		INKEY SCROLL$ANS
+		[KEY.UP TOPP] GOSUB SCROLL$BACKWARD$ROUTINE
+		[KEY.UP][NOT TOPP] GOSUB REDRAW_UP
+		[KEY.DOWN BOT] GOSUB SCROLL$FORWARD$ROUTINE
+		[KEY.DOWN][NOT BOT] GOSUB REDRAW_DOWN
+		[KEY.NEXT] GOSUB SCROLL$FORWARD$ROUTINE	
+		[KEY.PREVIOUS] GOSUB SCROLL$BACKWARD$ROUTINE
+		MOVE '' TO SCROLL$ANS
+		INDICATE SCROLL$VALID GROUP ANY [KEY.ESCAPE KEY.RETURN KEY.USER] 	// Without this line SCROLL_DEFEND will not be RETURNED when one of the keys is pressed.
+        [NOT SCROLL$VALID] LOOP
+		[KEY.ESCAPE][SCROLL$VALID] BEGIN
+			KEYPROC ON
+			RETURN
+		END
+		[KEY.RETURN][SCROLL$VALID] BEGIN
+			indicate scrollChoice true
+			KEYPROC ON
+			RETURN
+		END
+		[KEY.USER][SCROLL$VALID] BEGIN
+			indicate includeNulls true
+			KEYPROC ON
+			RETURN
+		END
+
+//=====> Scroll Forward Routine <==============================================
+SCROLL$FORWARD$ROUTINE:
+    CLEARWARNING
+	IF OPERATORLIST.1& EQ LAST_REC GOSUB ERR_MSG_42
+	INDICATE SCROLL.FOUND.STATUS AS [FOUND]
+    CLEAR USERX 
+    [KEY.NEXT] GOSUB LOAD_POINTS_GT
+    [KEY.DOWN] GOSUB LOAD_POINTS_LT
+	MOVE 1 TO SCROLL$ROW$NUM
+    REPEAT
+		FIND GT USERX BY INDEX.1
+		[FOUND] GOSUB TEST_DEFEND								
+		[FOUND] MOVE ((SCROLL$ROW$NUM - 1) * 2) TO WINDOWINDEX	
+		[FOUND] GOSUB DISPLAY_DEFEND							// This does the actual printing
+		[FOUND] INCREMENT SCROLL$ROW$NUM						
+		[FOUND] IF SCROLL$ROW$NUM LE 8 LOOP							
+	[FINDERR] GOSUB SCROLL$CLEAR$ROW
+	
+	INDICATE FOUND AS [SCROLL.FOUND.STATUS]
+RETURN
+
+//=====> Scroll Backward Routine <=============================================
+SCROLL$BACKWARD$ROUTINE:
+    IF OPERATORLIST.1 EQ FIRST_REC GOSUB ERR_MSG_41
+	INDICATE SCROLL.FOUND.STATUS AS [FOUND]
+	CLEAR USERX									
+	[KEY.PREVIOUS] GOSUB LOAD_POINTS_LT
+	[KEY.UP] GOSUB LOAD_POINTS_GT
+	MOVE 8 TO SCROLL$ROW$NUM
+	REPEAT
+		FIND LT USERX BY INDEX.1
+		[FOUND] GOSUB TEST_DEFEND												
+		[FOUND] MOVE ((SCROLL$ROW$NUM - 1) * 2) TO WINDOWINDEX
+		[FOUND] GOSUB DISPLAY_DEFEND
+		[FOUND] MOVE (SCROLL$ROW$NUM - 1) TO SCROLL$ROW$NUM
+		[FOUND] IF SCROLL$ROW$NUM GE 1 LOOP
+	[FINDERR] GOSUB SCROLL$CLEAR$BOTTOM
+	[FINDERR] GOSUB SCROLL$FORWARD$ROUTINE
+	INDICATE FOUND AS [SCROLL.FOUND.STATUS]
+RETURN
+
+//=====> Scroll Clear Row <====================================================
+SCROLL$CLEAR$ROW:
+	FOR SCROLL$ROW$NUM FROM SCROLL$ROW$NUM TO 8
+        MOVE ((SCROLL$ROW$NUM - 1) * 2) TO WINDOWINDEX		
+		MOVE 0 TO SCROLL$EXTRA
+		WHILE SCROLL$EXTRA LT 2			// This was 5. I'm not sure if it should be changed from 5 to 2 like the others yet.
+			BLANKFORM OPERATORLIST.1&
+			INCREMENT SCROLL$EXTRA
+			INCREMENT WINDOWINDEX
+		END
+    LOOP
+    GOSUB SET_HIGHLIGHT
+RETURN
+
+//=====> Scroll Clear Bottom <=================================================
+SCROLL$CLEAR$BOTTOM:
+    MOVE ((2 * 8 - 2)) TO WINDOWINDEX				
+	WHILE WINDOWINDEX LT (8 * 2)					
+        BLANKFORM OPERATORLIST.1&	// This was only for DEF (Case Management)
+        INCREMENT WINDOWINDEX		// Why? Should I delete this? Test later.				
+    END
+   GOSUB SET_HIGHLIGHT
+RETURN
+
+//=====> Other Scroll Utility Subroutines <====================================
+REDRAW_DOWN:
+    CLEARWARNING
+    IF OPERATORLIST.1& EQ LAST_REC GOSUB ERR_MSG_41	
+    IF ROW_NUM LT 8 BEGIN
+		MOVE ROW_NUM TO STOP_NUM
+		FOR ROW_NUM FROM ROW_NUM TO STOP_NUM
+			MOVE ((ROW_NUM - 1) * 2) TO WINDOWINDEX
+			SCREENMODE 79 ON
+			GOSUB DISPLAY_HIGHLIGHT
+			SCREENMODE 112 ON
+			MOVE (WINDOWINDEX + 2) TO WINDOWINDEX
+			GOSUB DISPLAY_HIGHLIGHT
+			SCREENMODE 112 OFF
+			LOOP
+		END
+	IF ROW_NUM EQ 8 INDICATE BOT TRUE
+    IF ROW_NUM LT 8 INDICATE BOT FALSE
+    IF ROW_NUM GT 1 INDICATE TOPP FALSE
+    IF ROW_NUM EQ 1 INDICATE TOPP TRUE
+RETURN
+
+REDRAW_UP:
+    CLEARWARNING
+    IF ROW_NUM LE 8 BEGIN
+		MOVE ROW_NUM TO STOP_NUM
+		FOR ROW_NUM FROM ROW_NUM TO STOP_NUM
+			MOVE ((ROW_NUM - 1 ) * 2) TO WINDOWINDEX	
+			SCREENMODE 79 ON
+			GOSUB DISPLAY_HIGHLIGHT
+			SCREENMODE 112 ON
+			MOVE (WINDOWINDEX - 2 ) TO WINDOWINDEX		
+			GOSUB DISPLAY_HIGHLIGHT
+			SCREENMODE 112 OFF
+			MOVE (ROW_NUM - 2) TO ROW_NUM
+			MOVE 0 TO STOP_NUM
+		LOOP
+	END
+    IF ROW_NUM EQ 8 INDICATE BOT TRUE
+    IF ROW_NUM LT 8 INDICATE BOT FALSE
+    IF ROW_NUM GT 1 INDICATE TOPP FALSE
+    IF ROW_NUM EQ 1 INDICATE TOPP TRUE
+RETURN
+
+DISPLAY_DEFEND:
+    BEGIN
+		DISPLAY USERX.USER_NUMB TO OPERATORLIST.1&
+		DISPLAY USERX.USER_NAME TO OPERATORLIST.2&
+    END 
+RETURN
+
+LOAD_POINTS_LT:
+    BEGIN
+        MOVE OPERATORLIST.3 TO USERX.USER_NUMB
+        MOVE OPERATORLIST.4 TO USERX.USER_NAME
+    END
+RETURN
+
+LOAD_POINTS_GT:
+	BEGIN
+		MOVE OPERATORLIST.15 TO USERX.USER_NUMB
+		MOVE OPERATORLIST.16 to USERX.USER_NAME
+    END
+RETURN
+
+TEST_DEFEND: 
+     INDICATE SCROLL_VALID TRUE
+  RETURN
+
+//========< Error Display Subroutines >========================================
+ERR_MSG_42:
+    SCREENMODE 79 ON
+	ERROR 42
+	SCREENMODE 79 OFF
+	[ERR] RETURN RETURN
+RETURN
+
+ERR_MSG_41:
+    SCREENMODE 79 ON
+	ERROR 41
+	SCREENMODE 79 OFF
+	[ERR] RETURN RETURN
+RETURN
+
+//=====> Scroll Highlight Subroutines <========================================
+SET_HIGHLIGHT:
+	PAGE OPERATORLIST
+	MOVE 8 TO STOP_NUM
+	MOVE 8 TO ROW_NUM
+	FOR ROW_NUM FROM ROW_NUM TO STOP_NUM
+		MOVE ((ROW_NUM - 1) * 2) TO WINDOWINDEX
+		SCREENMODE 79 ON
+		GOSUB DISPLAY_HIGHLIGHT
+		SCREENMODE 79 OFF
+		MOVE (ROW_NUM - 2) TO ROW_NUM
+		IF ROW_NUM  LE 0 MOVE 0 TO STOP_NUM
+	LOOP
+	SCREENMODE 112 ON
+	MOVE 0 TO WINDOWINDEX
+	GOSUB DISPLAY_HIGHLIGHT
+	SCREENMODE 112 OFF
+	INDICATE TOPP TRUE
+	INDICATE BOT FALSE
+	MOVE 1 TO ROW_NUM
+RETURN
+
+DISPLAY_HIGHLIGHT:
+	BEGIN
+		DISPLAY OPERATORLIST.1& TO OPERATORLIST.1&
+		DISPLAY OPERATORLIST.2& TO OPERATORLIST.2&
+		move OPERATORLIST.1& to filterNum
+	END
+RETURN
+// =< END OF SCROLL_DEFEND ROUTINES >============================================
+
+RESTART:
+    CLEARFORM
+    CLEAR USERX RECHANGE
+    RETURN START
+RETURN
+
+get_answ:
+    repeat
+         inkey answ
+         uppercase answ
+    if ~ answ in 'YyNn' loop
+return
+
+// Names the output file in the format of "Audit Trail Report month-day-year" or sends it to the printer.
+determineOutput:
+	DATE_MACRO_INIT
+	DECOMPOSE_DATE TODAY TO ADAY AMONTH AYEAR
+
+	move "Audit Trail Report " to outputFile
+	append outputFile amonth
+	append outputFile "-"
+	append outputFile aday
+	append outputFile "-"
+	append outputFile ayear
+	move 60 to pageend
+	if outputSelection in 'Pp' direct_output "lpt1:"
+	else if outputSelection in 'Ss' direct_output outputFile
+return
+
+//============================================================================
+// Key Procedures ============================================================
+//============================================================================
+KEYPROC KEY.ESCAPE
+    CLEARXY 24 0
+    GOTOXY 24 10
+    SHOW 'Do you really want to return to the main menu (Y/N)?  '
+    INKEY ANSW
+    IF ANSW IN 'Yy' BEGIN
+         page exit
+         CLEARFORM OPERATORLIST
+         clear USERX
+		 clear RECHANGE
+         ABORT
+    END
+    CLEARXY 24 0
+    ENTAGAIN
+RETURN
+
+// This keyproc just allows the user to go back to the previous field during the date entry screen.
+KEYPROC KEY.UP
+// I tried to include provisions for bad inputs here, but couldn't find a way to make it work the way I wanted. Will try to come back later.
+	BACKFIELD
+RETURN
+
+KEYPROC KEY.FIELD
+    BACKFIELD
+RETURN
+
+//============================================================================
+// Old description functions =================================================
+//============================================================================
+// All of this code was for a different version of this report that revolved 
+// around having two different body sections for data entries and switched
+// depending on how long the descriptions were in order to save pagespace and 
+// paper. It originally only saved to file. Later on a requirement was added
+// that the user be able to print directly from the report. This broke the
+// formating because Dataflex seemingly only permits printed 79 characters
+// wide. So, I redid the report section and now it requires a minimum of the 
+// rows of characters I'm already using per entry, so I scrapped this. For 
+// more info on where exactly all this code went, see older revisions.
+
+//Description part 1                                     |New Cred|New Disp|New M|New P|New Chk|New Res|	
+//Description part 2               Description part 3    |Old Cred|Old Disp|Old M|Old P|Old Chk|Old Res|
+//                                                       |        |        |     |     |       |       |
+///BODY RESIDENT
+//__/__/____ Oper:____ File:________ ID#______ Ctrl#_____|_____.__|_____.__|__.__|__.__|____.__|____.__|
+///SPLITDESCRIPTIONS RESIDENT
+//_______________________________________________________|_____.__|_____.__|__.__|__.__|____.__|____.__|
+//_______________________________________________________ _______________________________________________________
+//---------------------------------------------------------------------------------------------------------------
+///MERGEDDESCRIPTIONS RESIDENT
+//_______________________________________________________|_____.__|_____.__|__.__|__.__|____.__|____.__|
+//------------------------------------------------------------------------------------------------------
+
+//	//The plan here is to squeeze all three of the description fields into one if possible so we can save space (and paper). we declare a
+//	//description string and 3 numbered description strings for the three desc fields; they each have a character length of 55 because that's
+//	//the max length of the desc fields from the RECHANGE table. We will need 4 integers so we can check how the length of each string later.
+//	string description
+//	STRING description1 55
+//	string description2 55
+//	string description3 55	
+//	integer len1 len2 len3 lenSum
+
+//move RECHANGE.DESC1 to description1			// The trim command removes all of the null characters 
+//trim description1 to description1			// from the strings so we can get an accurate string length.
+//length description1 to len1					// Dataflex doesn't seem to like interrupting the REPORT macro
+//move RECHANGE.DESC2 to description2			// with conditional output, so we go ahead and output
+//trim description2 to description2			// the BODY section without the description. Dataflex will let 
+//length description2 to len2					// us throw the descriptions in later, even on the same line.
+//move RECHANGE.DESC3 to description3
+//trim description3 to description3
+//length description3 to len3
+//CALC (len1+len2+len3) to lenSum
+//move description1 to description
+//ifnot description2 match "" BEGIN
+//	append description " / "
+//	append description description2
+//	END
+//ifnot description3 match "" BEGIN
+//	append description " / "
+//	append description description3
+//	END
+//trim description to description
+//if lenSum gt 55 gosub SplitDescs // We've output the body section, now we see if the length sum is greather than one descrption field size.
+//else gosub MergeDescs			 //If it is, we can put it on the second line. If it's more, we output the original separated descriptions instead.
+//Each of these two subroutines create pages (Dataflex concept) that are output to the page (the output file) after each individual BODY output.
+//MergeDescs:
+//	Autopage MERGEDDESCRIPTIONS
+//	PRINT description to MERGEDDESCRIPTIONS.1
+//	PRINT RECHANGE.OLD_CREDIT TO MERGEDDESCRIPTIONS.2
+//	PRINT RECHANGE.OLD_DISPAMT TO MERGEDDESCRIPTIONS.3
+//	PRINT RECHANGE.OLD_MFEE TO MERGEDDESCRIPTIONS.4
+//	PRINT RECHANGE.OLD_PFEE TO MERGEDDESCRIPTIONS.5
+//	PRINT RECHANGE.OLD_CKAMT TO MERGEDDESCRIPTIONS.6
+//	PRINT RECHANGE.OLD_RESAMT TO MERGEDDESCRIPTIONS.7
+//	OUTPUT MERGEDDESCRIPTIONS
+//RETURN
+//
+//SplitDescs:
+//	Autopage SPLITDESCRIPTIONS
+//	PRINT RECHANGE.DESC1 to SPLITDESCRIPTIONS.1
+//	PRINT RECHANGE.OLD_CREDIT TO SPLITDESCRIPTIONS.2
+//	PRINT RECHANGE.OLD_DISPAMT TO SPLITDESCRIPTIONS.3
+//	PRINT RECHANGE.OLD_MFEE TO SPLITDESCRIPTIONS.4
+//	PRINT RECHANGE.OLD_PFEE TO SPLITDESCRIPTIONS.5
+//	PRINT RECHANGE.OLD_CKAMT TO SPLITDESCRIPTIONS.6
+//	PRINT RECHANGE.OLD_RESAMT TO SPLITDESCRIPTIONS.7
+//	PRINT RECHANGE.DESC2 TO SPLITDESCRIPTIONS.8
+//	PRINT RECHANGE.DESC3 TO SPLITDESCRIPTIONS.9
+//	OUTPUT SPLITDESCRIPTIONS
+//RETURN

@@ -1,0 +1,67 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// About.Pkg
+// Version: 1.0
+//  03-27-1992 : Created
+//
+// Author: John J. Tuohy
+//
+// Class About is a Buttom
+// 
+//
+//  About Class...Expects first item to be a name.
+//     Should have three windows in image.
+//               1) Name (user supplied),
+//               2) memory - determined when objectis activated
+//               3) <OK> button - supplied by class.
+//
+// See About.Tem for a template application about object package.
+//************************************************************************
+
+Use UI
+
+Class About is a Button
+
+  Procedure Construct_Object Integer Img#
+    Forward Send Construct_Object Img#
+    set LOCATION to 5 11 absolute
+    Set BLOCK_MOUSE_STATE to true
+    Set AUTO_TOP_ITEM_STATE to false
+    Set Scope_State to True
+    Item_List
+      On_Item ''   // will be a title..user supplied
+      On_Item ''   // will be memory free
+      On_Item '<OK>' send STOP_UI
+    End_Item_List
+    set CENTER_STATE item 0 to TRUE
+    set CURRENT_ITEM to 2
+  End_Procedure  // Construct_Object    
+      
+  // The item_change procedure overrides the standard item_change
+  // procedure. It's intention is to insure that the user cannot
+  // rotate onto any item other than item 2 (the OK button).
+        
+  procedure item_change integer i_from integer i_to returns integer
+    procedure_return 2
+  end_procedure
+        
+  // The activating procedure fills in item 1 of ABOUT with the
+  // current available memory.
+      
+  procedure activating
+    local integer mem
+    memory mem
+    set Value item 1 to mem
+  end_procedure
+   
+End_Class // About
+
+

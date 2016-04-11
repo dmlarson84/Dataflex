@@ -1,0 +1,400 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// clmovemx.Pkg
+// Version: 1.0
+//  05-17-1993 : Created
+//
+// Author: John J. Tuohy
+//
+// 05-17-1993 - reluctantly added 
+// 08-15-1993 - various changes and clean-up
+// --V.1.1--
+// 03/16/94   - fix allow_move function. It wasn't working right at all. It
+//              let you drift where you shouldn't be
+// 03/16/94   - Change mouse_down to set focus_mode to pointer_only. Much
+//              better - no focus change messages are sent. We can now use this
+//              with non-clients.
+// 03/16/94   - The entire logic of movement has changed. If an object does
+//              not allow movement the message is delegated to the parent. This
+//              way all objects can support movement. Most will be shut off.
+//              Those that need it, will do it...else the parent will be tried.
+// 03/19/94   - Add Lee's change for making object take the focus. (mouse_down)
+// 03/31/94   - Added different mouse drag logic (more like auto_create)
+//              Gave the move keys symbolic names which can be changed.
+// 07/13/94   - Change Move_client_location from forward send to delegate
+// 07/13/94   - Major changes (JJT). 
+//              1. Create a logical rectangle and figure out if the image will
+//                 fit within the image 
+//              2. When Mouse overshoots go to the closest spot (Lee)
+//              3. No longer support movement of clients that don't have
+//                 images (kind of a goofy idea).
+//              4. Create Proper_Image_State which says the image's child
+//                 images are properly contained. Should make it faster.
+// 09/18/94   - bug in Move_client_location (comments in wrong place)
+// 09/26/94   - (LS) using define command now.
+//  
+// mixin package allows clients to be moved with ctrl arrow keys and mouse
+//
+//************************************************************************
+
+//
+// In order for this to work you must undefine the Ctrl+Down_arrow and
+// Ctrl+Up_Arrow keys (beginning_of_Panel & End_of_Panel). 
+//
+// This works best if your client has an image or the main visual child
+// image contains all the other images in it as relative. You do not have to
+// create a client image although I suggest that you do.
+//
+// We are supporting mouse movement. You can click and drag on the top
+// line of the client image (there must be an image for mouse dragging to
+// work). Supporting mouse dragging is risky but the results are probably worth
+// the risk. There is no way to support mouse dragging without firing some sort
+// scope entering/exiting messages. This normally is benign but it does ask for
+// unpredictable behaviors. If this becomes a problem you can shut off mouse
+// movment support by setting the ALLOW_MOUSE_MOVE_STATE to FALSE.
+//
+
+use ui
+
+// We use the following two global integers here because mouse events are a bit
+// squirelly. It is possible for mouse events to get lost. If this
+// happens during a drag you could end up with windows in permanent
+// drag mode. The globals make it a bit more solid.
+
+Integer Image_move$x_Offset
+Integer Image_move$Dragging 
+Move 0 to Image_move$Dragging
+
+// Alas, four more globals. We use these to construct a "logical"
+// rectangular image. This was done to speed the process as much as
+// is possible (faster than properties)
+//
+integer image_top_x image_top_y Image_Bottom_x Image_Bottom_y
+
+//
+// The global integer variables Image_move$Top, Image_move$Bottom,
+// Image_move$Left and Image_move$Right create limits for moving objects
+// up, down, left and right. The normal right-left limits are the edge of
+// the screen. The normal up-down limits are the edge of the screen minus 2.
+// This will keep an image from covering a normal CUA top of screen which
+// would consist of a title and an action bar (2 lines) and keeps the 
+// bottom two lines free for errors and a button bar. You may change these
+// variables to any value you wish.
+
+Integer Image_move$Bottom Image_move$Top Image_move$Left Image_move$Right
+
+// set bounds for right and left..default to entire screen
+Move 0 to Image_move$Left
+Move (Low(Size(Desktop)))  to Image_move$Right
+
+// set bounds for up and down. Make the top and bottom two lines off limits.
+Move 2 to Image_move$Top
+Move (Hi(Size(Desktop))-2) to Image_move$Bottom
+
+//  Define the keys as needed. If these are defined before this point the
+//  1st definition is used. Therefore, you could change these in your 
+//  program by defining these symbols before this package. The keys to use
+//  for this are imperfect in that they overlap keys that are used in the
+//  editor (word left/right and in DEOs (top/bottom panel). This is the
+//  best I can come up with for now.
+//
+define KEY_MOVE_RIGHT for KEY_CTRL+KEY_RIGHT_ARROW
+define KEY_MOVE_LEFT  for KEY_CTRL+KEY_LEFT_ARROW
+define KEY_MOVE_DOWN  for KEY_CTRL+KEY_DOWN_ARROW
+define KEY_MOVE_UP    for KEY_CTRL+KEY_UP_ARROW
+
+Procedure Image_Rectangle FOR DESKTOP Integer rFlag Integer NoBroadCast
+   local integer loc Row COl BC Img# a_no_image
+   //
+   Get Base_Class to BC
+   If (BC=ARRAY_CLASS or BC=SCROLL_CLASS) Procedure_Return
+
+   Get Image_Number to Img#
+   //
+   Move (Img#=0 AND (BC=Menu_Class OR BC=List_Class OR BC=Message_Class) ) ;
+          to a_no_Image
+   If ( rflag AND Location_type(Current_Object)=ABSOLUTE ;
+        AND a_no_image=0) Procedure_Return
+   //
+   If (Img#>=0 AND a_no_image=0 ) Begin
+      Get Location to Loc
+      Move (Hi(loc)) to col
+      Move (Low(loc)) to Row
+      // wierd image vodoo!
+      If Row gt 65000 Move (Row - 65536) to Row
+      If Col gt 65000 Move (Col - 65536) to Col
+      If ( (Rflag=0) OR (Col<image_top_y)) Move Col to Image_top_y
+      If ( (Rflag=0) OR (Row<image_top_x)) Move Row to Image_top_x
+      //
+      Get Size to Loc
+      Move (Hi(loc)+col) to col
+      Move (Low(loc)+row) to Row
+      If ( (Rflag=0) OR (Col>image_Bottom_y)) Move Col to Image_Bottom_y
+      If ( (Rflag=0) OR (Row>image_Bottom_x)) Move Row to Image_Bottom_x
+   End
+   If Not NoBroadCast BroadCast Send Image_Rectangle 1 0
+End_Procedure
+
+//  When Finally at the desktop do nothing....otherwise delegate
+//
+procedure Move_Client_Location FOR DESKTOP integer yoff integer xoff
+  //if Current_Object NE DESKTOP;
+  //Forward Send Move_Client_Location yoff xoff
+  // 07/13/94 12:30 pm - should have been delegate
+  if Current_Object NE DESKTOP ;
+      Delegate Send Move_Client_Location yoff xoff
+end_procedure
+
+//  This class can now actually be used by any class that needs
+//  movable mixin support.
+//
+Class Movable_Client_Mixin is a Message
+   Procedure Define_Movable_Client_Support   
+      // Public Properties
+      property integer Allow_Move_State          public FALSE
+      // with 1.1 there is really no reason not to always support
+      // mouse movement - this property may disappear in the future
+      property integer Allow_Mouse_Move_State    public TRUE
+      // If you image contains all child images (most do) you can set
+      // this true. It will speed things up
+      property integer Proper_Image_State        public FALSE
+
+      on_key KEY_MOVE_RIGHT send Move_Client_Right
+      on_key KEY_MOVE_LEFT  send Move_Client_Left
+      on_key KEY_MOVE_DOWN  send Move_Client_Down
+      on_key KEY_MOVE_UP    send Move_Client_Up
+   end_procedure
+   
+   //
+   // Move image by col/row offset specified. If the client does not
+   // contain an image do nothing.
+   //
+   procedure Move_Location integer yoff integer xoff
+      if (Allow_Move_State(Current_Object) AND Image_Number(Current_Object)) ;
+          Send Move_Image yoff xoff
+   end_procedure
+
+   //  Used by keyboard movements. If the current object is allowing movement
+   //  try to move it. Otherwise, delegate and see if the container object
+   //  supports movement. This delegation will occur out to the desktop
+   //
+   //  Note: Ent_item defines and replaces (not augments) this code. If 
+   //        you make changes here also make them in the other package
+   procedure Move_Client_Location integer yoff integer xoff
+      // if allowed do the move....else delegate
+      if (Allow_Move_State(Current_Object)) ;
+         send Move_Location yoff xoff
+      Else Delegate Send Move_Client_Location yoff xoff
+   end_procedure
+   
+   procedure Move_Client_Right
+      send Move_Client_Location 0 1
+   end_procedure
+   
+   procedure Move_Client_Left
+      send Move_Client_Location 0 -1
+   end_procedure
+   
+   procedure Move_Client_Up
+      send Move_Client_Location -1 0
+   end_procedure
+   
+   procedure Move_Client_Down
+      send Move_Client_Location 1 0
+   end_procedure
+
+   // Support for mouse movement of an image. This is tricky. This uses
+   // a method that Doug Goldner came up with that alters the 
+   // client_area_state of a client just long enough to allow a mouse_down
+   // message to get sent to it. This has a side-effect of having some
+   // scope entering / exiting messages getting fired but it is the best
+   // solution I've seen so far.
+   //
+   // 03/16/94 v 1.1 - Make it pointer only - this is so cool
+   procedure mouse_down integer p1 integer p2
+      local integer Mse_Loc  Top_Corner oldf oldc
+      local integer cursco mysco //** 1994-Mar-18  LS
+      if (Allow_Move_State(Current_Object) AND ;
+          Allow_Mouse_Move_State(Current_Object) ) Begin
+          //
+          Get absolute_mouse_location to Mse_Loc     // mouse loc cmplx
+          Get location                to Top_Corner  // top corner cmplx
+          If (  hi(Mse_Loc)=hi(Top_Corner) ) Begin   // crnt row = top row?
+             Move 1 to Image_move$Dragging               // set move fg
+             Move (low(Mse_Loc) - low(Top_Corner) ) to Image_move$x_Offset
+             
+             //*** 1994-Mar-18  LS
+             //  If a client or if non-focusable
+             //     we want to make sure that this object's scope has the
+             //     focus. Find the object's scope and if it does not match
+             //     the current_scope make it do so.
+             //  else (if the object is a focusable non-client)
+             //     the object should first take the focus (if needed). 
+             //     Taking the focus is what an object does when clicked
+             //     on.  
+             if (client_area_state(current_object) or ;
+                   (focus_mode(current_object) <> focusable)) begin
+                get current_scope of desktop to cursco
+                if (scope_state(current_object)) move current_object to mysco
+                else get find_scope to mysco
+                if cursco ne mysco set current_scope to mysco
+             end
+             Else If (focus(desktop)<>Current_Object) Send Activate
+             Get client_area_state to Oldc    // remember these states
+             Get Focus_mode to Oldf
+             Set client_area_state to false   // make this a pointeronly
+             Set focus_mode to Pointer_Only   // non-client for mouse_down
+             Forward Send mouse_down p1 p2    // hee, hee        
+             Set client_area_state to Oldc    // now back to reality
+             Set Focus_mode to Oldf
+             Procedure_return
+          End   
+      End
+      Forward send mouse_down p1 p2            
+   end_procedure
+   
+   procedure mouse_up integer p1 integer p2
+      If Image_move$Dragging Begin
+         move 0 to Image_move$Dragging
+         // no longer needed with pointer only objects... the focus
+         // never changes or if it changes, it belongs there
+         //**If (Current_Scope(desktop)=Old_Scope(Current_Object)) ;
+         //**   Send Activate to (Old_Focus(Current_Object))
+         //**Else Send Activate   
+      End
+      Else forward send mouse_up p1 p2   
+   end_procedure
+   
+   // 03/18/94 - v1.1 don't allow mouse to drag where it doesn't belong
+   // 03/29/94 - Try letting move_image do the right thing. Forget the above
+   procedure mouse_drag integer p1 integer p2
+      local integer loc yTOp xLeft
+      if Image_move$Dragging begin
+         get absolute_mouse_location to loc
+         Move (Hi(Loc)) to yTop
+         Move (low(loc) - Image_move$x_Offset) to xLeft
+         Get Location to Loc
+         Move (YTop - Hi(Loc)) to YTop
+         Move (xLeft - Low(Loc)) to xLeft
+         Send Move_Image YTop xLeft
+         //* Move image will try something different here.
+         //*// These two lines will keep the mouse from dragging out of
+         //*// bounds.
+         //*Get Location to Loc
+         //*set absolute_mouse_location to ;
+         //*    (Hi(Loc)) (Low(loc)+Image_move$x_Offset) TRUE
+      end
+      Else forward send mouse_drag p1 p2   
+   end_procedure
+
+   // Function Allow_Move
+   //
+   // Check if the image for this object can be moved. Check this image and
+   // all relative child images to make sure that ALL of them fit within our
+   // screen limits. Pass yoff and xoff as the Y and X offsets, and pass
+   // rflag as False if this is main outer image to be moved.
+   //
+   // return: non-zero value if move is OK
+   //
+   Function Allow_Move integer yoff integer xoff integer rflag ;
+                              returns integer
+      local integer loc rval YTop YBottom xLeft xRight yval
+      //
+      Send Image_Rectangle 0 (Proper_Image_State(Current_Object))
+
+      // *** DEBUG ***    gotoxy 24 78
+      // *** DEBUG ***    showln
+      // *** DEBUG ***    show "Rectangle Top-xy: " Image_Top_x ':' Image_Top_y "  "
+      // *** DEBUG ***    show "Bottom-xy: "Image_Bottom_x ":" Image_Bottom_y
+
+      //
+      Move (Image_Top_y    + yoff)  to yTop     // desired location of top bar row
+      Move (Image_Bottom_y + yoff)  to yBottom  // desired location of Bottom bar row
+      Move (Image_Top_x    + xoff)  to xLeft    // desired location of left column
+      Move (Image_Bottom_x + xoff)  to xRight   // desired location of left column
+      
+      // see if we fit within row bounds.
+      If      YTop    lt Image_move$Top    Move (YTop - Image_move$Top) to yVal
+      Else If yBottom gt Image_move$Bottom Move (yBottom - Image_move$Bottom) to yval
+      // see if we fit within column bounds
+      If      xLeft  lt Image_move$Left  Move (xLeft - Image_move$Left) to rVal
+      Else If xRight gt Image_move$Right Move (xRight-Image_move$Right) to rval
+      //
+      If (rval or yval) begin // we have a failure.. suggest correct position
+         // 03/16/94 1.1 fix: Add an offset so these damn things won't
+         //                   ever be negative. Anyone that uses this will
+         //                   have to remove this 1024 when parsing. If we
+         //                   ever have a character screen that supports more
+         //                   than 1024 rows or columns we are in trouble.
+         Move (xoff-rval+1024) to rVal // suggested x offset to try
+         Move (yoff-yval+1024) to yVal // suggested y offset to try
+         //
+         // Pack as a complex integer where:
+         //
+         //    Hi(rval)  =  Suggested correction horizontally+1024.
+         //
+         //    Low(rval)  = Suggested correction vertically+1024.
+         //                 Look at AutoLcMx.pkg to see how this is used
+         // 
+         //
+         Move (rval + (65536 * yval)) to rval // pack as complex integer
+      End   
+         
+      // *** DEBUG *** if rval begin
+      // *** DEBUG ***    Send bell
+      // *** DEBUG ***    gotoxy 24 78
+      // *** DEBUG ***    showln
+      // *** DEBUG ***    Get Location to Loc
+      // *** DEBUG ***    show (name(Current_Object)) ' at: ' (hi(loc)) ':' (Low(Loc))
+      // *** DEBUG ***    show ' Offset-attempt: ' yoff ':' xoff
+      // *** DEBUG ***    show ' Try:' (hi(rval)-1024) ':' (Low(rval)-1024)
+      // *** DEBUG *** End
+
+      Function_Return rval
+   End_Function
+
+   //
+   // If image exists move the image by the offsets passed.
+   // 03/16/94 - leave relative images relative
+   // 03/29/94 - Attempt to make a kinder, gentler Move_image. If both
+   //            an X and a Y movement is desired and one direction fails
+   //            still move the other one. We do this for the mouse.
+   // 07/13/94 - If image doesn't fit, instead of doing nothing move to the
+   //            best spot given the constraints. This makes the mouse feel
+   //            better.
+   Procedure Move_Image integer yoff integer xoff
+      local integer loc col row rVal
+      //If (Image_Number(Current_Object) AND ;
+      //    Allow_Move(Current_Object,yoff,xoff,0)=0 ) Begin
+      If (Image_Number(Current_Object)) Begin
+         Get Allow_Move Yoff Xoff 0 to rVal
+         If rVal Begin // if move fails, try a one dimension move.
+            Move (hi(rVal)-1024) to row    // adjust row
+            Move (low(rVal)-1024) to col   // and column
+            If (row=0 and col=0) procedure_return // current location is best
+            //
+            Move col to xoff  // if row OK, then col failed
+            Move row to yoff         // if col OK, then row failed
+            Get Allow_Move Yoff Xoff 0 to rVal // try again...it should work
+            If rVal Procedure_Return // move failed
+         End
+         Get Location to loc
+         Move (Hi(loc)  + yoff) to Row  // new absolute location
+         Move (Low(loc) + xoff) to Col
+         If (Location_Type(Current_Object)=RELATIVE)  Begin
+            // if relative image relocate it in relative terms.
+            Delegate Get Location to Loc // parent image location
+            Set Location to (Row-hi(Loc)) (Col-Low(Loc)) Relative
+         End  
+         Else Set Location to Row Col // if absolute...
+      End   
+   End_Procedure
+End_Class
