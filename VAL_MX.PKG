@@ -1,0 +1,153 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Val_mx.pkg
+// Version: 1.0 for DAF 1.1
+// Copyright (c) 1994 Data Access Corporation
+//
+// 05/02/94  - created
+//
+// Author: John J. Tuohy
+//
+// Augmentations:
+//    Validate_items
+//    Next
+//
+//
+// Val_MX.pkg  - Validate Mixin for alternate validation capabilities.
+//
+// 1. Validate_All_Items_State property - Is set TRUE during a save
+//      validation and false during a navigation validation. Let's developer
+//      take different actions based on a save validate and a navigate
+//      validate.
+//
+// 2. Validate_Mode - Determines when validations are sent.
+//        VALIDATE_DEFAULT       Works the way it does now. Validates
+//                               occur if Object_Validation is TRUE
+//                               (which is the default). This means that
+//                               validates normally occur during
+//                               downward navigation and save (when
+//                               Validate_Items is sent by DSO).
+//
+//        VALIDATE_ON_SAVE       Validates are only sent during a save.
+//                               When this property is set
+//                               object_validation is also set FALSE. It
+//                               is only turned on inside of
+//                               Validate_Items.
+//
+//        VALIDATE_ON_SAVE_NEXT  Validates are only sent during a save
+//                               and during NEXT navigation (ENTER and
+//                               TAB). When this property is set
+//                               object_validation is also set FALSE. It
+//                               is only turned on inside of
+//                               Validate_Items and Next messages.
+//
+//        Note: When this property is SET the Obvject_Validation
+//              property is also set. It is set TRUE if mode is set to
+//              VALIDATE_DEFAULT, else it is set False. It is not
+//              expected that you will dynamically change the
+//              Validate_Mode property. You'll probably set it once,
+//              when the object is created.
+//
+//
+// 12/22/94 JJT - Added code from server.pkg to validate_items.
+// 05/25/95 JJT - Created Object_item_Validation sets object_validation.
+//************************************************************************
+Use UI
+
+enum_list
+    Define VALIDATE_DEFAULT
+    Define VALIDATE_ON_SAVE
+    Define VALIDATE_ON_SAVE_NEXT
+end_enum_list
+
+Class Validate_Mixin is a Message
+     Procedure Define_Validate
+        Property Integer Validate_All_Items_State Public FALSE
+        Property Integer Private.Validate_mode    Public VALIDATE_DEFAULT
+     End_Procedure // Construct_Object
+
+     //  Get/Set Validate_Mode: When SET also set object_Validation
+     //                         property
+     //
+     Function Validate_Mode Returns Integer
+       Function_Return (Private.Validate_Mode(Current_Object))
+     End_Function // Validate_Mode
+
+     Procedure Set Validate_mode Integer Mode
+        Set Private.Validate_Mode to Mode
+        Set Object_Validation to (If(Mode=VALIDATE_DEFAULT,TRUE,FALSE))
+     End_Procedure // Set Validate_mode
+
+     //  1) If Validate_mode is SAVE or SAVE_NEXT then make sure that the
+     //     validations occur (set object_validation to TRUE). If the mode is
+     //     DEFAULT the property is probably already true.
+     //
+     //  2) Set Validate_All_Items_State to T. Validate handlers can query this
+     //     property to determine if a validate is due to navigation or saving
+     //
+     Function Validate_items integer fg returns integer
+        Local integer rVal oldval VAI
+        Local integer oldautotop
+        Get Validate_all_Items_State to VAI     // what it was s/b False
+        Set Validate_all_Items_State to TRUE    // what it is now!
+        If (Validate_Mode(Current_Object)<>VALIDATE_DEFAULT) Begin
+           get object_validation to oldval
+           Set object_validation to TRUE
+           Forward Get Validate_items fg to rVal
+           Set object_validation to oldval
+        End
+        Else ;
+           Forward Get Validate_items fg to rVal
+        Set Validate_all_Items_State to VAI     //Restore
+
+        // if validate failed make sure that this object now has
+        // the focus. This code had been in server.pkg
+        //
+        if (rVal <> 0 AND focus(desktop) <> current_object) begin
+           get auto_top_item_state to oldautotop
+           set auto_top_item_state to false
+           send activate  //take focus w/out changing current_item
+           set auto_top_item_state to oldautotop
+        end
+        function_return rVal
+     End_Function // Validate_items
+
+
+     //  1) If Validate_mode is SAVE_NEXT then make sure that the
+     //     validations occur (set object_validation to TRUE). If the mode is
+     //     DEFAULT the property is probably already true. This insures that
+     //     validates occur during "procedural" data-entry (pressing enter or
+     //     tab) but not during event-driven data-entry
+     //
+     Procedure Next
+        Local integer oldval
+        If (Validate_Mode(Current_Object)=VALIDATE_ON_SAVE_NEXT) Begin
+           get object_validation to oldval
+           Set object_validation to TRUE
+           Forward Send Next
+           Set object_validation to oldval
+        End
+        Else ;
+           Forward Send Next
+     End_Procedure // Next
+
+     // Set object_validation. This is sent to the focus object through
+     // entry_clear/clear_all. All objects understand this message but only
+     // item based (entry_form and table) objects uses this. See Deodlgmx.pkg
+     Procedure Set Object_Item_validation integer fg
+       Set Object_Validation to Fg
+     End_Procedure
+
+     Function Object_Item_Validation returns integer
+       Function_return (Object_Validation(Current_Object))
+     End_Function
+
+End_Class

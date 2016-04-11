@@ -1,0 +1,384 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\verify.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: verify.pkg,v $
+//Revision 2.1  1993/08/25  17:50:01  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:10  james
+//Initial revision
+//
+//Revision 1.3  92/05/14  17:07:33  SWM
+//Updated Copyright slug.
+//
+//Revision 1.2  92/03/09  19:05:46  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:23:13  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: Verify.Inc
+// Creation Date: January 1, 1991
+// Modified Date: June 26, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module defines the operations and properties required to support
+// prompting of the user prior to save and delete operations, and/or any
+// operation(s) which may cause the loss of (changed) data, collected
+// in the abstract class Verify_Mixin.
+//
+// This file should be USEd prior to and IMPORTed within the scope of the
+// class definition by any user-interface (esp. data-entry) class which
+// must support the data-entry object standards.
+//
+// This file is used by ENTRYFRM.PKG, TEXT_WIN.PKG, ENCLIENT.PKG, and
+// TABLE.PKG.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+//
+// Description
+//
+//   This statement registers the access function for the Component_State
+//   property.  Access to Component_State is required by some of the
+//   following operations.
+//
+// Assumptions/Preconditions
+//
+//   This object (or one of its ancestor classes) defines such a function.
+//
+// Exceptions
+//
+//   None.
+//
+// Notes
+//
+//   The Component_State property is defined in the NESTING.INC module,
+//   which should be #INCLUDEd prior to this module's inclusion.
+//
+Register_Function Component_State returns integer
+
+
+class verify_mixin is a message
+  //
+  // Description
+  //
+  //   This procedure defines the properties which are required to support
+  //   the verification of saves, deletes, and losses of changed data.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Though defined as private, access procedures and functions are defined
+  //   for these properties below (to make them public).
+  //
+  //   Verify_Save_Msg holds the message id to be sent to verify a Save
+  //   operation.
+  //
+  //   Verify_Delete_Msg holds the message id to be sent to verify a Delete
+  //   operation.
+  //
+  //   Verify_Data_Loss_Msg holds the message id to be sent to verify an
+  //   action which may cause the user to lose changes to the data in items.
+  //
+  procedure define_verify
+    Property integer private.Verify_Save_Msg      PUBLIC 0
+    Property integer private.Verify_Delete_Msg    PUBLIC 0
+    Property integer private.Verify_Data_Loss_Msg PUBLIC 0
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure sets the value of the Verify_Save_Msg property.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure set Verify_Save_Msg integer val
+    set private.Verify_Save_Msg to val
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure sets the value of the Verify_Delete_Msg property.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure set Verify_Delete_Msg integer val
+    set private.Verify_Delete_Msg to val
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure sets the value of the Verify_Data_Loss_Msg property.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure set Verify_Data_Loss_Msg integer val
+    set private.Verify_Data_Loss_Msg to val
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This function returns the message id to be used to verify a Save
+  //   operation.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Component_State.
+  //
+  // Exceptions
+  //
+  //   If this object's Verify_Save_Msg is 0, the value of this object's
+  //   parent's Verify_Save_Msg is returned, if any.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  function Verify_Save_Msg returns integer
+    local integer retval
+    get private.Verify_Save_Msg to retval
+    if (retval = 0 AND Component_State(current_object)) ;
+        delegate get Verify_Save_Msg to retval
+    function_return retval
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function returns the message id to be used to verify a Delete
+  //   operation.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Component_State.
+  //
+  // Exceptions
+  //
+  //   If this object's Verify_Delete_Msg is 0, the value of this object's
+  //   parent's Verify_Delete_Msg is returned, if any.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  function Verify_Delete_Msg returns integer
+    local integer retval
+    get private.Verify_Delete_Msg to retval
+    if (retval = 0 AND Component_State(current_object)) ;
+        delegate get Verify_Delete_Msg to retval
+    function_return retval
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function returns the message id to be used to verify an operation
+  //   which may cause the user to lose changes to the data in items.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Component_State.
+  //
+  // Exceptions
+  //
+  //   If this object's Verify_Data_Loss_Msg is 0, the value of this object's
+  //   parent's Verify_Data_Loss_Msg is returned, if any.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  function Verify_Data_Loss_Msg returns integer
+    local integer retval
+    get private.Verify_Data_Loss_Msg to retval
+    if (retval = 0 AND Component_State(current_object)) ;
+        delegate get Verify_Data_Loss_Msg to retval
+    function_return retval
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function confirms a Save operation with the user, returning 0 if
+  //   the Save should continue, or non-zero if the Save should be aborted.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   If the Verify_Save_Msg function returns 0, no action is taken.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  function Verify_Save returns integer
+    local integer msg# retval
+    get Verify_Save_Msg to msg#
+    if msg# ne 0 begin
+      get msg# to retval
+      function_return retval
+    end
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function confirms a Delete operation with the user, returning 0 if
+  //   the Delete should continue, or non-zero if the Delete should be aborted.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   If the Verify_Delete_Msg function returns 0, no action is taken.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  function Verify_Delete returns integer
+    local integer msg# retval
+    get Verify_Delete_Msg to msg#
+    if msg# ne 0 begin
+      get msg# to retval
+      function_return retval
+    end
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function confirms an operation (which may cause the loss of changed
+  //   data in items) with the user, returning 0 if the operation should
+  //   continue, or non-zero if the operation should be aborted.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   If the Verify_Data_Loss_Msg function returns 0, no action is taken.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  function Verify_Data_Loss returns integer
+    local integer msg# retval
+    get Verify_Data_Loss_Msg to msg#
+    if msg# ne 0 begin
+      get msg# to retval
+      function_return retval
+    end
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function deactivates this object.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Request_Cancel.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   None.
+  //
+// (LS) removed: exit_function should act just like request_cancel. This is
+//               already done in navigate.pkg.
+//  procedure Exit_Function
+//    local integer isChgd
+//    if (Component_State(current_object)) ;
+//        delegate get Changed_State to isChgd
+//    else get Changed_State to isChgd
+//    if (isChgd <> 0 AND Verify_Data_Loss(current_object) <> 0) ;
+//        procedure_return
+//    send request_cancel
+//  end_procedure
+end_class
+

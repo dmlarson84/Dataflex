@@ -1,0 +1,65 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Vld_Key.pkg
+// Version: 1.0
+//  07-01-1993 : Created
+//
+// Author: John J. Tuohy
+//
+//
+// Function Validate_Key_Field for DEOs
+//
+// 08-05-1993 : Mod to handle numeric values which may contain trailing .000s
+// 05/25/95     Registered function server for compiler
+//************************************************************************
+
+//
+// This can be added to an iValidate to make sure that a key field is not
+// changed.
+//
+//     entry_item File.Field {iValidate=Validate_key_Field, AutoFind}
+//
+// If the a current record exists you will be warned that you can not change
+// this key field. This will often be used with autofind. AutoFind will get
+// processed first. This way you can change the record, but you can not change
+// the key value.
+
+use ui
+
+register_function Server returns integer
+
+Function Validate_Key_Field FOR DESKTOP Integer Itm# Returns Integer
+  Local Integer File# Field# Srvr Typ Dummy Typ_Err
+  Local String Key Itm_Val
+  Get Server to Srvr
+  If Srvr Send Refind_Records to Srvr // make sure we've got correct record
+  Get Data_File Item Itm# to File#
+  if File# Begin
+     Get Data_Field Item Itm# to Field#
+     Move File# to FileNumber
+     Move Field# to FieldIndex
+     Move Indirect_File.Recnum to Key
+     If Status Indirect_File Begin     // if we have a current record
+        Get Value Item Itm# to Itm_Val // the value on the screen
+        Field_Def File# Field# to Typ Dummy
+        // if field type is Numeric (1) check for numeric equality
+        // we need to do numeric checks because the internal value
+        // of a number is sometimes "1" and sometimes "1.0000"
+        If Typ eq 1 Move (Number(Itm_Val)<>Number(Key)) to Typ_err
+        Else        Move (Itm_Val<>Key) to Typ_err
+        If Typ_err Begin
+           Error 300 "Can't Change Key Field."
+           Set Value Item Itm# to Key
+           Function_Return 1
+        End
+     End
+  End
+End_Function

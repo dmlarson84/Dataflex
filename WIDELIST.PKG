@@ -1,0 +1,312 @@
+//************************************************************************
+//     File Name: Widelist.Pkg
+// Creation Date: Thu  06-06-1991
+//     Author(s): John J. Tuohy
+//
+// This replaces the Wide_List and is designed to be used in its place.
+// check for *DAF* for changes
+// 12/19/94 JJT  Added Movable support here
+// 05/22/95 JJT Added object_item_validation to focus support in
+//              request_clear and request_clear_all (also see deodlgmx.pkg)
+// 08/31/95 JJT Altered order of clmovemx and entitem mixins
+//************************************************************************/
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\source.30b\pkg\rcs\widelist.pkg $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log:	widelist.pkg $
+//Revision 1.10  92/06/19  16:32:11  james
+//Last minute changes made to correct problem with 
+//SWITCH_BACK
+//
+//Revision 1.9  92/06/05  16:32:59  steve-l
+//altered set current_item occurrances to use set item false/true/2/3 instead,
+//in order ot properly handle displayonly/noenter items on top-of-panel et al.
+//
+//Revision 1.8  92/06/03  15:17:53  steve-l
+//altered Child_Wrapping for proper argument dereferencing
+//
+//Revision 1.7  92/06/03  15:11:03  steve-l
+//altered child_Wrapping for new argument
+//
+//Revision 1.6  92/05/29  14:05:59  lee
+//removed end_construct_* messages from mixins; now, classes that use the mixin
+//send the message that used to be sent by the end_construct_* message (for
+//efficiency).
+//
+//Revision 1.5  92/05/14  17:06:50  SWM
+//Updated Copyright slug.
+//
+//Revision 1.4  92/04/20  18:04:31  lee
+//added image argument error checking
+//
+//Revision 1.3  92/03/29  18:45:23  lee
+//added MSG_END_CONSTRUCT_OBJECT, moved ENDMAC macro stuff into END_CONSTRUCT-
+//OBJECT procedures (in .pkgs). moved Flag_ITems to list.pkg after generalizing
+//it based on PROTOTYPE_OBJECT instead of Whether or not it is a table-oriented
+//object. Moved define_access_keys mechanism completely into actionbr.pkg.
+//fixed two typos: import_class_protocol used !# instead of !3, and register-
+//procedure used !1 instead of !2.
+//
+//Revision 1.2  92/03/09  19:05:49  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:23:15  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: WideList.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: July 1, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Wide_List class definition.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+Use Nesting
+Use Navigate
+Use Server
+Use ActionBr
+Use EntItem
+Use Code_DEO // v1.1 Code file support
+Use ClMoveMx // Movable object support
+
+//
+// must set item_limit to use; defaults to 1
+//
+class Wide_List is an ENTRYLIST STARTMAC WLstart
+  procedure construct_object integer img
+    forward send construct_object img
+    set entry_msg to Initialize_List
+    set item_limit to 1
+    set auto_top_item_state to FALSE
+    on_key kUPARROW   send up_row   PRIVATE
+    on_key kDOWNARROW send down_row PRIVATE
+    send define_nesting     //invoke DEO nesting standard support constructor
+    send define_navigation  //invoke DEO navigation standard support constructor
+    send define_server      //invoke Server support constructor
+    send define_Action_bar  //invoke action-bar support constructor
+    send define_entry_item  //invoke Entry-Item support constructor
+    Send define_Movable_Client_Support // v1.1
+  end_procedure
+
+  IMPORT_CLASS_PROTOCOL Nesting_Mixin
+  IMPORT_CLASS_PROTOCOL Navigate_Mixin
+  IMPORT_CLASS_PROTOCOL Server_Mixin
+  IMPORT_CLASS_PROTOCOL Action_Bar_Mixin
+
+  // entry_item_mixin must mixin after Movable_cient_mixin. A message
+  // in entry-item (move_client_location) needs to replace the message
+  // in movable-client. (see entitem)
+  IMPORT_CLASS_PROTOCOL Movable_Client_Mixin // v1.1
+  IMPORT_CLASS_PROTOCOL Entry_Item_Mixin
+  IMPORT_CLASS_PROTOCOL Code_DEO_Mixin
+
+  procedure Initialize_List
+  end_procedure
+
+  procedure down_row
+    local integer toitem
+    calc (current_item(current_object) + item_limit(current_object)) ;
+        to toitem
+    if toitem lt (item_count(current_object)) set current_item to toitem
+  end_procedure
+
+  procedure up_row
+    local integer toitem
+    calc (current_item(current_object) - item_limit(current_object)) ;
+        to toitem
+    if toitem ge 0 set current_item to toitem
+  end_procedure
+
+  //
+  // created for nesting support
+  //
+  procedure Child_Wrapping integer direction integer xorigID
+    local integer base targetItem lim origID
+
+    if NUM_ARGUMENTS gt 1 move xorigID to origID
+    else get focus of desktop to origID
+    if origID eq 0 move current_object to origID
+
+    send activate
+//    get base_item to base
+//    if direction ne 0 begin
+//      calc (item_count(current_object) - 1) to lim
+//      calc (base + item_limit(current_object)) to targetItem
+//      if targetItem gt lim move lim to targetItem
+//    end
+//    else begin
+//      calc (base - 1) to targetItem
+//      if targetItem lt 0 move 0 to targetItem
+//    end
+//    set current_item to targetItem
+
+    // set item direction      //sets current_item to first/last enterable item
+
+    procedure_return 1
+  end_procedure
+
+
+  //
+  // created for navigation support
+  //
+  procedure Top_of_Panel
+    local integer retval
+    //
+    // modification for EntItem support
+    //
+    get Object_Validation to retval
+    set Object_Validation to false
+    if (focus(desktop) <> current_object) send activate
+//    set current_item to (top_item(current_object))
+
+    set item TRUE      //sets current_item to first enterable item
+
+    set Object_Validation to retval
+  end_procedure
+
+  //
+  // created for Bottom_of_Panel support
+  //
+  function last_panel_item returns integer
+    local integer lastitem maxitem
+    calc (top_item(current_object) + Display_Size(current_object) - 1) ;
+        to lastitem
+    get item_count to maxitem
+    if lastItem gt maxitem move (maxitem - 1) to lastitem
+    function_return lastitem
+  end_function
+
+  //
+  // created for navigation support
+  //
+  procedure Bottom_of_Panel
+    local integer lastChild
+    //
+    // modification for composition support
+    //
+    if (Has_Components_State(current_object)) begin
+      get Find_Last_DEO to lastChild
+      if lastChild ne 0 begin
+        send Bottom_Of_Panel to lastChild
+        procedure_return
+      end
+    end
+    send activate
+//    set current_item to (last_panel_item(current_object))
+
+    set item FALSE      //sets current_item to last enterable item
+
+  end_procedure
+
+  //
+  // created for navigation support
+  //
+  function next_entry_ok returns integer
+    local integer retval wrapstate
+    forward get next_entry_ok to retval
+    get wrap_State to wrapstate
+    if (retval >= 0 AND wrapstate = 0 AND ;
+        row(current_object,retval) <> current_row(current_object)) ;
+        move -1 to retval    //out of row bounds, pretend must switch
+    else if (retval < 0 AND wrapstate) begin  //on last row w/wrap_state true
+      send add_row                            //add new row at end
+      forward get next_entry_ok to retval     //try to rotate to it
+    end
+    function_Return retval
+  end_function
+
+  //
+  // created for navigation support
+  //
+  // *DAF* This has been altered to work right for us. Since we support the
+  // ability of tables to insert rows at the top we must check if a 
+  // previous should open up a line at the top (more like what next_
+  // entry_ok). It seems that neither of these (next_item_ok or prev-
+  // ious_entry_ok) really belongs here - but to be consistant....
+  function previous_entry_ok returns integer
+    local integer retval curitem  // *DAF* curitem is new
+    get current_item to curitem   // *DAF* new
+    forward get previous_entry_ok to retval
+    if (retval >= 0 AND wrap_state(current_object) = 0 AND ;
+        row(current_object,retval) <> current_row(current_object)) ;
+        function_return -1  //out of row bounds, pretend must switch back
+
+    // *DAF* this block is new. If no more items and wrap_state is true we
+    // will create a new row on top and attempt to go to it.
+    if (retval < 0 AND wrap_state(current_object)) begin //on 1st row w/wrap_state true
+      send Insert_row 0                                  //insert new row at top
+      // after insert we must move down one row to stay in place
+      set new_Item  to (CurItem + item_limit(current_object)) 
+      set Row_base_Item to (Current_Row(Current_Object))
+      forward get previous_entry_ok to retval     //try to rotate to it
+    end
+
+    function_Return retval
+  end_function
+  
+  procedure End_Construct_Object
+    send Mark_Components      // nesting
+    send Define_Access_Keys 0 // action_bar_keys
+    forward send End_Construct_Object
+  end_procedure
+
+  //..*DAF*.......................................................
+  // These have been added to wide_list. They just belong here 
+  // (hey could be added to data_list allowing us to avoid changing
+  // wide_list - however, this is where they belong). We could change
+  // this
+  // 
+  // new Handlers: Up, Down, Column, current_col, Row_base_item 
+  
+  procedure up // custom for wlist
+    send up_Row
+  end_procedure
+  
+  procedure down // custom for wlist
+    send down_Row
+  end_procedure
+    
+  Function Column Integer Item# returns Integer
+    Function_Return (Mod(Item#,Item_Limit(Current_Object)))
+  End_Function
+
+  Function Current_Col Returns Integer
+    Function_Return (Current_Item(Current_Object)-Base_Item(Current_Object))
+  End_Function
+  
+  // sets base item to Row#
+  Procedure Set Row_Base_Item Integer Row#
+    Set Base_Item to (Row# * Item_Limit(Current_Object) )
+  End_Procedure
+  
+  //.........................................................
+end_class
+
+//
+// WLStart <class> <image> { ACTION_BAR <actionbar#> } { POP_UP } { RING }
+//
+#COMMAND WLstart R R
+  FORWARD_BEGIN_CONSTRUCT !1 !2 !3 !4 !5 !6 !7 !8 !9
+  bind_Action_bar !3 !4 !5 !6 !7 !8 !9
+  bind_Pop_up !3 !4 !5 !6 !7 !8 !9
+  bind_Ring !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND

@@ -1,0 +1,75 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// ViewClnt.Pkg
+// Version: 1.0
+//  04-27-1993 : Created
+//
+// Author: John J. Tuohy
+//
+// View_Client is a Client
+//
+//  1. Sets the three "view" properties to true. Scope_state, Ring_State
+//     and attach_parent_State
+//  2. Adds Movable Client Support (Allow_move_State Property)
+//  3. Adds Auto_locate support for popups (Auto_Locate_State property)
+//  4. Adds Stop_UI Support (Stop_UI_State)
+//
+//************************************************************************
+
+Use UI
+Use AutoLcMx   // Auto locate of popup mixin
+Use ClMoveMx   // Move client support
+
+//
+//  View_Client
+//
+Class View_Client is an Client
+
+  Procedure construct_object integer img#
+    forward send construct_object img#
+    property integer Stop_UI_State Public FALSE
+    Send Define_Auto_Locate
+    Send define_Movable_Client_Support
+    set scope_State to TRUE         // defaults to a Scope
+    set Attach_Parent_State to TRUE // default...controls parentage better
+    Set Ring_State to TRUE          // default to Ring...makes sense
+  End_Procedure  
+  
+  IMPORT_CLASS_PROTOCOL Auto_Locate_Mixin
+  IMPORT_CLASS_PROTOCOL Movable_Client_Mixin
+  
+  //  Augment to Support AutoLocate
+  //
+  Procedure Activating Returns Integer
+    local integer InvokingId RVal
+    Get Focus to InvokingId
+    forward get MSG_activating to rVal
+    If rVal Procedure_Return rVal
+    //
+    If (Auto_Locate_State(Current_Object) ) ;
+       Send Auto_Locate InvokingId
+  End_Procedure
+
+  //  Augment for stop_ui_state support
+  //
+  procedure Deactivate Integer Flag Returns integer
+    Local integer rVal
+    if Num_Arguments GT 0 ;
+      Forward Get MSG_Deactivate Flag to rVal
+    else ;
+      Forward Get MSG_Deactivate to rVal
+      if ( ((Num_Arguments <= 0) or (Flag = 0)) and ;
+          Stop_UI_State(Current_Object)) ;
+        send Stop_Ui
+      Procedure_Return rVal
+    end_procedure  // deactivate
+End_Class
+

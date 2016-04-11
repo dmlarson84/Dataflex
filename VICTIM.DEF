@@ -1,0 +1,36 @@
+        FILE DEFINITION LISTING FOR FILE #19
+*************************************************** 
+        FILE ROOT NAME     = Victim
+        USER DISPLAY NAME  = VRS Victim File
+        DATAFLEX FILE NAME = VICTIM
+*************************************************** 
+        RECORD LENGTH = 256  (USED = 174)
+        MAX NUMBER OF RECORDS = 10000  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       3   NUMERIC   0    1     0     0     VICTIM_NUM
+   2       4      20   ASCII          2     0     0     LAST_NAME
+   3      24      10   ASCII          2     0     0     FIRST_NAME
+   4      34       1   ASCII          2     0     0     MI
+   5      35      30   ASCII          0     0     0     ADDRESS
+   6      65      20   ASCII          0     0     0     CITY
+   7      85       2   ASCII          0     0     0     STATE
+   8      87      10   ASCII          0     0     0     ZIP
+   9      97       3   NUMERIC   0    3    10     1     DEFENDANT_NUM
+  10     100       4   NUMERIC   2    0     0     0     TOTAL_PAID
+  11     104       3   DATE           0     0     0     DATE_LAST_DISB
+  12     107       1   NUMERIC   0    0     0     0     CASE_NUM_1
+  13     108       2   NUMERIC   0    0     0     0     CASE_NUM_2
+  14     110      60   ASCII          0     0     0     OFFENSE
+  15     170       4   NUMERIC   2    0     0     0     MAX_AMOUNT
+  16     174       1   NUMERIC   0    4     0     0     STATUS
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   
+INDEX 2:  FIELD SEGMENTS:  <2>   <3>   <4>   <0>   
+INDEX 3:  FIELD SEGMENTS:  <9>   <16>   <2>   <3>   <4>   <0>   
+INDEX 4:  FIELD SEGMENTS:  <16>   <2>   <3>   <4>   <0>   
+

@@ -1,0 +1,32 @@
+//===============================================================================//
+//    Y2K.PKG                                                                    //
+//    Written By Cindy Cruciger & Scott Pond                                                   //
+//    September 12, 1997                                                         //
+//
+//    Purpose:  To create a standard for a given program to save and evaluate
+//              dates in the four year format
+//
+//    To use: add use y2k.pkg to top of your program, This use will force all
+//            programs that have this package to have the same date standard.
+//
+// Caution:
+//   1. Earlier revisions of DataFlex 3.1 do not have
+//   the Year-2000 capabilities of this revision. Therefore, any legacy programs
+//   that will be run under revisions prior to 3.1c or VDF
+//   (with the exception of 2.3b Enhanced)
+//   must be converted to use 4-digit-year dates before they can be run against
+//   data being shared with this runtime set to use its Year-2000 date
+//   capabilities.
+//
+//   2. The images are formated to handle four digit years
+//   are helpful remove confusion as to what year is visualy displayed.
+//
+//===============================================================================//
+
+SET_Date_ATTRIBUTE sysdate4_State to DFTRUE // DFTRUE same as 1
+SET_Date_ATTRIBUTE Date4_State to DFTRUE
+SET_Date_ATTRIBUTE epoch_value to 30    // Year 0  to 29 add 2000
+                                        // Year 30 to 99 add 1900
+
+#REM Y2k Supported Added Epoch set to 30
+
