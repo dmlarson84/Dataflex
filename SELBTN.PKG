@@ -1,0 +1,96 @@
+//---------------------------------------------------------------------------
+// SelBtn.Pkg - Ok, Escape button for selection lists and pick_lists
+//
+// Class: SelList_Button <----Button
+//
+// Button Class that automatically fills in <Enter=Ok> and <Esc=Cancel>
+// and delegates OK and Cancel message to the parent (which should be the
+// popup selection list or picklist). Automatically locates itself one row
+// up from the bottom of the parent object and one column to the left.
+// 
+// To use create the image and place the object in the object that needs
+// the button.
+//
+//   /Vndr_Lkup_Btn
+//    __________  ____________
+//   /*
+//   .... inside the selection list or picklist object
+//   Object B is a SelList_Button Vndr_Lkup_Btn
+//   End_Object
+//
+// Custom Buttons: If you need to customize the buttons for a particular 
+//                 object you may do this by creating your own item_list 
+//                 inside the object. If the object contains an 
+//                 item_list, the default <Ok> <Cancel> is not used. 
+//                 These custom buttons may contain more (or less) than 
+//                 the default two items.
+//
+// Custom Location: If you want your list to appear in some other row 
+//                  you SET BUTTON_OFFSET to some value. The default is 
+//                  1 (i.e. One row up from bottom). Setting this to 2 
+//                  would move this up one row, setting this to 0 would 
+//                  move it down a row.
+//
+//---------------------------------------------------------------------------
+
+Use UI
+
+Register_Procedure Set Button_Offset Integer Col#
+
+Class SelList_Button is a Button
+
+   // Locate the object relative to the location of the parent object. 
+   // Pass Col# as the number of rows UP from the bottom of the parent's 
+   // image.
+   //
+   Procedure Set Button_Offset Integer Col#
+     Local Integer PSz Sz
+     Get Size to Sz                      // size of object
+     Delegate Get Size to PSz            // size of parent object
+     Set location to (hi(Psz)-Col#-hi(Sz) ) 1 relative
+   End_Procedure
+   
+   Procedure Construct_Object Integer Img#
+     Forward Send Construct_Object Img#
+     Set focus_mode to Pointer_Only          // default to pointer
+     Set Button_Offset to 1                  // default location of button
+   End_Procedure  // Construct_Object
+   
+   //
+   // After the object has been created, this procedure will get called. 
+   // If there were no items created (item_count is 0) we will fill the
+   // object in with out two default item values. Neat trick!
+   //
+   Procedure End_Construct_Object              // if no item values
+     If (Item_Count(Current_Object)=0) Begin   // create default
+       item_list
+         on_item '<Enter=Ok>'   Send Ok        // default button values
+         on_item '<Esc=Cancel>' Send Cancel
+       end_item_List  
+     End
+     Forward Send End_Construct_Object
+   End_Procedure  // End_Construct_Object
+   
+   Procedure Ok                          // Must delegate OK and Cancel.
+     Local integer rVal                  // Both OK and Cancel are
+     Delegate Get Msg_Ok to Rval         // directly understood by the
+     Procedure_Return rVal               // button class. The default
+   End_Procedure                         // behavior would return a non-
+                                         // zero value and stop the UI.
+   Procedure Cancel                      // This we don't want. Instead
+     Local integer rVal                  // we should delegate and do
+     Delegate Get Msg_Cancel to Rval     // what the parent wants.
+     Procedure_Return rVal
+   End_Procedure
+   
+   // It is possible that the selection_list's OK and Cancel will return 
+   // a non-zero value. If this happens we must return this value as 
+   // well. This is why we use the "GET MSG_xxx to val" syntax. By 
+   // sending a message as a functon we can get the procedure's 
+   // return_value. 
+   //
+   // You never think of this kind of thing at first. When things don't 
+   // quite work right, you figure them out. Such is the nature of tool 
+   // building.
+   
+End_Class

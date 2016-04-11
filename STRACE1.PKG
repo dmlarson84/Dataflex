@@ -1,0 +1,777 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Strace1.Pkg
+// Version: 1.0
+//  04-27-1993 : Created
+//
+// Author: John J. Tuohy
+//
+// 05-17-1993 : Moved watch to appear before message to be sent.
+// --------------------------------------
+// 3.1 changes
+// 08/29/95 JJT - Output_line 1) Only send if trace_msg if tracer is on
+//                            2) save restore old output channel
+//                            3) had hard coded channel # in there
+// 09/07/95 JJT   Toggle_tracer - move '----' before shutting off tracer 
+//************************************************************************
+
+Use UI
+
+Use Eval       // eval object
+Use Set
+#SYM
+
+//
+Define KEY_EXPRESSION   for KEY_ALT+KEY_E
+Define KEY_TOGGLE_TRACE for KEY_CTRL+KEY_F9 
+Define KEY_TOGGLE_SPEED for KEY_CTRL+KEY_F3 
+Define KEY_TOGGLE_STEP  for KEY_ALT+KEY_F3
+//
+
+Register_Object Watch_Array
+
+enum_list
+    define TRACE_OFF
+    define TRACE_ON
+    define TRACE_SUSPEND
+end_enum_list
+
+//==========================================================================
+// Trace_Support Class - Internal
+//
+//  This class is included to provide a frame for the tracer
+//  it is done as a class so that the tracer_status object
+//  can be a sub object of the main tracer class
+//             
+//--------------------------------------------------------------------------
+
+Class Trace_Support Is a Message
+
+   Procedure Construct_Object Integer Img#
+      Forward Send Construct_Object Img#
+      Set Object_Color To 1 2
+      Set Focus_Mode to NonFocusable
+   End_Procedure
+   
+   Procedure Refresh
+      Local Integer Mem
+      Local String Temp 
+      Local Integer Origx Origy Obj#
+      Get Parent to Obj#
+      Memory Mem
+      Set Value Item 0 To Mem
+      Get Trace_Status of Obj# To Temp
+      Set Value Item 1 To Temp
+      Get Origin of obj# To Origy
+      Move (Low(Origy)) To Origx
+      Move (Hi(Origy)) To Origy
+      Set Value Item 2 To (Origy + 1)
+      Set Value Item 3 To (Origx + 1)
+   End_Procedure
+   
+End_Class
+
+//==========================================================================
+// Expression_Entry Class - Internal
+//
+//  used by trace_analyser to handle expression evals.
+//
+//==========================================================================
+
+Class Expression_Entry is a Form
+
+   Procedure Construct_Object Integer Img#
+      Forward Send Construct_Object Img#
+      Property Integer Bad_Expression Public False
+      Set Object_Color To 1 2
+      On_Key kEnter        Send Calc_Now
+      On_Key kCancel       Send Cancel
+      On_Key KEY_EXPRESSION Send Cancel
+      On_Key Key_Alt+Key_W Send Add_or_Remove_Watch
+      On_Key Key_Alt+Key_R Send Remove_All_Watches
+      Set Scope_State To True
+      Set Block_Mouse_State To True
+      Set Attach_Parent_State to TRUE
+      set popup_state to true
+
+      Item_List
+         On_Item ''
+         On_Item ''
+      End_Item_List
+   End_Procedure  // Construct_Object
+ 
+   // force item to remain on 0  
+   Procedure Item_Change Integer from# Integer to# Returns Integer
+      Procedure_return 0
+   End_procedure  
+
+   // Watch toggle, if watch is new...add it to the watch array
+   //               if watch is old - remove it   
+   Procedure Add_or_Remove_Watch
+      Local Integer ArryObj Item#
+      Local String Temp Var Exp
+      Send Calc_Now
+      Move (Watch_Array(Current_Object)) to ArryObj
+      Move (LowerCase(Value(Current_Object,0))) to Exp
+      If Exp ne '' Begin // skip if blank 
+         Get Value Item 1 to temp
+         Get Find_Element of ArryObj Exp to Item# // does watch exist yet?
+         If Item# eq -1 Begin  // does not exist...add to watch array
+            If Not (Bad_Expression(Current_Object)) Begin // only add if OK
+               Send Add_Element to ArryObj Exp            // add to array.
+               Set Value Item 1 To (temp * "is watched")  // let user know.
+            End
+         End
+         Else Begin                                  // watch exists..remove
+           Send Remove_Element to ArryObj Exp        // remove from array
+           Set Value Item 1 To (temp * "is removed") // let user know.
+         End   
+      End   
+   End_Procedure
+   
+   // remove all watches 
+   //
+   Procedure Remove_All_Watches
+     Send Delete_Data to (Watch_Array(Current_Object))   // remove all
+     Set Value Item 1 to 'All watches have been removed' // let user know
+   End_procedure
+
+   // Perform an eval...place results in Item 1.
+   // set Bad_expression based on eval result
+   Procedure Calc_Now
+      Local String Temp Exp
+      Get Value Item 0 to Exp
+      Get Smart_Eval Exp to Temp
+      Set Bad_Expression to (Eval_Err)
+      Set Value Item 1 to (Exp * "=" * if((Eval_Err),"Bad Expression",Temp))
+   End_Procedure
+
+   Procedure Cancel
+      Local Integer Priorscope Oldfocus
+      Send Stop_UI
+      Get Prior_Scope to Priorscope
+      If Priorscope Ne 0 Begin
+         Set Current_Scope To Priorscope
+      End
+      Else Begin
+         Get Scope_Focus of Desktop to Oldfocus
+         If Oldfocus Ne Current_Object Begin
+            Send Activate To Oldfocus
+         End
+      End
+      Send Deactivate
+   End_Procedure   
+   
+   
+End_Class
+
+//==========================================================================
+// S_Trace Class
+//
+//   Produce a class that produces more useful object trace and 
+//   diagnostic information
+//
+//==========================================================================
+
+Class S_Trace is a Trace
+
+   Procedure Construct_Object Integer Img1# Integer Img2# Integer Img3#
+      Local Integer Siz
+      Local String Str
+      Forward Send Construct_Object
+      Set Right_Margin To 255
+      Set Object_Color To 112 76
+      Set Scroll_Bar_Visible_State To False
+
+      // public properties
+      Property Integer Output_Mode       Public  1   // 0-none,1-pr,2-paranoid
+      Property Integer Trace_Channel     Public  9   // use channel 9
+      Property Integer Queue_Size        Public  100 // allow 100 items
+      
+      Property String  User_Filename     Private "trace.trc"
+      Property Integer Tracing_Mode      Public  TRACE_OFF
+      Property Integer Single_Step_State Public  False
+      Property Integer Speed_State       Public  False
+      Property Integer Trace_Over_State  Public  False
+      Property Integer Wait_Depth        Public  0  
+      Property Integer Current_Depth     Public  0
+      Property Integer In_View           Public  False
+      Property String  Trace_Status      Public  ""
+      Property String  Old_Receiver      Public  ""
+      Property Integer Zoom_State        Public False
+      Property Integer Old_Location      Public 0
+      
+      Property Integer Refresh_Count     Public 20
+
+      // outer frame for the tracer
+      Object Trace_Frame is a Trace_Support Img1#
+        Set Location to -2 -1 Relative
+        Get Size to Siz // size of outer frame - we will size to this
+      End_Object
+      
+      // expression evaluator form
+      Object Express is an Expression_Entry Img2#
+        Set Location to 0 0 Relative
+      End_Object 
+      
+      // help display object
+      Object Trace_Help Is A Message Img3#
+         Set Focus_mode to nonfocusable
+         Set Location To 1 3 Absolute
+         Set Object_Color to 1 1
+      End_Object
+      
+      // Determine size and location based on the Frame size
+      Set Location to (Screenend-Hi(Siz)+2) 2 // bottom of screen
+      Set Size to (hi(Siz)-3) (Low(Siz)-2)  // edit fills the frame
+      
+      Object Watch_Array Is A Set  // Watched variables array. We
+      End_Object                   // use SET for adding and removing
+      
+      Get_Environment 'dftrace_mode' to Str
+      If Str ne '' Set OutPut_mode to Str
+      
+   End_Procedure
+   
+   
+   Procedure Toggle_Zoom
+     Local Integer Siz Loc
+     Set Zoom_State to (Not(Zoom_State(Current_Object)))
+     Get Size of (Trace_Frame(Current_Object)) to Siz
+     If (Zoom_State(Current_Object)) Begin
+        Get Location to Loc
+        Set Old_Location to Loc
+        Set Location to 2 (Low(Loc))
+        Set Size to (ScreenEnd-4) (Low(Siz)-2)
+     End
+     Else Begin
+        Get Old_Location to Loc
+        Set Size to (hi(Siz)-3) (Low(Siz)-2)      // edit fills the frame
+        Set Location to (Hi(Loc)) (Low(Loc)) // bottom of screen
+     End  
+   End_Procedure
+   
+   // Page/UnPage the outer frame based on passed State
+   Procedure Page_Frame Integer State
+     Send Page_Object to (Trace_Frame(Current_Object)) State
+   End_Procedure
+   
+   // refresh the frame values
+   Procedure Refresh
+      If (Refresh_Count(Current_Object)<=0 AND ;
+          Tracing_Mode(Current_Object)=TRACE_ON) ;
+      Begin
+         Set Refresh_Count To 20
+         Send Page_Frame True
+         Send Page_Object True
+      End   
+      Send Refresh to (Trace_Frame(Current_Object))
+   End_Procedure
+   
+   Procedure Move_Window_Up
+      Local Integer Loc Row
+      Get Location of (Trace_Frame(Current_Object)) to Loc
+      Move (Hi(Loc)) to Row
+      If Row gt 0 Begin
+         Get Location to Loc
+         Set Location to (Hi(Loc)-1) (Low(Loc))
+      End   
+   End_Procedure
+
+   Procedure Move_Window_Down
+      Local Integer Loc Row Siz bot Obj#
+      Move (Trace_Frame(Current_Object)) to Obj#
+      Get Location of Obj# to Loc
+      Get Size of Obj# to Siz
+      Move (Hi(Loc)) to Row
+      Move (Hi(siz)) to Bot
+      If (Row+Bot<ScreenEnd) Begin
+         Get Location to Loc
+         Set Location to (Hi(Loc)+1) (Low(Loc))
+      End   
+   End_Procedure
+   
+   // start up the expression evaluator
+   Procedure Activate_Eval
+      Local Integer Rval
+      Ui_Accept (Express(Current_Object)) To rVal
+   End_procedure   
+   
+   Procedure Set User_Filename String New_Filename
+      Local Integer Chnl Mode
+      Get OutPut_Mode to Mode
+      If Mode begin
+        Get Trace_Channel to Chnl
+        Direct_Output Channel Chnl New_Filename
+        If Mode eq 2 Close_Output Channel Chnl
+      End  
+      Set !$.User_Filename To New_Filename
+   End_Procedure
+   
+   Function User_Filename Returns String
+      Local String File
+      Get !$.User_Filename To File
+      Function_Return File
+   End_Function
+  
+   Function Height Returns Integer
+      Function_Return (Hi(Size(Current_Object)))
+   End_Function
+
+   Function Width Returns Integer
+      Function_Return (Low(Size(Current_Object)))
+   End_Function
+
+   Procedure Shrink_Queue
+    Set Dynamic_Update_State To False
+    Send Goto_Line 0
+    Send Delete_Line
+    Send Goto_Line (Line_Count(Current_Object))
+    Set Dynamic_Update_State To True
+   End_Procedure
+
+   //  Change trace_over status: Pass state to turn on or off.
+   //
+   Procedure Trace_Over Integer State 
+      Set Trace_Over_State To State
+      If State Set Wait_Depth To (Current_Depth(Current_Object))
+      Send Determine_Status
+   End_Procedure
+
+   Procedure Page_Down
+      If (Hi(Origin(Current_Object)) < ;
+          Line_Count(Current_Object)-(Height(Current_Object)-1)) ;
+          Forward Send Page_Down
+   End_Procedure
+
+   Procedure Left_Page
+      Send Horizontal_Scroll (-Width(Current_Object)/2)
+   End_Procedure
+
+   Procedure Right_Page
+      Send Horizontal_Scroll (Width(Current_Object)/2)
+   End_Procedure
+   
+   Procedure Left
+      Send Horizontal_Scroll -1
+   End_Procedure
+
+   Procedure Right
+      Send Horizontal_Scroll 1
+   End_Procedure   
+   
+   Procedure Horizontal_Scroll Integer Distance
+      Local Integer Origx NewX Origy RMargin Wdth
+      Move (Origin(Current_Object)) To Origy
+      Move (Low(Origy)) To Origx
+      Move (Hi(Origy)) To Origy
+      Move (Origx + Distance) to NewX
+      If NewX lt 0 Move 0 to NewX
+      Else Begin
+        Get Width to Wdth
+        Get Right_Margin to rMargin
+        If (NewX + Wdth > RMargin) ;
+            Move (RMargin - Wdth + 1) To NewX
+      End      
+      If NewX ne OrigX Set Origin To Origy NewX
+   End_Procedure
+   
+   Procedure Up_Line
+      Send Scroll UpWard_Direction 1
+   End_Procedure
+
+   Procedure Down_Line
+      If (Hi(Origin(Current_Object)) < Line_Count(Current_Object)-1) ;
+         Send Scroll Downward_Direction 1
+   End_Procedure
+
+   Procedure End_Of_Data
+      Local Integer Origx Origy
+      Forward Send End_Of_Data
+      Move (Position(Current_Object)) To Origy
+      Move (Low(Origy)) To Origx
+      Move (Hi(Origy)) To Origy
+      If Origx Gt 1 Increment Origy
+      Send Move_Absolute Origy 0
+   End_Procedure
+
+   //
+   // Procedure Output_Line
+   //     Place the line in temp in both the edit buffer and the 
+   //     trace output file
+   //
+   Procedure Output_Line String Temp
+      Local Integer Count Mode Chnl OldChnl
+
+      If (Tracing_Mode(Current_Object)<>TRACE_ON) Procedure_Return
+
+      Get Output_Mode to Mode
+      If Mode Begin
+         Get_Current_Output_Channel to OldChnl
+         Get Trace_Channel to Chnl
+         If Mode eq 2 Append_Output Channel Chnl (User_Filename(Current_Object))
+         Writeln Channel Chnl Temp
+         If Mode eq 2 Close_Output Channel Chnl
+         Direct_output Channel OldChnl // w/ no param it just changes channels
+      End
+      If (Queue_Size(Current_Object) <Line_Count(Current_Object)) ;
+         Send Shrink_Queue  //Drop A Message From Queue
+
+      Send End_of_Data
+      Set Refresh_Count to (Refresh_Count(Current_Object)-1)
+      Forward Send Trace_Output Temp
+   End_Procedure
+
+   //
+   // Procedure Toggle_Speed_State - toggle speed/pause state on and off
+   //
+   Procedure Toggle_Speed_State
+      If (Tracing_Mode(Current_Object)=TRACE_ON) Begin
+         If Not (Speed_State(Current_Object)) Begin
+            Set Single_Step_State False
+            Set Speed_State To True
+            send trace_msg "**** Tracer Paused **** Press Ctrl+F3 To Unpause"
+         End
+         Else Set Speed_State To False
+         Send Determine_Status
+      End
+   End_Procedure
+
+   //
+   // Procedure Toggle_tracer - Toggle Tracer on and off
+   //
+   // We have three trace modes. On, Off and suspended. When suspended the
+   // tracer is off but it can not be turned on with the Toggle_Tracer message.
+   // This is used when other operations are started in trace mode (object
+   // tree, focus tree, evalulator).
+   //
+   Procedure Toggle_Tracer
+      Local Integer Mode TrFlag
+      Get Tracing_mode to Mode
+      If Mode eq TRACE_SUSPEND Procedure_Return  // is suspended....return
+      If Mode eq TRACE_ON Move TRACE_OFF to Mode // flip trace mode
+      Else Move TRACE_ON to Mode
+      Move (Mode=TRACE_ON) to TrFlag //
+      If TrFlag Begin
+         Set Single_Step_State To TRUE
+         Set Speed_State To False
+      End
+      Else Send Output_Line "----------------------------------------------------"
+      Set Tracing_Mode to Mode
+      Send Page_Frame TrFlag
+      Send Trace_Switch TrFlag False
+      If TrFlag Send Determine_Status
+   End_Procedure
+
+   //
+   // Procedure Toggle_Step - Toggle Single Step Mode
+   //
+   Procedure Toggle_Step
+      If (Tracing_Mode(Current_Object)=TRACE_ON) Begin
+         Set Speed_State To False
+         Set Single_Step_State To (Not(Single_Step_State(Current_Object)))
+         Send Determine_Status
+      End
+   End_Procedure
+   
+   // Figure out what the Trace_Status message string should be and if it
+   // has changed, display the change.
+   //
+   Procedure Determine_Status
+      Local String New_Stat
+      If (Trace_Over_State(Current_Object)) ;
+          Move ("Continue over until" * String(Wait_Depth(Current_Object))) ;
+                to New_Stat
+      Else If (Single_Step_State(Current_Object)) ;
+                Move "Single Step Mode" to New_Stat
+      Else If (Speed_State(Current_Object) ) ;
+                Move "Speed Mode" to New_Stat
+      Else      Move "Run Mode"   to New_Stat
+      If (New_Stat<>Trace_Status(Current_Object)) Begin
+         Set Trace_Status to New_Stat
+         Send refresh
+      End   
+   End_Procedure           
+   
+   // Popup the help image
+   //
+   Procedure Request_Help
+     Local Integer Dummy
+     Send Page_Object to (Trace_Help(Current_Object)) True
+     Inkey dummy
+     Send Page_Object to (Trace_Help(Current_Object)) False
+   End_Procedure
+
+
+   //
+   // Procedure Control_View
+   //
+   // Purpose:    Allow user to manage tracing while operating
+   //             
+   Procedure Control_View
+      Local String Hold
+      local integer Stop_view_mode Process_Char
+      If (In_View(Current_Object)) Procedure_Return // In_View prevents
+      Set In_View to True                           // recursion.
+      // If we are in trace over and we are here, we are done tracing
+      // over. Shut off the trace over status
+      If (Trace_Over_State(Current_Object) ) Send Trace_Over FALSE
+
+      Move 0 To Termchar
+      If (Single_Step_State(Current_Object)) Inkey Hold
+      Else Inkey$ Hold
+      Move TermChar to Process_Char
+      While Process_Char
+         Move 0 to Process_Char
+         
+         If (Termchar = kExit_Application) Begin
+            Send Toggle_Tracer
+            System
+         End
+         Else If (Termchar = KEY_TOGGLE_TRACE)   Send Toggle_Tracer
+         Else If (Termchar = KEY_TOGGLE_SPEED)   Send Toggle_Speed_State
+         Else If (Termchar = KEY_TOGGLE_STEP)    Send Toggle_Step 
+         Else If (Termchar = KFind_Next AND ;
+                  Single_Step_State(Current_Object)) ;
+                                                 Send Trace_Over TRUE
+         Else Begin
+           //
+           Repeat
+              // we will stay in a view mode as long as we are processing
+              // valid commands, or we have a global trace command
+              Get Process_View_Key TermChar to Stop_View_Mode // 1=huh?, 0=Ok
+              If (Zoom_State(Current_Object)) Move 0 to Stop_View_Mode
+              If Not Stop_View_Mode Begin
+                 Set Trace_Status To "View Trace Buffer"
+                 Send Refresh
+                 Inkey Hold
+                 If (Termchar = kExit_Application OR ;
+                     (Zoom_State(Current_Object)=0 AND ;
+                       (Termchar = KFind_Next OR ;
+                        Termchar = kExit_Application OR ;
+                        Termchar = KEY_TOGGLE_STEP OR ;
+                        Termchar = KEY_TOGGLE_TRACE OR ;
+                        Termchar = KEY_TOGGLE_SPEED )))  Move 1 to Process_Char
+              End            
+           Until (Process_Char<>0 OR Stop_View_Mode)
+         End
+         //
+         Send Determine_Status
+         //
+      Loop  // while process_char
+      Set In_View to False
+  End_Procedure
+  
+  //
+  // Process a special view mode key. Return 0 if processed, 1 if unknown
+  //
+  Function Process_View_Key Integer Ch Returns Integer
+    If      (Ch = KEY_ALT+KEY_M)            Send Show_Mem
+    Else If (Ch = KEY_EXPRESSION)           Send Calc_String 
+    Else If (Ch = kScroll_back)             Send Page_Up  
+    Else If (Ch = kScroll_forward)          Send Page_Down
+    Else if (Ch = KEY_CTRL+KEY_LEFT_ARROW)  Send Left_Page
+    Else If (Ch = KEY_CTRL+KEY_RIGHT_ARROW) Send Right_Page
+    Else If (Ch = KEY_CTRL+KEY_UP_ARROW)    Send Move_Window_Up
+    Else If (Ch = KEY_CTRL+KEY_DOWN_ARROW)  Send Move_Window_Down
+    Else If (Ch = kUpArrow)                 Send Up_Line
+    Else If (Ch = kDownArrow)               Send Down_Line
+    Else If (Ch = kLeftArrow)               Send Left
+    Else If (Ch = kRightArrow)              Send Right
+    Else If (Ch = kBegin_of_Line)           Send Beginning_Of_Line
+    Else If (Ch = kEnd_of_line)             Send End_Of_Line
+    Else If (Ch = kBegin_of_Data)           Send Beginning_of_Data
+    Else If (Ch = kEnd_of_Data)             Send End_of_Data
+    Else If (Ch = kHelp)                    Send Request_Help
+    Else If (Ch = kZoom)                    Send Toggle_Zoom
+    Else Function_Return 1 // 1 means we did not find a valid key
+  End_Function  
+
+
+   //
+   // Function Parse_Receiver
+   //     Parse The Receiver Of The Message From The Trace_Line
+   //
+   Function Parse_Receiver String Trace_Line Returns String
+      Local Integer Start_Receiver_Name Receiver_Name_Length
+      Local String  Temp_String Receiver_Of_Message
+      Local Integer Current_Length
+    
+      Length Trace_Line To Current_Length
+    
+      // Get Start Position Of Receiver Name.
+      Pos "--> (<" In Trace_Line To Start_Receiver_Name
+      Move (Start_Receiver_Name + 6) To Start_Receiver_Name
+    
+      // Get End Position Of Receiver Name.
+      Mid Trace_Line To Temp_String ;
+         (Current_Length - Start_Receiver_Name + 1) Start_Receiver_Name
+      Pos ">" In Temp_String To Receiver_Name_Length
+      Decrement Receiver_Name_Length
+             
+      // Get Reciever Name.
+      Move (Mid(Trace_Line,Receiver_Name_Length,Start_Receiver_Name)) ;
+         To Receiver_Of_Message
+                                                         
+      Function_Return Receiver_Of_Message                                                     
+   End_Function
+  
+   //
+   // Function Parse_Level
+   //     Parse The Level Of The Message From The Trace_Line
+   //
+   Function Parse_Level  String Trace_Line
+      Function_Return (Mid(Trace_Line,2,2)) 
+   End_Function
+  
+   //
+   // Function Parse_Line_Number
+   //    Parse The Line Number Of The Message From The Trace_Line
+   //
+   Function Parse_Line_Number  String Trace_Line
+      Function_Return (Mid(Trace_Line,5,7)) 
+   End_Function
+  
+   //
+   // Function Parse_Message
+   //   Parse The Message Of The Trace_Line
+   //
+   Function Parse_Message String Trace_Line Returns String
+      Local Integer Start_Of_Message Length_Of_Message
+      // Get Start Of Message.
+      Move (Pos(">",Trace_Line) + 2) To Start_Of_Message
+      // Get Length Of Message.
+      Move (Pos(") -->",Trace_Line) - Start_Of_Message) To Length_Of_Message
+      // Get Message.
+      Function_Return (Mid(Trace_Line,Length_Of_Message,Start_Of_Message)) 
+   End_Function
+  
+   //
+   // Procedure Process_Trace_Line
+   //     Analyze and output the trace message line
+   //
+   Procedure Process_Trace_Line String Trace_Line
+
+      Local String Receiver Line_Number Level Message OutStr
+
+      Get Parse_Receiver     Trace_Line To  Receiver     
+      Get Parse_Line_Number  Trace_Line To  Line_Number  
+      Get Parse_Level        Trace_Line To  Level        
+      Get Parse_Message      Trace_Line To  Message      
+   
+      Trim Receiver to Receiver
+      If (Receiver<>Old_Receiver(Current_Object)) Begin
+         Set Old_Receiver To Receiver
+         Send Output_Line " "
+         Move "" To Outstr
+         Append Outstr "[" Receiver "]"
+         Send Output_Line Outstr
+      End  
+      Move "" To Outstr
+      Append Outstr "#" (Pad(Line_Number,6)) ":"
+      Append Outstr "("  (Pad(Level,2)) ")"
+      Append Outstr (Pad("",1 * Level))
+      Append Outstr Message
+      Send Output_Line Outstr
+   End_Procedure
+  
+   //
+   // Procedure Trace_Msg
+   //    Procedure allows the program to inesrt text into the trace file 
+   //    allowing diagnostic information during object use
+   //
+   // Format: send trace_msg to (tracer(Current_Object)) String
+   Procedure Trace_Msg String Message_Text
+           Send Output_Line (Append("Trace Msg: ",Message_Text))
+   End_Procedure
+
+   //
+   // Procedure Show Mem - Insert current memory into trace file
+   //
+   Procedure Show_Mem
+      Local Integer Mem
+      Memory Mem
+      Send Trace_Msg (Append("Current Memory ",Mem))
+   End_Procedure
+
+   //
+   // Procedure Watch Variables
+   //
+   //   This procedure uses an array watch_array to provide the
+   //   user with the ability to watch varables from his program
+   //             
+   Procedure Watch_Variables
+      Local Integer Count Icount WObj#
+      Local String Temp
+      Move (Watch_Array(Current_Object)) to WObj#
+      Get Item_Count of WObj# To Icount
+      Decrement ICount
+      For Count from 0 to ICount
+         Get String_Value of WObj# Item Count To Temp
+         Send Output_Line ("Watch:("+String(Count)+") "+Temp+" = "+Smart_Eval(Temp))
+      Loop
+   End_Procedure
+
+   //
+   // Procedure Trace Output
+   //    Agument the basic trace class output to the screen by calling
+   //    our procedure process_trace_line
+   //
+   Procedure Trace_Output String Trace_Line
+      Local Integer Depth 
+      Local Integer Fnd tErr
+      
+      Move (Found) To Fnd // found mustn't get clobbered
+      Move (Err) To tErr // found mustn't get clobbered
+      If (Pos('Command',Trace_Line)=0) Mid Trace_Line To Depth 2 2 //Get Depth
+      Else Get Current_Depth To Depth
+      
+      // if the object ID has tracer in it skip...
+      If (Pos(Name(Current_Object),Trace_Line)=0) Begin
+         If ( Trace_Over_State(Current_Object)=0 OR ;
+              Depth <= Wait_Depth(Current_Object) ) Begin
+            // tracer's messages are trapped to allow for the 
+            // trace message to run more cleanly
+            If (Speed_State(Current_Object)=0 And ;
+                Pos('ERROR_INFO',Trace_Line)=0 And ;
+                Pos('GET_CHILD',Trace_Line)=0 ) Begin
+                Set Current_Depth to Depth
+                Indicate Found as Fnd
+                Indicate Err as tErr
+                Send Watch_Variables
+                If (Pos('Command',Trace_Line)=0) Send Process_Trace_Line Trace_Line
+                Else Send Output_Line Trace_Line
+                Error_Report
+              End
+            Send Control_View
+         End
+         Send Refresh
+      End   
+      Indicate Found as Fnd
+      Indicate Err as tErr
+   End_Procedure
+   
+   //
+   // Procedure Calc_String - invoke the Expression Evaluator
+   //
+   Procedure Calc_String
+      If (Tracing_Mode(Current_Object)=TRACE_ON) Begin     // if tracing,
+         Set Tracing_Mode to TRACE_SUSPEND                 // shut it off
+         Send Trace_Switch False False
+         Send Activate_Eval
+         //Send Trace_Msg To Atracer Last_Expression
+         Send Trace_Switch True False
+         Set Tracing_Mode to TRACE_ON
+      end
+      Else Send Activate_Eval
+   End_Procedure
+   
+End_Class

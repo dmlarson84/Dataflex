@@ -1,0 +1,362 @@
+//
+// SysButn.Pkg
+// January 23, 1991
+// Theo van Dongeren
+//
+// Package for system menu button
+//
+// Includes rubberband-moving of parent with right-hand mouse button
+//
+// Assumption:
+//
+// - Instance of system_button is owned by an object that has its own
+//   physical (not shared...) image.
+//
+// Example:
+//
+// /a_client
+// ÚÄ[_]ÄÄÄÄÄÄÄÄÄ¿
+// ³             ³
+// ³ blabla      ³
+// ³   blabla    ³
+// ³             ³
+// ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+// /a_menu
+// ÚÄÄÄÄÄÄÄÄ¿
+// ³ ______ ³
+// ³ ______ ³
+// ÀÄÄÄÄÄÄÄÄÙ
+// /*
+//
+// object a_client is a client
+//   :
+//   sub_page sysbutton from a_client 1
+//
+//   object sysbutton is a system_button
+//     item_list
+//       on_item 'ð' send yo
+//     end_item_list
+//   end_object
+//
+//   on_key key_alt+key_f10 send activate to (sysbutton(current_object))
+//
+//   object a_menu is a menu
+//     set popup_state to true
+//     set location to 1 0 relative
+//
+//     on_key kcancel send deactivate private
+//
+//     item_list
+//       :
+//     end_item_list
+//   end_object
+//   :
+//   procedure yo
+//     send popup to (a_menu(current_object))
+//   end_procedure
+//   :
+// end_object
+//
+// Notes:
+//
+// - YOU must provide the item list for the system button (see example above).
+// - System buttons are pointer_only by default.
+// - Sending ACTIVATE to a system button will cause the item message of item 
+//   zero to be sent (in above example; sending ACTIVATE to sysbutton
+//   will cause YO to be sent; which pops up the system menu.
+//
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+// help class to draw draggable borders
+class border is a vconsole
+  procedure construct_object integer image
+    forward send construct_object image
+
+    property string borderchars public '...'
+  end_procedure
+
+  // this initializes the virtual console's size and contents
+  procedure initialize integer rows integer cols
+    local integer index maxindex
+    local string chars
+
+    // set the size
+    set size to rows cols
+
+    // clear it
+    send delete_data
+
+    // find greatest dimension
+    move (rows max cols) to maxindex
+
+    // get chars to use for drawing
+    get borderchars to chars
+
+    // turn it on (redirect output to it)
+    send virtual_console
+
+    // fill it
+    show (left(chars,1))
+    for index from 2 to (maxindex - 1)
+      show (mid(chars,1,2))
+    loop
+    show (right(chars,1))
+
+    // turn it off (redirect output back to the desktop)
+    send virtual_console to desktop
+  end_procedure
+
+  // this msg sent by desktop; informs parent that mouse has moved
+  procedure mouse_drag2 integer win# integer col#
+    forward send mouse_drag2 win# col#
+
+    // tell parent that the mouse has moved
+    send drag_me
+  end_procedure
+
+  // this msg sent by parent; sets new location of virtual console
+  procedure relocate integer rel_row integer rel_col
+    local integer complex
+    local integer old_row old_col
+
+    // get the current location
+    get location to complex
+    move (hi(complex)) to old_row
+    move (low(complex)) to old_col
+
+    // set a new location
+    set location to (old_row + rel_row) (old_col + rel_col)
+  end_procedure
+
+  // this msg sent by desktop; tells parent to stop dragging
+  procedure mouse_up2 integer win# integer col#
+    forward send mouse_up2 win# col#
+
+    // tell parent to stop dragging and drop its parent here
+    send drop_me
+  end_procedure
+end_class
+
+// this is the draggable border
+class rubberband is a client
+  procedure construct_object integer image
+    local integer complex
+    local integer x1 y1 x2 y2
+
+    forward send construct_object no_image
+
+    property integer old_mouse_row public
+    property integer old_mouse_col public
+    property integer max_obj_row public
+    property integer max_obj_col public
+
+    set popup_state to true
+
+    // create top border segment
+    object tb is a border
+      set borderchars to 'ÚÄ¿' // change this to your liking
+    //                    ^^^
+    //                    ³³ÀÄ> this one used for last char only
+    //                    ³ÀÄÄ> this one used for all intermediate chars
+    //                    ÀÄÄÄ> this one used for first char only
+    end_object
+
+    // create left border segment
+    object lb is a border 
+      set borderchars to 'Ú³À' // change this to your liking
+    end_object
+
+    // create bottom border segment
+    object bb is a border 
+      set borderchars to 'ÀÄÙ' // change this to your liking
+    end_object
+
+    // create right border segment
+    object rb is a border 
+      set borderchars to '¿³Ù' // change this to your liking
+    end_object
+
+    // get size of outermost object
+    delegate get hsize to x1
+    delegate get vsize to y1
+
+    // setup border segments
+    send initialize to (tb(current_object)) 1 y1
+    send initialize to (lb(current_object)) x1 1
+    send initialize to (rb(current_object)) x1 1
+    send initialize to (bb(current_object)) 1 y1
+
+    // get size of desktop (ie. size of screen)
+    get size of desktop to complex
+    move (hi(complex)) to x2
+    move (low(complex)) to y2
+
+    // calculate max row and column to prevent dragging past end of screen
+    set max_obj_row to (x2 - x1 - 1) // leave last row free for error msgs
+    set max_obj_col to (y2 - y1)
+  end_procedure
+
+  // this activates the whole spiel
+  procedure popup
+    local integer x1 y1 x2 y2
+    local integer complex
+
+    // get size of outermost object
+    delegate get hsize to x1
+    delegate get vsize to y1
+
+    // get location of outermost object
+    get location of (parent(parent(current_object))) to complex
+    move (hi(complex)) to x2
+    move (low(complex)) to y2
+
+    // set locations of all border segments
+    set location of (tb(current_object)) to x2 y2
+    set location of (lb(current_object)) to x2 y2
+    set location of (rb(current_object)) to x2 (y2 + y1 - 1)
+    set location of (bb(current_object)) to (x2 + x1 - 1) y2
+
+    // find out where the mouse is
+    get absolute_mouse_location to complex
+
+    // keep handy
+    set old_mouse_row to (hi(complex))
+    set old_mouse_col to (low(complex))
+
+    // displays all borders; gives focus to first child (top border)
+    forward send popup
+  end_procedure
+
+  // this drags all borders 
+  procedure drag_me
+    local integer complex
+    local integer old_row old_col
+    local integer new_row new_col
+    local integer inc_row inc_col
+    local integer obj_row obj_col
+    local integer max_row max_col
+
+    // get location of top border (happens to be location of outermost
+    // object too!  Magic...)
+    get location of (tb(current_object)) to complex
+    move (hi(complex)) to obj_row
+    move (low(complex)) to obj_col
+
+    // get move limits
+    get max_obj_row to max_row
+    get max_obj_col to max_col
+
+    // where was the mouse before it was moved?
+    get old_mouse_row to old_row
+    get old_mouse_col to old_col
+
+    // where is the mouse now?
+    get absolute_mouse_location to complex
+    move (hi(complex)) to new_row
+    move (low(complex)) to new_col
+
+    // calculate relative moves
+    move (new_row - old_row) to inc_row
+    move (new_col - old_col) to inc_col
+
+    // don't go outside of desktop...
+    if (obj_row + inc_row) lt 0 ;
+      move (0 - obj_row) to inc_row       // clamp to top edge
+
+    if (obj_row + inc_row) gt max_row ;
+      move (max_row - obj_row) to inc_row // clamp to bottom edge
+
+    if (obj_col + inc_col) lt 0 ;
+      move (0 - obj_col) to inc_col       // clamp to left edge
+
+    if (obj_col + inc_col) gt max_col ;
+      move (max_col - obj_col) to inc_col // clamp to right edge
+
+    // calculate new position
+    move (old_row + inc_row) to new_row
+    move (old_col + inc_col) to new_col
+
+    // adjust mouse location if needed (ie. when clamped) & turn on mouse
+    set absolute_mouse_location to new_row new_col true
+
+    // move all borders if possible
+    if (inc_row or inc_col) broadcast send relocate inc_row inc_col
+
+    // remember current mouse location
+    set old_mouse_row to new_row
+    set old_mouse_col to new_col
+  end_procedure
+
+  // this moves the outermost object to the final spot
+  procedure drop_me
+    local integer complex row col prow pcol
+
+    // find out where the top border is at
+    get location of (tb(current_object)) to complex
+    move (hi(complex)) to row
+    move (low(complex)) to col
+
+    // remove draggable borders from the screen
+    send deactivate
+
+    // get location of outermost object's parent
+    get location of (parent(parent(parent(current_object)))) to complex
+    move (hi(complex)) to prow
+    move (low(complex)) to pcol
+
+    // move outermost object to current spot, relative to its parent
+    set location of (parent(parent(current_object))) ;
+      to (row - prow) (col - pcol) relative
+  end_procedure
+end_class
+
+// this is the button for the system menu
+class system_button is a button
+  procedure construct_object integer image
+    local integer complex
+
+    forward send construct_object image
+
+    set focus_mode to pointer_only
+
+    get size of (parent(current_object)) to complex
+
+    property integer hsize public (hi(complex))
+    property integer vsize public (low(complex))
+
+    // include a draggable border
+    object rubberband is a rubberband no_image
+    end_object
+  end_procedure
+
+  // sent by desktop; start dragging
+  procedure mouse_down2 integer win# integer pos#
+    forward send mouse_down2 win# pos#
+    send popup to (rubberband(current_object))
+  end_procedure
+
+  // According to CUA: if you double-click on the system menu icon, then
+  // its parent should disappear (augment if necessary).
+  procedure mouse_click
+    send deactivate to (parent(current_object))
+  end_procedure
+
+  // sent by parent; sends item message of item 0 in turn
+  procedure activate returns integer
+    local integer msg retval
+
+    get message item 0 to msg
+    forward get msg to retval
+    procedure_return retval
+  end_procedure
+
+  procedure mouse_down integer win# integer pos#
+    forward send mouse_down win# pos#
+    send mouse_up win# pos#
+  end_procedure
+end_class
+
+

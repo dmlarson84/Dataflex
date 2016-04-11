@@ -1,0 +1,9 @@
+use ui
+
+define ACTION_BAR_COLOR_PALETTE for 3
+
+class status_bar is a title
+    set class_colors u_status_bar to ;
+            (low(class_colors(desktop,u_action_bar))) ;
+            (low(class_colors(desktop,u_action_bar)))
+end_class

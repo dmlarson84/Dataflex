@@ -1,0 +1,994 @@
+//************************************************************************
+//     File Name: table.Pkg
+// Creation Date: Mon  02-17-1992
+//     Author(s): John J. Tuohy
+//
+// Class: Table <--- Data_List <---Wide_List
+//
+// Table class
+//
+// Thu  02-06-1992 For now we are not supporting deferred states with tables
+// Thu  07-02-1992 Changed add row and clear row behavior F5 S+F10
+// Thu  01-14-1993 reset new-item after delete of row (search for date)
+// 1/30/93  - Rewritten and brought up to date for DAF style
+// 01/12/94 - Added No_Create_State (for old table compatability)
+// 03/18/94 - Modifed Add row and clear to return to column zero after
+//            a blank row is created.
+// 07/21/94 - Added Save_row procedure to maintain interface compatability
+//            with the old DAC tables.
+// 10/04/94 -JJT Row_Changing is changed to make add mode items insert new
+//               rows instead of overwriting
+// 11/07/94 -JJT Row_Changing altered to refind the current_record when
+//               a find above or below the end of list fails and a blank
+//               row is not allowed.
+//************************************************************************/
+
+//************************************************************************
+// Version: 1.0
+//  02-23-1993 : Created
+//
+// Author: John J. Tuohy
+//
+// 1. Adds Stop_UI_State Support
+// 2. Adds Should_Save Property (LS - deleted)
+// 3. Modifies Changed_State to check Should_save (fixes DAC bug) (LS - deleted)
+// 4. Adds Child_Table_State Property. If TRUE then Child_Entering and
+//    Child_exiting called during object entry and exit.
+// 5. Adds Child_Entering Function (null). Intended for augmentation
+// 6. Add Child_Exiting Function. Attempts to save table line before
+//    exiting the object.
+// 7. Modifies request_clear behavior to be more intuitive (02-23-1993)
+//             F5 = request_Clear     = Undo any changes
+//      Shift+F10 = add_or_remove_Row = add new row, remove current row
+// 8. Adds auto-prompt
+// 9. Adds Validate_all_items_state
+//10. Adds dependent_item support
+//11. Add checkbox item support to class
+//12. Adds movable support (ver 1.1)
+//13. Added Validate_mode (mixin). Table default to Validate_on_save_Next
+//14. Added entry_defaults (and better retains) through mixin
+//
+// 10-07-1993  Add include file with new exit_function procedure. DAC bug
+// 03/11/94    Item 10 and 11 for 1.1
+// 03/17/94    Item 12 v.1.1
+// 03/22/94    (LS) send add_row during end_construct_object to prevent
+//             invalid item number error with dependent_items.
+// 04/08/94    (LS) v1.1 Added DEO delegation.
+// 05/02/94    Added Validate_Mode to handle validation (and their errors)
+//             in a more friendly fashion. Done with mixin class.
+// 07/18/94    Add Clear_mx mixin for better setting of default values
+//************************************************************************/
+//************************************************************************/
+// 12/22/94 JJT Merge Changes
+//              Merged the 0 class into entry_form.
+//              Added DEO delegate logic to request_???? messages.
+//              Set Deo_delegate_mode to default to DELEGATE_NEVER
+//
+// 03/06/95 -JJT 1) Altered Clear, Add_or_remove_row, clear_a_Row and
+//               request_delete to go to first enterable item (set Item)
+//               and not column 0. Needed when col1 is displayonly.
+//               2) Altered Add_or_revmoe_row and Clear_a_row to not remove
+//               a new unchanged row when it is the only row.
+//               3) Altered Remove_row so that when the last row is removed
+//               that the item will attempt to remain in the same
+//               column if the prior row.
+// 05/16/95 jjt  Added refresh to set unsorted_state true after a save.
+//
+// 05/22/95 JJT Added object_validation to focus support in request_clear_all
+//              (also see deodlgmx.pkg). Note not added to request_clear
+//              since this is handled differently in table.
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+//************************************************************************/
+
+
+
+use ui
+use Datalist       // Super class Data_list
+use Verify         // Verify Mixin
+Use FindEdit       // Find Edit mixin
+Use Dep_item       // v1.1 Auto-dependent-item support
+Use CkBox_Mx       // v1.1 checkbox mixin support
+Use DEODlgMx       // v1.1 DEO delegation support
+Use Val_MX         // v1.1 test validate options
+Use Clear_mx       // v1.1 new defaults upon clear
+
+Register_Function Row_Changed Returns Integer
+
+class Table is a Data_List
+//  New Properties:
+//
+//     Allow_Top_Add_State Dflt:False If true then you may cursor up
+//                                    to the top of the list and an empty
+//                                    space will open up
+//
+//     Allow_Bottom_Add_State Dflt: TRUE If true then you may cursor down
+//                                    to the end of the list and an empty
+//                                    space will open up
+//
+//     Allow_Insert_Add_State    Dflt: TRUE If true then you may insert a new
+//                                    row at the current position.
+//
+//     No_Create_State Dflt: False    If True you can not add any new row (it
+//                                    overrides the above three states).
+
+//     No_Delete_State Dflt: False    If True deletes are disabled in table
+//
+//     Read_Only_State Dflt: False    If true no edits, adds, or deletes
+//                                    are allowed.
+//
+//     Auto_Refresh_State  Dflt:True  If true the the table updates itself
+//                                    after a save with the exception of
+//                                    being in add mode.. It will rebuild
+//                                    after you exit add mode. If False it
+//                                    will not rebuild until screen is
+//                                    refreshed
+//
+//     Needs_Refresh_State Dflt:False Maintained by system. If true than
+//                                    a save might have changed the table
+//                                    order.
+//
+  procedure construct_object integer img
+    forward send construct_object img
+    on_key kADD_MODE send add_or_remove_row    PRIVATE  // same as F5
+    Property integer Wrapping_State            PUBLIC 0
+    Property Integer Allow_Bottom_add_State    public TRUE
+    Property Integer Allow_top_add_State       public FALSE
+    Property Integer Allow_Insert_Add_State    public TRUE
+    Property Integer No_Create_State           Public FALSE
+    Property Integer No_Delete_State           public FALSE
+    Property Integer Auto_Regenerate_State     public TRUE
+    Property Integer Unsorted_State            public FALSE
+    Property Integer Child_Table_State         Public FALSE
+    send define_Verify    //invoke verify support constructor
+    send define_find_edit //invoke find/edit support constructor
+    Send Define_Validate
+    Send Define_Clear_Defaults
+    Send Define_CheckBox_Support
+    Send Define_DEO_Delegate // v1.1
+
+    set Auto_Save_State to TRUE  //tables change default for wrap-around save
+
+    // In Tables navigation item validation will only occur on NEXT events
+    // (tab or enter). Without this, you get all kinds of unwanted item
+    // validation errors when you navigate - this makes tables much happier
+    //
+    Set Validate_Mode to VALIDATE_ON_SAVE_NEXT
+
+    // It probably makes most sense to make table NOT delegate any
+    // of their request_ messages. Tables have a very different behavior
+    // then item based DEOs. Delegating to a client (most likely case)
+    // will not do us any good. In rare cases a table might want to
+    // delegate to another table (with the same server) and in this
+    // case you can change this property.
+    //
+    Set Deo_delegate_mode to DELEGATE_NEVER
+
+  end_procedure
+
+  IMPORT_CLASS_PROTOCOL VERIFY_Mixin //include Verification support module
+  IMPORT_CLASS_PROTOCOL FIND_EDIT_Mixin //include finding/editing support module
+  IMPORT_CLASS_PROTOCOL Validate_Mixin // ver 1.1
+          // Note: This augments: Next and Validate_Items
+  IMPORT_CLASS_PROTOCOL DEO_Delegate_Mixin // ver 1.1
+  IMPORT_CLASS_PROTOCOL DEO_Dependent_item_mixin //v1.1
+  IMPORT_CLASS_PROTOCOL Clear_Defaults_Mixin // ver 1.1
+
+  IMPORT_CLASS_PROTOCOL Entry_CheckBox_Mixin // v1.1
+  //
+  // Create the cbox object. This only gets created if required.
+  // We create this in the class and not the mixin because you seem to
+  // get odd results if objects are created in mixin procedures
+  //
+  Function Create_Cbox_Object returns Integer // returns ID of object
+    Local Integer Obj
+    Object CBox is a CBox_array   // keep track of list of
+       Move Current_Object to Obj // items which are check_box items
+    End_Object
+    Function_return Obj
+  End_Function
+
+
+  //
+  // clear inserts a new line and goes to that line
+  // 03/06/95 JJT - adjust so a clear returns to the first enterable
+  //                item and not the first column.
+  procedure clear
+    local integer oldDynUpdt base oldChg
+    if (Line_Display_State(current_object)) send entry_clear 1
+    else if (Current_Record(current_object) <> 0) begin
+      get Dynamic_Update_State to oldDynUpdt
+      set Dynamic_Update_State to false
+      get base_item to base  //send insert blank row changed base_item...
+      send insert_blank_row (current_row(current_object))
+      get Changing_State to oldChg
+      set Changing_State to true
+      //set current_item to base  // doesn't work if 1st is displayonly
+      set item true // Go to first enterable column!
+      Send Trim_Page
+      Send entry_display 0 0 // redisplay active (parent) file
+      set Changing_State to oldChg
+      set Dynamic_Update_State to oldDynUpdt
+      get exec_entry item (current_item(current_object)) to oldchg
+    end
+  end_procedure
+
+  // public
+  procedure Request_Clear
+    Local Integer rval
+    If (Should_delegate_Clear(Current_Object)) ;
+       Delegate send request_clear
+    Else ;
+       Get Clear_a_row to rval
+  end_procedure
+
+  // internal
+  function validate_range integer from# integer to# returns integer
+    local integer count retval oldcuritem
+    move 0 to retval
+    get current_item to oldcuritem
+    for count from from# to to#
+      set new_item to count
+      move (exec_Validate(Current_Object,count)) to retval
+    until retval ne 0
+    set new_item to oldcuritem
+    if retval ne 0 function_return count  //return item# that failed
+    else function_return -1               //-1 means all ok
+  end_function
+
+  // Internal
+  //  Function: Allow_row_Change - Rets 0 if ok to change
+  //
+  //  We want to change row...See if it is allowed. it is allowed if:
+  //  1. There is no change - no problem
+  //  2. If changes and auto_save - attempt to make the save
+  //  3. If changes and not auto_save - verify_data Loss
+  //
+  Function Allow_Row_Change Returns Integer
+    Local Integer RetVal
+    If (Read_Only_State(Current_Object)) function_Return // Read only...who cares
+
+    if Not (Row_Changed(Current_Object)) Function_Return // nothing changed..aok
+
+    If (Auto_Save_State(Current_Object)) ;  // autosave...attempt to save
+       Get Row_save to RetVal
+    Else Begin
+       Get Verify_Data_Loss to RetVal // not autosave..verify loss
+       If RetVal eq 0 send Find_Record (Current_Record(Current_Object))
+    End
+    Function_Return RetVal
+  End_Function
+
+ // internal:
+ // Remove row. Add another line in the table to replace the missing
+ //             row. Make sure the current record remains active
+ //
+ // 03/06/95 JJT - make sure we stay in the same column when we remove
+ //                the last row in a table
+  Procedure Remove_Row Integer CurRow
+    Local Integer Rec# rowCount CurItem notAtEnd
+    Get Current_item to CurItem // remember where we started..
+    send delete_row curRow      // dump the row
+    //
+    // if no rows or the last row has a valid record than add a blank row.
+    // if their already is a blank row we leave it alone
+    get Row_Count to RowCount
+    Move (RowCount=0 OR record_number(current_object,rowCount-1)>0) to NotAtEnd
+    if (notatend) begin
+       send add_row
+       increment rowCount
+    end
+    get fill_next_row (rowCount-1) to rec# // lets add to the table end
+    // if no record remove that row we added
+    If (Rec#<=0 and notatend) send Delete_Row (rowCount-1)
+    //
+    // If we removed the last row - move curItem up 1 row.
+    If (CurItem >= Item_Count(Current_Object)) ;
+       Move (CurItem - Item_limit(Current_Object)) to CurItem
+    Set New_Item to CurItem // reset back to old item
+    set Row_base_item to (Current_row(Current_Object))
+    Get Current_record to Rec# // we will refind the current record
+    If rec# gt 0 send Find_record (Current_Record(Current_Object))
+  End_Procedure
+
+  // internal
+  // Add_or_Remove_row: This is the table clearing handler. If:
+  //   A. New row / Unchanged:  Delete empty row if this is not the
+  //                            only row.
+  //   B. old row / unchanged:  If Allow_Insert_Add_State and not
+  //                            no_create_state, insert new row and enter.
+  //   C. New row / changed:    Verify_loss and create emtpy row. Goto 1st
+  //                            enterable column.
+  //   D. old row / changed:    Verify_loss and insert row.
+  //                                                (was: restore to what was)
+  //
+  //
+  // 03/06/95 JJT Altered logic. Case A: If row is new and unchanged
+  //              and there is only 1 row do nothing.
+  //              Case C: Goto first enterable column (not col 0)
+  procedure add_or_Remove_row
+    local integer dynUpdt rec# Changed CurRec#
+    If (read_only_State(Current_Object) or no_create_state(Current_Object)) Procedure_return
+    Get Row_Changed to Changed
+    Get Current_Record to CurRec#
+    Get dynamic_update_State to dynUpdt
+    Set dynamic_update_State to false
+    If Changed eq 0 begin
+       If CurRec# eq 0 Begin      // A. new row-unchanged
+          // If we only have 1 blank, unchanged row, do not
+          // remove it (it already is blank).
+          If (row_Count(Current_Object)>1) Begin
+              send Remove_Row (Current_Row(Current_Object))
+              if (Unsorted_State(Current_Object)) send Display
+          end
+       end
+       Else ;                    // B. old row-unchanged
+          if (Allow_Insert_Add_State(Current_Object)) send Clear
+    End
+    Else Begin // changed...first do verify data loss
+       If (Verify_Data_Loss(current_object)=0) Begin
+          If CurRec# eq 0 Begin  // C. new row-changed
+             Send Clear_Row (Current_Row(Current_Object))
+             //Set Current_Item to (Base_Item(Current_Object))
+             Set Item to TRUE // move to first enterable column!
+          End
+          Else begin            // D. old row-changed
+             send Find_Record CurRec# // restore current record
+             //added 12/30/93 08:45 am
+             if (Allow_Insert_Add_State(Current_Object)) send Clear // and add new
+          End
+       End
+    End
+    set dynamic_update_State to dynUpdt
+  end_procedure
+
+  // internal
+  // Clear_a_row: This is the table clearing handler. If:
+  //   A. New row / Unchanged:  Delete empty row (should it be ignore?)_
+  //                            Only do this, if this is not the only row.
+  //   B. old row / unchanged:  ignore
+  //   C. New row / changed:    verify_loss and create emtpy row, goto 1st
+  //                            enterable column
+  //   D. old row / changed:    verify_loss and restore to what was
+  //
+  //
+  // 03/06/95 JJT Altered logic. Case A: If row is new and unchanged
+  //              and there is  only 1 row do nothing.
+  //              Case C: Goto first enterable column (not col 0)
+  Function Clear_a_row Returns integer
+    local integer dynUpdt rec# Changed CurRec# rVal
+    If (read_only_State(Current_Object)) Procedure_return
+    Get Row_Changed to Changed
+    Get Current_Record to CurRec#
+    Get dynamic_update_State to dynUpdt
+    Set dynamic_update_State to false
+    If Changed eq 0 begin
+       If CurRec# eq 0 Begin      // A. new row-unchanged
+          // If we only have 1 blank, unchanged row, do not
+          // remove it (it already is blank).
+          if (row_Count(Current_Object)>1) Begin
+             send Remove_Row (Current_Row(Current_Object))
+             if (Unsorted_State(Current_Object)) send Display
+          end
+       end
+       //Else ;                    // B. old row-unchanged
+       //   if (Allow_Insert_Add_State(Current_Object)) send Clear
+    End
+    Else Begin // changed...first do verify data loss
+       Get Verify_Data_Loss to Rval
+       If Rval eq 0 begin
+       //If (Verify_Data_Loss(current_object)=0) Begin
+          If CurRec# eq 0 begin       // C. new row-changed
+             //send Remove_Row (Current_Row(Current_Object))
+             //if (Unsorted_State(Current_Object)) send Display
+             Send Clear_Row (Current_Row(Current_Object))
+             //Set Current_Item to (Base_Item(Current_Object)) // not always!
+             set item to TRUE  // go to first enterable column
+          end
+          Else ;                // D. old row-changed
+             send Find_Record CurRec#
+       End
+    End
+    If (Row_count(Current_Object)=0) Send Append_Blank_row
+    set dynamic_update_State to dynUpdt
+    Procedure_Return rVal
+  end_procedure
+
+  //  public message: Add_new_row
+  //
+  //  Pass: loc as:  -1=top, 0=current row, 1=bottom
+  //
+  //
+  procedure add_new_row Integer loc
+    If (read_only_State(Current_Object)) Procedure_return
+    if loc eq 0 Begin // if insert row at current position
+       // if a new rec with no changes we already have a cleared row..
+       // so we skip this step. If not add_or_remove_row will do it.
+       if not (Current_Record(Current_Object)=0 AND ;
+               row_changed(Current_Object)=0) send Add_or_Remove_Row
+    End
+    Else ;
+    If (Allow_Row_Change(Current_Object)=0) begin // check is change is legal
+       If loc eq -1 begin // add to top
+          forward send Beginning_of_Data
+          send up_row
+       end
+       else begin    // add to bottom
+          forward send end_of_Data
+          send down_row
+       end
+    end
+  end_procedure
+
+  // Internal
+  // procedure Child_Wrapping integer direction
+  //   local integer base targetItem
+  //   send activate
+  //   get base_item to base
+  //   if direction ne 0 begin
+  //     calc (base + item_limit(current_object)) to targetItem
+  //     if targetItem ge (item_count(current_object)) send add_row
+  //   end
+  //   else begin
+  //     calc (base - 1) to targetItem
+  //     if targetItem lt 0 move 0 to targetItem
+  //   end
+  //   set current_item to targetItem
+  //   procedure_return 1
+  // end_procedure
+
+  procedure Child_Wrapping integer direction integer xorigID
+    local integer targetItem origID
+
+    if NUM_ARGUMENTS gt 1 move xorigID to origID
+    else get focus of desktop to origID
+    if origID eq 0 move current_object to origID
+
+    send activate
+
+    if direction ne 0 begin     //wrapping forward
+      calc (base_item(current_object) + item_limit(current_object)) ;
+          to targetItem
+      if targetItem GE (item_count(current_object)) send add_row
+
+      //
+      // save only when wrapping forward
+      //
+      if (auto_Save_State(origID)) send request_Save to origID
+      else if (auto_save_state(current_object)) send request_save
+
+      set Wrapping_State to true
+      set current_item to targetItem
+    end
+    else set Wrapping_State to true
+
+    set item direction      //sets current_item to first/last enterable item
+
+    set Wrapping_State to false
+    procedure_return 1
+  end_procedure
+
+  // public
+  // Sun  07-05-1992 Added send Append_Blank_Row to leave an blank line
+  // 03/06/95 - Move to first enterable item if a blank-row is added.
+  procedure Request_Delete
+    local integer obj# dynUpdt
+    If (Should_delegate_delete(Current_Object)) ;
+       Delegate Send Request_Delete
+    else Begin
+       if (read_only_State(Current_Object)=0 and No_Delete_State(Current_Object)=0) Begin
+          Get Server to Obj#
+          if (can_Delete(Obj#) AND Verify_Delete(current_object)=0) Begin
+             set changed_state to false
+             Send Row_Delete
+             [not err] Begin
+               get dynamic_update_State to dynUpdt
+               set dynamic_update_State to false
+               Send Remove_Row (Current_Row(Current_Object))
+               If (Row_count(Current_Object)=0) Begin
+                  Send Append_Blank_row
+                  Set Item True // go to first enterable item
+               End
+               Set dynamic_update_State to dynUpdt
+             End
+         end
+       end
+    end
+  end_procedure
+
+  // public
+  procedure Request_Save
+    local integer curItem retval
+    If (should_delegate_save(Current_Object)) ;
+       delegate Send Request_Save
+    else begin
+       If (Read_Only_State(Current_Object)) Procedure_Return
+       get current_item to curItem
+       if (exec_validate(Current_Object,curItem) <> 0) procedure_return
+       if (exec_exit(Current_Object,curItem) <> 0) procedure_return
+       if (Row_changed(current_object)) begin
+         Get Row_save to Retval
+         If (Retval=0 AND Auto_regenerate_State(Current_Object)) send Display
+       end
+    end
+  end_procedure
+
+   // this allows us to save a record without it clearing regardless of
+   // the Auto_Clear_DEO_State value
+   //
+   Procedure Request_Save_No_Clear
+     Local integer oldclr
+     If (should_delegate_save(Current_Object)) ;
+       delegate Send Request_Save_no_Clear
+     else begin
+       Get Auto_Clear_DEO_State to OldClr  // whatever it was
+       Set Auto_Clear_DEO_State to False   // it is now NO!
+       send request_save                   // do your magic
+       Set Auto_Clear_DEO_State to OldClr  // back to whatever it was
+     end
+   End_procedure
+
+  // internal
+  // Function: Row Changing
+  //
+  //   New row / Unchanged:  Delete empty row..then move
+  //   old row / unchanged:  Move
+  //   Auto_Save -New row / changed:    Save then move
+  //   Auto_Save -old row / changed:    Save then move
+  //  ~Auto_Save -New row / changed:    Verify data loss / empty / move
+  //  ~Auto_Save -old row / changed:    Verify data loss / restore /move
+  //
+  // 10/04/94 -JJT changed to make add mode items insert new rows
+  //               instead of overwriting
+  function row_changing integer from# integer to# returns integer
+    local integer retval lim toRow fromRow rowcount
+    local integer dynUpdt wasNew Rec# ROS NCS
+    //s/b fixed as of 301 beta 3
+    //*// Temporary fix to fix problem of row changing getting sent
+    //*// in a 1 row 2 column table when doing a shift+tab
+    //*if (row(Current_Object,to#)=row(Current_Object,from#)) ;
+    //*   function_return to#
+    //
+    get Item_Limit to lim
+    get row item from# to fromRow
+    Move ( (record_number(current_object,fromRow)) = 0) to wasNew
+
+    // check if change allowed....if not return from#
+    // this might save a new record..so we recheck the rec array
+    If ( Allow_Row_Change(Current_Object) ) Function_Return from#
+
+    If (record_number(current_object,fromRow) = 0) begin
+      // if a new record..we have approval to remove this row..do so
+      get dynamic_update_State to dynUpdt
+      set dynamic_update_State to false
+      send Remove_row fromRow
+      set dynamic_update_State to dynUpdt
+      if to# ge from# Move (to#-lim) to to# // target has moved
+    end
+
+    get row item to# to toRow
+    set base_item to (toRow * lim)
+    set new_item to to#
+    // this handles auto add. Auto Add=T if Move 1 down and it was a new rec
+    if ( (toRow - fromRow = 1) AND (wasNew) ) Begin
+           // 10/04/94 - Changed to make new rows get inserted instead
+           // of replacing current item. At this point we are in insert mode
+           // and we've moved to the new row. If this new row has data
+           // (i.e., its rec# is not -1,-2, or 0) then we need to insert a row,
+           // else we just need to clear the row. In either case, make sure the
+           // current_row number does not change (insert changes current row)
+           If (Current_Record(Current_Object)>0) ;
+               Send Insert_Blank_row (Current_Row(Current_Object)) // existing data
+           else ;
+               Send Clear_Row (Current_Row(Current_Object)) // row already blank
+           set base_item to (toRow * lim) // The current row might
+           set new_item to to#            // change so we reset it here.
+           Move 0 to rec#
+    End
+    Else Begin
+       Get Record_Number Item toRow to Rec# // the new rec number
+       // if rec# -2 or -1 then we need to go to the database to fill
+       // in the next record.
+       If Rec# gt 0 Send Read_By_Recnum Rec# // read the next record
+       else If Rec# lt 0 get Fill_next_row toRow to Rec#
+       //
+       If Rec# gt 0 Begin
+          send Display_other_UI // fill out rest of UI
+          set base_item to (toRow * lim)
+       End
+       Else begin
+         // if top row couldn't add only allow an empty row on top if
+         // it is allowed
+         Get Row_Count to rowCount
+         // if row count is 1 then this is the only row we have and we
+         // will not delete it.
+         If (RowCount>1 and Rec#=-2 AND ;
+             ( Allow_top_add_State(current_Object)=0 OR  ;
+               No_Create_State(current_Object) OR ;
+               Read_Only_State(Current_Object) ) ) ;
+         Begin
+            Send Delete_Row toRow
+            Set New_item to to# // added 01-14-1993
+            // added 11/07/94 - make sure we've got the right record
+            //                  in the buffer
+            Send Read_by_Recnum (Current_record(Current_Object))
+         End
+         else Begin
+           // if bottom row couldn't add only allow an empty row on bottom if
+           // it is allowed
+           If (RowCount>1 and Rec#=-1 AND ;
+               ( Allow_Bottom_add_State(current_Object)=0 OR ;
+                 No_Create_State(current_Object) OR ;
+                 Read_Only_State(Current_Object) ) ) ;
+           begin
+              Send Delete_Row toRow // (Current_Row(Current_Object))
+              // adjustment stuff since current row no longer exists..
+              // could probably be optimized
+              move from# to to#
+              If (top_item(current_object)<>0) Set Top_item to 0 // (top-1)
+              set new_item to to#
+              // added 11/07/94 - make sure we've got the right record
+              //                  in the buffer
+              Send Read_by_Recnum (Current_record(Current_Object))
+           end
+           else Send Clear_Row toRow
+         End
+       End
+    End
+    If (Rec#>0 and Auto_regenerate_State(Current_Object) and ;
+         UnSorted_State(Current_Object)) send Display
+    Else Send Trim_Page
+    //
+    Move (Current_Item(Current_object)) to to#
+    // if we are not in column 0 we must validate up to this row
+    // for all to work properly.
+    if to# gt (toRow * lim) begin
+      move (validate_range(Current_Object,(toRow * lim),(to# - 1))) to retval
+      if retval ne -1 function_return retval  //returns item# which failed
+    end
+    function_return to#
+  end_function
+
+  // public
+  procedure beginning_of_data
+    If (Allow_Row_Change(Current_Object)=0) ;
+      forward send beginning_of_data
+  end_procedure
+
+  // public
+  procedure end_of_data
+    If (Allow_Row_Change(Current_Object)=0) ;
+      forward send end_of_data
+  end_procedure
+
+  // public
+  Procedure Scroll Integer Direction Integer Dist
+    local integer dynUpdt
+    get dynamic_update_State to dynUpdt
+    set dynamic_update_State to false
+    If (Allow_Row_Change(Current_Object)=0) begin
+       // if rec is new and we have more than 1 row..remove the record
+       If (Current_record(current_object)=0 AND Row_Count(Current_Object)>1) ;
+       begin
+          // if a new record..we have approval to remove this row..do so
+          send Remove_row (Current_Row(Current_Object))
+       end
+       forward send Scroll Direction Dist
+    end
+    set dynamic_update_State to dynUpdt
+  end_procedure
+
+//?? try it without this..If this must be included then the entry_display
+//?? in the checkbox class must be changed
+//??  procedure  entry_display integer file integer flag
+//??    local integer mainfile rec# showRow
+//??    if (flag eq 0 AND file eq 0) begin
+//??      get main_file to mainfile
+//??      is_file_included mainfile 1
+//??      [found] begin
+//??        move (row(current_object,base_item(current_object))) to showRow
+//??        move (Record_Number(current_object,showRow)) to rec#
+//??        move mainfile to filenumber
+//??        move 0 to fieldindex
+//??        if rec# ne Indirect_File.RECNUM ;
+//??            set Record_Number item showRow to Indirect_File.RECNUM
+//??      end
+//??    end
+//??    forward send entry_display file flag
+//??  end_procedure
+
+  //
+  // Augment to unset the UnSorted_State Flag
+  //
+  Function Load_Page Integer Row# Returns Integer
+    local Integer Retval
+    Forward Get Load_Page Row# to Retval
+    Set UnSorted_State to False
+    Function_Return Retval
+  End_Function
+
+  // Private:
+  // Control Mouse down so that it will move into an empty
+  // row just like down arrow does. Also if pressed anyhwere at the
+  // bottom of an empty then move to the last valid row.
+  //
+  Procedure Mouse_Down Integer Window Integer Char_Pos
+     Local integer rCount Row#
+     If Window Gt 0 Begin
+        Decrement Window
+        Get Row Item Window to Row# // zero based
+        Get Row_Count to rCount     // one based
+        If Row# GE rCount Begin
+           If ( rCount eq 0 OR ;
+                ( Record_Number(current_object,rcount-1)>0 AND ;
+                  Allow_Bottom_Add_State(Current_Object) AND ;
+                  No_Create_State(current_Object)=0 ) ) ;
+           //Begin
+           //  If (Allow_row_Change(Current_Object)) Procedure_Return
+             Send Add_row
+           //end
+           Else Decrement rCount
+           Move ( rCount*Item_limit(Current_Object)+;
+                     Column(Current_Object,Window)) to Window
+        End
+        //
+        Increment Window
+     End
+     Forward Send Mouse_down Window Char_Pos
+  End_Procedure
+
+  //-------------------------------------------------------------------
+  // messages requiring server services
+  //------------------------------------------------------------------
+  //
+
+  // public
+  procedure Request_Clear_All
+    local integer srvr# retval foc
+    If (Should_delegate_Clear(Current_Object)) ;
+       Delegate send request_clear_all
+    Else Begin
+        get Server to srvr#
+        if (Read_Only_State(Current_Object)=0 AND ;
+            Row_Changed(Current_Object)) begin
+          if (Verify_Data_Loss(current_object) <> 0) ;
+            procedure_return
+        end
+        Get Focus to Foc
+        get Object_Item_Validation of Foc to retval
+        set Object_Item_Validation of Foc to false
+        if Srvr# ne 0 send clear_all to Srvr#
+        else send entry_clear_all 0
+        if (Auto_Top_Panel_State(current_object)) send beginning_of_panel
+        set Object_Item_Validation of Foc to retval
+    end
+  end_procedure
+
+  procedure entry_autofind integer mode
+    local integer srvr# file# datafile# field# oldDisp oldChg item#
+    get autofind_item to item#
+    get data_file item item# to datafile#
+    If DataFile# le 0 Procedure_Return
+    get data_field item item# to field#
+    get Server to srvr#
+    get main_file to file#
+    get Changing_State to oldChg
+    set Changing_State to TRUE
+    if srvr# ne 0 Begin
+       get line_display_State to oldDisp
+       if datafile# ne file# set line_display_State to true
+       //----remove deferred_state support
+       //send Item_Find to srvr# mode datafile# field# TRUE FALSE ;
+       //   (Deferred_State(current_object))
+       send Item_Find to srvr# mode datafile# field# TRUE FALSE FALSE
+       set line_display_State to oldDisp
+    end
+    Else begin
+      forward send entry_autofind mode
+      if datafile# eq file# send display
+    end
+    set Changing_State to oldChg
+  end_procedure
+
+  // public
+  // FindEdit support behavior
+  //
+  procedure Request_Find integer mode integer entUpdtFlag
+    local integer dataFile ser# mainfile# dfrdState
+    If (Should_delegate_find(Current_Object)) ;
+       delegate Send Request_Find mode entUpdtFlag
+    else begin
+       get Data_File to dataFile
+       get Server to ser#
+       get Main_file to mainfile#
+       if (Read_Only_State(Current_Object) AND mainfile#<>DataFile) ;
+          Procedure_return
+       if (ser# <> 0 AND dataFile > 0) begin
+          get Deferred_State to dfrdState
+          send Item_Find to ser# mode dataFile ;
+            (Data_Field(current_object,CURRENT)) entUpdtFlag TRUE dfrdState
+          //--Re-add deferred_state support
+          //send Item_Find to ser# mode dataFile ;
+          //  (Data_Field(current_object,CURRENT)) entUpdtFlag TRUE FALSE
+          [found] if dfrdState begin
+            if dataFile eq mainfile# send display
+            else send entry_display 0 0
+          end
+       end
+       else begin
+         send entry_find mode
+         [found] Begin
+           if datafile eq mainfile# send display
+           else send entry_Display 0 0
+         end
+       end
+    end
+  end_procedure
+
+  // public
+  // FindEdit support behavior
+  //
+  procedure Request_SuperFind integer mode
+    local integer obj# file# mainfile#
+    If (Should_delegate_find(Current_Object)) ;
+       delegate Send Request_SuperFind mode
+    else begin
+       get Server to obj#
+       get data_file to file#
+       if file# gt 0 begin
+         get main_file to mainfile#
+         if obj# ne 0 begin
+           indicate err false
+           send Request_SuperFind to obj# mode file# ;
+               (data_field(current_object,CURRENT))
+           [not found] begin
+             if mode lt 2 error 41
+             else error 42
+           end
+         end
+         else begin
+           send entry_superfind mode mainfile#
+           [found] begin
+             if file# eq mainfile# send display
+             else send entry_Display 0 0
+           end
+         end
+       end
+     End
+  end_procedure
+
+  // internal
+  procedure Row_Delete
+    local integer Srvr#
+    get Server to Srvr#
+    indicate err false
+    //----remove deferred_state support
+    //if (Deferred_State(current_object)) ;
+    //   send Request_Assign to Srvr# 0  //0 means main_file of Server
+    send Request_Delete to Srvr#
+    // add this because the server does not 0 current_record
+    // didn't work...sent off refresh Sun  07-05-1992
+    //send Request_Assign to Srvr# 0  //0 means main_file of Server
+  end_procedure
+
+  // internal
+  function Row_save returns integer
+    local integer srvr# retval rec# MainFile
+    get Server to srvr#
+    get Request_Validate of Srvr# to retval
+    if retval ne 0 function_return 1
+    if (Verify_Save(current_object) = 0) begin
+      //----remove deferred_state support
+      //if (Deferred_State(current_object)) ;
+      //   send Request_Assign to Srvr# mainfile
+      Send Save_Row // we do this for backwards interface reasons
+      [err] function_return 3
+    end
+    else function_return 2
+  end_function
+
+  // internal
+  // This exists to maintain compatability with the DAC table
+  // interface (people might have augmented this). Note: It is better
+  // to augment the row_save function because it returns a status value
+  Procedure Save_row
+    local integer srvr#
+    get Server to srvr#         // we just assume that a server exists
+    indicate err false          // this would not get called if it did
+    send Request_Save to srvr#  // not.
+    [not err] begin
+      set current_record to (File_Record(Current_Object))
+      Set UnSorted_State to True
+    end
+  end_Procedure
+
+  // internal
+  Function Row_Changed Returns Integer
+    Local Integer Srvr# ch
+    Get Server to Srvr#
+    get changed_state to Ch
+    Function_Return (Ch OR ;
+                     (Srvr#<>0 AND Should_Save_Row(Srvr#)) )
+  End_Function
+
+  Function Should_Save Returns Integer // added 07-24-1992 - could replace row_changed
+    // 02-21-1993 should only check fo change if items exist..Dac wierdness
+    If (Item_Count(Current_Object)) ;
+       Function_Return (Row_Changed(Current_Object))
+    //**Function_Return (Row_Changed(Current_Object))
+  End_function
+
+  // Child_Entering and Child_Exiting are only called when Child_Table_State is
+  // true. When a table is nested inside another DEO (a header / table
+  // condition) you have different needs.
+
+  //  Function Child_Entering
+  //
+  //  By default this does nothing. If you return a non-zero value the table
+  //  will not be entered. Very useful. You will often use this to make sure
+  //  that 1) it is valid to enter the table and 2) that the header is
+  //  saved before entering the table.
+  //
+  Function Child_Entering Returns Integer
+  End_function
+
+  // Function Child_Exiting
+  //
+  // You can stop the exiting by returning a non-zero value. By default this
+  // save the current record. If the save fails the exiting is stopped. Note
+  // that the object ID you are entering is passed. This can be useful to
+  // know. If you are exiting to a form or editor that is part of the table
+  // (often a child of the table object) you may not want to save the table
+  // line. If the object you are entering is part of the header, you would
+  // probably want to save the table. Note that the default errs on the side
+  // of caution (it always saves the table).
+  //
+  Function Child_Exiting Integer toObj# Returns Integer
+     Local Integer ret_val
+     Get Should_Save to Ret_Val
+     if Ret_Val Send Request_Save
+     Get Should_Save to Ret_Val
+     Function_Return Ret_Val
+  end_Function
+
+  // Entering is augmented to call Child_Entering if Child_Table_State=T
+  //
+  Procedure Entering
+     Local Integer ret_val
+     if (Child_Table_State(Current_Object)) Get Child_Entering to Ret_val
+     If ret_Val eq 0 Forward get MSG_Entering to Ret_Val
+     Procedure_Return Ret_Val
+  end_procedure
+
+  // Exiting is augmented to call Child_Exiting if Child_Table_State=T
+  //
+  Procedure Exiting Integer toObj#
+     Local Integer ret_val
+     if (Child_Table_State(Current_Object)) Get Child_Exiting toObj# to Ret_val
+     If ret_Val eq 0 Forward get MSG_Exiting toobj# to Ret_Val
+     Procedure_Return Ret_Val
+  end_procedure
+
+
+  // fix for DAC bug in dependent_items that causes invalid item number
+  // error if items don't exist when update_dependent_items occurs.
+  procedure end_construct_object
+     forward send end_construct_object
+     send add_row
+  end_procedure
+
+  // 05/16/95 -Augment so that refreshes that are part of a save sets the sorted
+  // state to false. This probably belongs in data_list but this would require
+  // moving all of the unsorted_state logic into that class. Not for now.
+  //
+  procedure refresh integer notifyMode
+    if (Batch_State(Current_Object)) Procedure_return
+    Forward Send refresh notifyMode
+    // If save on main-file, we are no longer sorted properly
+    if ( notifyMode=MODE_SAVE AND ;
+         Main_File(Current_Object)=Main_file(Server(Current_Object)) ) ;
+             Set Unsorted_State to TRUE
+  end_procedure
+
+
+end_class
+

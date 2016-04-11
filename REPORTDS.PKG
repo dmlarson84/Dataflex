@@ -1,0 +1,294 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// ReportDS.Pkg
+// Version: 1.1
+//  Wed  11-25-1992  Created
+//
+// Author: John J. Tuohy
+//
+//************************************************************************
+
+//
+// Report_Ds - Report class that can optionally use data_sets.
+// 
+// If Data_sets are used the report can support batch updates where files
+// are saved and deleted (via request_save and request_delete).
+// 
+// IMPORTANT: All constraints including "relates to" constraints MUST be
+// handled by the data_set and not the report object (when in Rome do as the
+// Romans). Also, the report's relate_main_file, No_Constrained_Find_State and
+// No_relate_state are ignored - these same properties in the data_set are used
+// instead.
+//
+// This class can be used as a non-data_set class (just don't set the server).
+//
+// New Syntax:
+//
+// To hook into a Data_set, three syntaxes
+//       Object Order_Rpt is a Report_ds Using DATA_SET_NAME
+//
+// <or>  Object Order_Rpt is a Report_ds
+//          Report_Data_Set DATA_SET_NAME
+//
+// <or>  Object Order_Rpt is a Report_ds
+//         Set Server to DATA_SET_NAME
+//
+// New Public Interface:
+//
+//   PROPERTY: Server
+//      This is the object ID of the data_set. If 0, the report will behave
+//      exactly like a non_ds report. This is usually only set once and 
+//      usually when the object is created. This can be done with the USING
+//      object command line parameter, the SET SERVER TO command, or the
+//      RPT_DATA_SET command.
+//
+//   PROPERTY: Deferred_State (Default=TRUE)
+//      This determines if accesses to the data_set causes refresh messages
+//      to get sent to other objects using this data_set. Setting this TRUE
+//      reduces traffic a bit. This can be set FALSE but you should know what
+//      you are doing.
+//
+//   PROCEDURE: Request_Save
+//      If sent, will save the current record. Usually sent in Body section.
+//      Use Entry_Update message to make the changes during the save process.
+//      All parent files are properly modified. This is M/U solid.
+//
+//   PROCEDURE: Request_Delete
+//      If sent (usually in the body) this will delete the current record thru
+//      the data_set. After delete the record remains unchanged in the buffer
+//      (including the recnum). All parent files are properly updated and 
+//      all multi-user requirements are met.
+//
+//   PROCEDURE Entry_Update
+//      Does nothing. This is the user hook that you fill out to make changes
+//      the record you are saving. If this were a DEO this would get called
+//      when you need to update from the forms to the database. This is a
+//      manual version of this.
+//
+//   PROCEDURE Refresh
+//      This is normally a stub that does nothing. A clever data_set expert
+//      might be able to make use of this. 
+//
+
+use report
+use data_set
+
+
+Class Report_DS is a Report STARTMAC Report_DS_Start
+  
+  Procedure Construct_Object // Integer Img#
+    Forward Send Construct_Object // Img#
+    
+    //**// I had toyed with supporting constraints in both data_sets and
+    //**// the report object. I decided against this because data_sets get
+    //**// too complicated when you deal with saves and deletes, and, I felt
+    //**// it was best to work "within the system" and let Data_sets do what
+    //**// they want.
+    //**// 
+    //**// Constrain_by_Report_State: If true and using data_sets 
+    //**//                            nesting of reports determines the
+    //**//                            relates_to constraint. Server constraints
+    //**//                            are always respected                        
+    //**Property Integer Constrain_by_Report_State PUBLIC FALSE  // alter with care
+    
+    Property Integer Server                    PUBLIC 0      // data_set
+    Property Integer Deferred_State            PUBLIC TRUE   // makes less traffic
+    Property Integer Auto_Fill_State           PUBLIC FALSE  // Required not used
+  End_Procedure  // Construct_Object
+  
+  Procedure Refresh          // Display - required
+  End_Procedure
+  
+  Procedure Entry_Update     // Update from report to datafile.
+  End_Procedure              // User hook routine.
+  
+  Procedure Request_Delete   // Supports deletes. Should be called in body
+    Local Integer Srvr# Rec# //                   procedure.
+    Get Server to Srvr#
+    If Srvr# Begin
+       if (Deferred_State(current_object)) ;
+           send Request_Assign to srvr# 0  //0 means main_file of Server
+      // when deleted the record number is lost. Remember this number
+      // and restore it so that findings will work properly.     
+      Get Current_Record of Srvr# to Rec# // remember rec number
+      Send Request_Delete to Srvr#
+      // now move rec back into file if a delete really occured
+      Get main_file of srvr# to Filenumber
+      Move 0 to FieldIndex
+      If Not Status Indirect_File Move Rec# to Indirect_File.RecNum
+    End   
+  End_Procedure
+  
+  Procedure Request_Save   // supports saves
+    Local Integer Srvr#    // entry_update should handle updating.
+    Get Server to Srvr#
+    If Srvr# Begin
+       if (Deferred_State(current_object)) ;
+           send Request_Assign to srvr# 0  //0 means main_file of Server
+       Set Changed_state of Srvr# to TRUE
+       Send Request_Save to Srvr#
+    End   
+  End_Procedure
+
+  //
+  //  Augmented to add this object from the Data_set's user interface
+  //
+  Function Start_Report returns integer
+    local Integer Retval Srvr#
+    get server to srvr#
+    if srvr# ne 0 Send Add_User_Interface to srvr# current_object
+    forward get start_Report to retval
+    Function_Return retval 
+  End_Function // Start_Report
+  
+  //
+  //  Augmented to remove this object from the Data_set's user interface
+  //
+  Function End_Report integer rpt_Status returns integer
+    Local Integer Retval Srvr#
+    forward get end_report rpt_status to retval
+    get server to srvr#
+    if srvr# ne 0 Send Remove_User_Interface to srvr# Current_Object
+    Function_Return retval 
+  End_Function
+
+  //
+  // Procedure: Find_Init
+  // set up this file for finding... This clears the needed buffers
+  //
+  Procedure Find_Init
+    Local Integer Srvr# Mode file# ndx#
+    Get Server to Srvr#
+    If Srvr# eq 0 Forward send Find_init
+    Else begin
+      Move (if(Find_Down_State(Current_Object),1,3)) to Mode // LE or GE
+      Get main_file of srvr# to File#
+      Get Ordering to Ndx#
+      Set Ordering of Srvr# to Ndx#
+      Send Rebuild_Constraints to Srvr#
+      Constrained_Clear Mode File# BY Ndx#
+      Send establish_find_direction to srvr# mode file# Ndx#
+    end
+  End_Procedure
+  
+  //
+  // Augment to find record in Data_set if Server exists
+  //
+  Function Find_Rec Returns Integer
+    Local Integer srvr# rval
+    Local Integer File# Ndx# Dfrd
+    Get server to srvr#
+    if srvr# eq 0 begin                 // if no server do
+       forward get find_rec to rval     // standard finding
+       function_return rval             // behavior
+    end
+    //
+    // Server exists. Channel the Find through the data_set
+    //
+    Get main_file to File#
+    Get Ordering to Ndx#
+    Get Deferred_State to Dfrd
+    // if not deferred find next record and notify all other DEOs
+    // if deferred just find the record
+    If Dfrd eq 0 Send Request_Find to Srvr# Next_record file# Ndx#
+    Else Send Locate_Next to Srvr#
+    [Found] Begin                   // set Found_Rec
+      Move file# to filenumber   // to new record #
+      Move 0 to fieldindex
+      Set Found_Rec to Indirect_File.RecNum
+      Function_Return RPT_OK
+    End
+    Function_return RPT_END  
+  End_Function
+  
+  //
+  //  Procedure : Read_By_RecNum
+  //              Augmented to direct read to server
+  //     
+  Procedure Read_by_RecNum Integer Rec#
+    Local Integer srvr# File#
+    Get Server to Srvr#
+    If Srvr# eq 0 Forward send Read_by_Recnum Rec#
+    Else Begin
+      Get Main_File of Srvr# to File#
+      If (Deferred_state(Current_Object)) ;
+           Send Read_by_Recnum to srvr# File# rec# // if deferred
+      Else Send Find_by_Recnum to srvr# File# rec# // if not deferred
+    End  
+  End_procedure
+  
+  //**Procedure rebuild_constraints
+  //**  Local Integer srvr#
+  //**  Get server to srvr#
+  //**  if srvr# eq 0 forward send rebuild_constraints
+  //**  Else Begin
+  //**    send rebuild_constraints to srvr#
+  //**    if (Constrain_by_Report_State(Current_Object)) Send constrain              
+  //**  End  
+  //**End_procedure
+  //**
+  //**Procedure constrain
+  //**  Local integer srvr# file# Prnt_srvr#
+  //**  Get server to srvr#
+  //**  If Srvr# eq 0 Forward send constrain // this'll set object relates to constraint
+  //**  else begin
+  //**    if (Child_Rpt_State(current_object)) begin
+  //**       delegate get Server to Prnt_srvr#
+  //**       CONSTRAIN (Main_File(srvr#)) RELATES TO ;
+  //**          (if(prnt_srvr#=0,;
+  //**               Main_File(Parent(current_object)), Main_file(Prnt_Srvr#)))
+  //**    end    
+  //**  end    
+  //**End_Procedure
+  
+  //
+  // Augment to set Report Object's main_file if server exists
+  //
+  Procedure End_Construct_Object
+    Local Integer Srvr# File#
+    Get Server to Srvr#
+    If Srvr# Begin
+       Get Main_file of Srvr# to File#
+       Set Main_File to File#
+    End   
+    Forward Send End_Construct_Object
+  End_Procedure  
+
+  
+End_Class
+
+
+#COMMAND Report_DS_Start
+  FORWARD_BEGIN_CONSTRUCT !1 !2 !3 !4 !5 !6 !7 !8 !9
+  bind_Report_Data_set !1 !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+#COMMAND bind_report_Data_set
+  #IF (!0>0)
+    #IFSAME !1 USING
+      Report_Data_set !2
+    #ELSE
+      bind_report_data_set !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+//
+//  Set a report's dataset
+//
+#COMMAND Report_Data_Set R .
+   #IFDEF !1
+     set Server to !1
+   #ELSE
+     set Server to !1.obj
+   #ENDIF
+#ENDCOMMAND
+

@@ -1,0 +1,236 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\reszclnt.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: reszclnt.pkg,v $
+//Revision 2.1  1993/08/25  17:49:33  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:08  james
+//Initial revision
+//
+//Revision 1.3  92/05/14  17:18:26  SWM
+//Updated Copyright slug.
+//
+//Revision 1.2  92/03/09  19:04:14  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:22:15  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: ReSzClnt.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: May 23, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Resize-Window pop-up object for the Text_Editor
+// class.
+//
+// This package implements a pop-up object for window resizing within a
+// text-editor object.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+Use UI
+
+
+/reSizeClientImg
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³                 ÚÄÄÄÄÄÄÄÄÄÄ¿ ³
+³  Height... __   ³   <__>   ³ ³
+³                 ³          ³ ³
+³  Width.... __   ³ <______> ³ ³
+³                 ÀÄÄÄÄÄÄÄÄÄÄÙ ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+/*
+Sub_Page xyImg   FROM reSizeClientImg 1 3
+Sub_Page BtnsImg FROM reSizeClientImg 2 4
+
+
+//
+//Attribute: ReSize_Area
+//
+//Description: re-size window pop-up object
+//
+//Representation: modified CLIENT instance
+//
+object ReSize_Area is a CLIENT reSizeClientImg
+  set location to 3 26 relative
+  set Block_MOUSE_STATE to true
+  set DELEGATION_MODE to DELEGATE_PRIOR_LEVEL
+  set SCOPE_STATE to TRUE
+  set Exit_Msg to cancel_Scope
+  procedure cancel_scope
+    send deactivate 3
+  end_procedure
+  on_key kCancel        SEND cancel_scope
+  on_key kExit_Function SEND cancel_scope
+  //
+  //Attribute: ReSize_Form
+  //
+  //Description: form for entering new window height and width
+  //
+  //Representation: FORM, with two items sending message NONE
+  //
+  object ReSize_Form is a FORM xyImg
+    set LOCATION to 1 1 relative
+    set LOCAL_ROTATE_STATE to TRUE
+    item_list 
+      on_item "" SEND NEXT  //height
+      on_item "" SEND NEXT  //width
+    end_item_list 
+  end_object
+  //
+  //Attribute: Button_Area
+  //
+  //Description: panel of OK and CANCEL buttons
+  //
+  //Representation: BUTTON, with two items sending messages Request_ReSize
+  //
+  object Button_Area is a BUTTON BtnsImg
+    set location to 1 19 relative
+    set entry_msg to check_extent
+    item_list
+      on_item "OK"     SEND Finis
+      on_item "CANCEL" SEND cancel_scope
+    end_item_list
+  end_object 
+  procedure Finis
+    send request_resize
+    send cancel_Scope
+  end_procedure
+  //
+  //Operation: SET HEIGHT
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): set item 0 of ReSize_Form to specified value
+  //
+  //Algorithm: sets value of ReSize_Form item 0 to Height
+  //
+  //Usage: 
+  //
+  procedure Set Height integer ht
+    set value of (ReSize_Form(current_object)) item 0 to ht
+  end_procedure
+  //
+  //Operation: HEIGHT
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): return value of ReSize_Form's first item
+  //
+  //Algorithm: gets value of ReSize_Form's item 0 and returns it
+  //
+  //Usage: 
+  //
+  function Height returns integer
+    local integer i
+    get value of (ReSize_Form(current_object)) item 0 to i
+    function_Return i
+  end_function
+  //
+  //Operation: SET WIDTH
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): set item 1 of ReSize_Form to specified value
+  //
+  //Algorithm: sets value of ReSize_Form's second item to wdth
+  //
+  //Usage: 
+  //
+  procedure Set Width integer wdth
+    set value of (ReSize_Form(current_object))  item 1 to wdth
+  end_procedure
+  //
+  //Operation: WIDTH
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): return value of ReSize_Form's second item
+  //
+  //Algorithm: gets value of ReSize_Form's second item and returns it
+  //
+  //Usage: 
+  //
+  function Width returns integer
+    local integer i
+    get value of (ReSize_Form(current_object))  item 1 to i
+    function_Return i
+  end_function
+  //
+  //Operation: CHECK_EXTENT
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): if extent parameters (height and width) are within proper
+  //  range, set shadow_state of Button_Area' OK button to False, else set
+  //  it to True
+  //
+  //Algorithm: get location of prior focus to x and y
+  //           if entered height > 0 and <= (ScreenEnd - y),
+  //             if width > 0 and width < (SCREEN_WIDTH - x),
+  //               set shadow_state of Button_Area' OK item to False and exit
+  //           set shadow_state of Button_Area' OK item to True
+  //             
+  //Usage: invoked on entry to Button_Area
+  //
+  procedure Check_Extent
+    local integer c x y
+    get location of (prior_level(current_object)) to y
+    move (low(y)) to x
+    move (hi(y)) to y
+    get height to c
+    if ((c > 0) AND (c <= (ScreenEnd - y))) begin  //height ok
+      get width to c
+      if ((c > 0) AND (c <= (SCREEN_WIDTH - x))) begin
+        set shadow_state of (Button_Area(current_object))  item 0 to false
+        procedure_return
+      end
+      else ERROR 499 "Width out of range"
+    end
+    else ERROR 498 "Height out of range"
+    set shadow_state of (Button_Area(current_object))  item 0 to true
+  end_procedure
+  //
+  //Operation: REQUEST_RESIZE
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): if height and width parameters are within proper range,
+  //  deactivate self and delegate REQUEST_RESIZE, passing height and width
+  //
+  //Algorithm: send deactivate to self
+  //           send Request_ReSize to prior focus
+  //
+  //Usage: 
+  //
+  procedure Request_ReSize
+    local integer objID
+    get prior_level to objID
+    send Request_ReSize to objID ;
+        (height(current_object)) (width(current_object))
+  end_procedure
+end_object 
+
+

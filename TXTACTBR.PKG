@@ -1,0 +1,35 @@
+// TXTACTBR.PKG
+// December 3, 1990
+// LS
+//
+// Text_Action_Bar class definition
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use Action
+use PullDown
+use HelpMsgs
+
+class Text_Action_Bar is an ACTION_BAR_MENU
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        set Action_Bar_Keys_Msg to Text_Action_Bar_Keys
+
+        item_list
+            #INCLUDE BUFFE_PD.INC
+            #INCLUDE LINE_PD.INC
+            #INCLUDE TEXT_PD.INC
+            #INCLUDE WIND_PD.INC
+            #INCLUDE HELP_PD.INC
+        end_item_list
+    end_procedure
+end_class
+
+procedure Text_Action_Bar_Keys for Desktop integer Obj
+    on_key key_Alt+key_B send Activate to (Buffer_Pull_Down( Obj )) Private
+    on_key key_Alt+key_L send Activate to (Line_Pull_Down( Obj ))   Private
+    on_key key_Alt+key_T send Activate to (Text_Pull_Down( Obj ))   Private
+    on_key key_Alt+key_W send Activate to (Window_Pull_Down( Obj )) Private
+    on_key key_Alt+key_H send Activate to (Help_Pull_Down( Obj ))   Private
+end_procedure

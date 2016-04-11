@@ -1,0 +1,86 @@
+//** Program: Struc.pkg
+//** Written: 08/01/90
+//**      By: Alex Paransky
+//** Purpose: To show the current object structure
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+class Struc_View_Type is an edit
+   procedure Construct_Object
+     forward send Construct_Object
+     set location            to  9 0
+     set size                to 15 78
+     set right_margin        to 128
+     set scope_state         to true
+     set block_mouse_state   to true
+     on_key KCANCEL          send Exit_Object
+     on_key KExit_Function   send Exit_Object
+     on_key KNext_Item       send none
+     on_key KPrevious_Item   send none
+   end_procedure
+   
+   procedure Exit_Object
+     send delete_data
+     set current_scope to (prior_scope(current_object))
+     send deactivate
+   end_procedure
+   
+   procedure mouse_drag
+     local integer complex
+     local integer y
+     local integer x
+     get absolute_mouse_location to complex
+     move (hi(complex)) to y
+     move (low(complex)) to x
+     set location to y x 
+   end_procedure
+   
+   procedure Show_Structure integer Object_Number integer Current_Show_Level
+     send Insert (pad("",Current_Show_Level * 3))
+     send Insert (Name(Object_Number)) 
+     send Insert "  Id: "
+     send Insert Object_Number
+     send Key    KENTER
+   end_procedure   
+   
+   procedure Scan_Struc integer Object_Number integer Current_Show_Level
+     local integer Next_Node
+     local integer counter
+     local integer Obj#
+     local integer Old_Current_Object
+     local integer End_Loop
+      
+     //** Show Current Object information
+     //**
+     send Show_Structure Object_Number Current_Show_Level
+      
+     //** Process Children Objects, if any
+     //**
+     get child_count of object_number to End_Loop
+     for counter from 1 to End_Loop
+         move Current_Object to Old_Current_Object
+         move Object_Number to Current_Object
+         get Object_Id of (-Counter) to Obj#
+         move Old_Current_Object to Current_Object
+         if Obj# send Scan_Struc Obj# (Current_Show_Level + 1)
+     loop
+   end_procedure
+   
+   procedure View_Struc_Structure
+     send Delete_Data
+     send Activate
+     send Scan_Struc Desktop 0
+     send beginning_of_data
+   end_procedure
+      
+end_class
+
+object Struc_View is a Struc_View_Type
+end_object
+
+#REPLACE KView_Struc KEY_CTRL+KEY_X  
+on_key KView_Struc send View_Struc_Structure to Struc_View
+
+

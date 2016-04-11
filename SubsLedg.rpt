@@ -1,0 +1,497 @@
+/PAGE1                               
+                             HOT CHECK SYSTEM
+            Print Subsidiary Restitution Ledgers Alphabetically
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+BEGINNING DEFENDANT
+    ID No: [_____.]          Name: [______________________________] 
+    Address:  _________________________   _________________________ 
+              _______________, __  _________  
+    Identification:  Physical (Y/N) _  Driver's Lic. __________  SSN _________
+    Other ______________________________________________________
+          ______________________________________________________
+    Sex _   Race _   DOB __/__/____   Height _.'_."   Weight __. lbs.
+    Credit: _____.__                   Last Control Number Used: __.
+    Outstanding Offense Balance : ______.__
+/PAGE2
+
+ENDING DEFENDANT
+    ID No: [_____.]          Name: [______________________________] 
+    Address:  _________________________   _________________________ 
+              _______________, __  _________  
+    Identification:  Physical (Y/N) _  Driver's Lic __________ SSN _________
+    Other ______________________________________________________
+          ______________________________________________________
+    Sex _   Race _   DOB __/__/____   Height _.'_."   Weight __. lbs.
+    Credit: _____.__
+    Outstanding Offense Balance : ______.__
+/HEADER                              ANNLEDG.RPT
+                        SUBSIDIARY RESTITUTION LEDGER
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ID #:   _____.                  Name: ______________________________
+DL #:   __________           Address: _________________________ _______________
+
+Date  Ctrl  Merch   Rest    Rest      Paid/    Chgs     PA       Mer     Bal 
+       No   #/Name  Paid    Avail     Holder            Fee      Fee     Owed
+
+/SUBHEADER1  RESIDENT                                    //Receipts
+__/__/____    ___________________________________________________
+                ______.__ _____.__                                     _____.__
+/BODY        RESIDENT                                    //Disbursements
+__/__/____    ___________________________________________________________
+    _____.                _____.__ ______.__ (____.__)        (___.__)
+      __________________  _____.__   ____.__          (___.__)       
+/TOTAL
+
+TOTALS          ______.__ _____.__ ______.__ _____.__ ____.__ ____.__ ______.__
+/UNPAID      RESIDENT                                    //Offenses
+__/__/____    _@______________________________________  Active: _
+    _____.                                    ____.__  ___.__  ___.__  _____.__
+/SELECT
+                        SUBSIDIARY RESTITUTION LEDGER
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+                   Enter H to use handfed paper _
+/SOUTPUT
+                        SUBSIDIARY RESTITUTION LEDGER
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~						
+				
+				
+  Enter P to send ledger to printer or S to save the ledger to a file. (P/S) _
+					
+/info
+
+        Changes made on 01-19-2000 by Jeff March
+                added y2k.pkg
+                backspace function in calcdate.inc
+				
+		Changes made on 6-15-2015 by Don Larson
+			- Enabled users to either send report straight to printer or save to file.
+				- Save file has a custom name for single-defendant reports or a generic name for multiple-defendant reports.
+			- Made a subroutine out of the "Press H to handfeed" command. It now only applies to printed reports.
+			
+		Changes made on 12-3-2015 by Don Larson
+			- Tried to clean up the command a bit so it's easier to read.
+/*
+//----------------- Cannot Run Program From Command Line (DOS)
+Use y2k.pkg
+Read_dfini "df23ini.cfg"
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+#include calcdate.inc
+#include macs.frm
+
+//#NOISY 99
+
+//===================================================================================
+// Random Macro Stuff================================================================
+//===================================================================================
+// Alright, this is apparently a Command to do... something. I think it may have been part of a
+// subtotal section once upon a time, but I don't really see why he would write this when there's a 
+// "Subtotal" function available to the default Dataflex Report macro. Much of it is commented out, too.
+// I'm honestly not even sure if it does anything anymore, but I've left it here just in case.
+
+#COMMAND SUBSREPORT    T "BY""DOWN" VFW%LGR "BREAK""" 
+#CHECK !1.RECNUM _UVCWG%L 
+//           INTEGER RECCOUNT 
+#REPLACE RECCOUNT |VI!D 
+#SET P$ 0 
+//           MOVEINT 20000 TO LINECOUNT  // start with   a full page 
+//  !A []  $82 |CI20000 |VI10 
+//           MOVE 0 TO     RECCOUNT 
+!A []  $82 |CI0 RECCOUNT 
+//           BREAKINIT                // init breakpoints 
+!A []  $207 
+//           INDICATE FIRSTREC  TRUE   // used for subtotals 
+#IFDEF FIRSTREC
+#ELSE
+#REPLACE FIRSTREC |!C 
+#ENDIF 
+!A []  $4028 |CI0 |CI0     FIRSTREC~ 
+#IFSAME !2 BY
+FIND GE !1 BY !3           // FIND first     record 
+#ELSE 
+FIND LE !1 BY !3 
+#ENDIF 
+[~FOUND] GOTO    END$OF$REPORT 
+//           CLEARSCREEN          // start with a clear screen 
+//  !A []  $144 
+RPT.LOOP:// INDICATE SELECT     TRUE   // default for SELECT 
+#IFDEF SELECT 
+#ELSE 
+#REPLACE SELECT |!C
+#ENDIF
+!A []  $4028 |CI0 |CI0     SELECT~
+//           GOSUB RPT.SELECTION       // go   to user   selection 
+!A []  $42 |CL0
+#FREF  RPT.SELECTION !a
+//[NOT SELECT] GOTO RPT.CONT           // test SELECT
+!A [~  SELECT]   $41 |CL0
+#FREF  RPT.CONT !a
+BREAK$ !5 !6 !7 !8 !9       // set breakpoints
+#SET X$ !p                   // set up to break down
+[NOT FIRSTREC] BREAK$DOWN RPT.SUBTOTAL  // break down for SUBTOTAL 
+#SET X$ 0                    // set up to break up 
+//           RELATE !1                 // get related records 
+!A []  $C4 !1.RECNUM 
+BREAK$UP RPT.SUBHEADER      // break up for SUBHEADER 
+//           INCREMENT     RECCOUNT 
+!A []  $083 RECCOUNT |CI0 
+//           GOSUB RPT.BODY            // print body
+!A []  $42 |CL0 
+#FREF  RPT.BODY !a 
+//           INDICATE FIRSTREC  FALSE       // not first any more 
+!A []  $4028 |CI0 |CI0     FIRSTREC 
+RPT.CONT: 
+#IFSAME !2 BY 
+FIND GT !1 BY !3           // FIND next record 
+#ELSE 
+FIND LT !1 BY !3 
+#ENDIF 
+//           KEYCHECK             // check keyboard
+!A []  $46 
+//[FOUND NOT KEYPRESS] GOTO RPT.LOOP   // if   ok, loop 
+!A [FOUND ~ KEYPRESS] $41 RPT.LOOP 
+//[KEYPRESS]     GOSUB RPT.KEYPRESS    // user can disable KEYPRESS
+!A [KEYPRESS]    $42 |CL0 
+#FREF  RPT.KEYPRESS !a 
+#SET X$ !p                   // set up for     break down 
+END.OF.REPORT: 
+[~ FIRSTREC]     BREAK$DOWN RPT.SUBTOTAL  $X  // break down for last subtotals
+//[FIRSTREC]     GOSUB RPT.TOTAL            // print TOTAL
+!A [~  FIRSTREC] $42 |CL0 
+#FREF  RPT.TOTAL !a 
+//           GOTO END$OF$REPORT   // GOTO end 
+!A []  $41 |CL0 
+#FREF  END$OF$REPORT !a 
+NEWPAGE://  GOSUB RPT.HEADER      // new page, print HEADER
+!A []  $42 |CL0 
+#FREF  RPT.HEADER !a 
+#SET X$ 0    // this will reprint the     page headers if included // 
+[NOT FIRSTREC] BREAK$PRT SUBHEADER     // reprint pages 
+//           RETURN               // end of NEWPAGE 
+!A []  $43 |CI0 
+RPT.SELECTION:               // selection starts after REPORT 
+#ENDCOMMAND 
+
+
+OPEN DEFENDNT 
+OPEN OFFENSE
+OPEN RESTITUT INDEX.1
+OPEN DISBURSE INDEX.1
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+STRING ANSW 1 LINE 80 MERCH 40 DEFNAME1 30 DEFNAME2 30
+INTEGER COUNTER COMP CT ID DEF1 DEF2
+NUMBER TOTAL_CHARGES BALANCE REST_AVAIL D_MFEE JE_AMT PAID_HOLDER
+NUMBER TOTAL_PFEE TOTAL_MFEE TOTAL_PAID TOTAL_REST
+indicate ONEDEF false
+string defInfo
+string dotTxt
+string outputFile 200
+string underscore IDstring
+string outputSelection 1
+
+PAGE SOUTPUT
+ACCEPT SOUTPUT.1                        {CAPSLOCK,CHECK='PS'}
+move SOUTPUT.1 to outputSelection			//Stashing this for later since Dataflex scope is mysterious
+
+// If user entered "P" for print, display the "Hand-fed printing" page.
+if SOUTPUT.1 in 'Pp' gosub handFeed
+
+PAGE SET PAGE1 AT  0 0
+PAGE SET PAGE2 AT 13 0
+
+
+//---------------------------- Enter Beginning Defendant ----------------
+
+BEG_DEF:
+	CLEARSCREEN
+    ENTERGROUP 
+         AUTOPAGE PAGE1 1
+         ENTRY DEFENDNT.IDNO                   {AUTOFIND}
+         ENTRY DEFENDNT.NAME                   {AUTOFIND}
+         ENTRY DEFENDNT.ADDR                   {SKIPFOUND}
+         ENTRY DEFENDNT.ADDR2                  {SKIPFOUND}
+         ENTRY DEFENDNT.CITY                   {SKIPFOUND}
+         ENTRY DEFENDNT.ST                     {SKIPFOUND}
+         ENTRY DEFENDNT.ZIP                    {SKIPFOUND}
+         ENTRY DEFENDNT.PHYS                   {SKIPFOUND}
+         ENTRY DEFENDNT.LIC                    {SKIPFOUND}
+         ENTRY DEFENDNT.SOCSEC                 {SKIPFOUND}
+         ENTRY DEFENDNT.OTHER                  {SKIPFOUND}
+         ENTRY DEFENDNT.OTHER2                 {SKIPFOUND}
+         ENTRY DEFENDNT.SEX                    {SKIPFOUND}
+         ENTRY DEFENDNT.RACE                   {SKIPFOUND}
+         ENTRY DEFENDNT.AGE                    {SKIPFOUND}
+         ENTRY DEFENDNT.FT                     {SKIPFOUND}
+         ENTRY DEFENDNT.IN                     {SKIPFOUND}
+         ENTRY DEFENDNT.LBS                    {SKIPFOUND}
+         ENTRY DEFENDNT.CREDIT                 {SKIPFOUND}
+         ENTRY DEFENDNT.LAST_CTRL#             {SKIPFOUND}
+         ENTRY DEFENDNT.BAL                    {SKIPFOUND}
+    ENDGROUP
+    MOVE PAGE1.1  TO DEF1
+    MOVE PAGE1.2 TO DEFNAME1
+    ENTERGROUP 
+         AUTOPAGE PAGE2 1
+         ENTRY DEFENDNT.IDNO                   {AUTOFIND}
+         ENTRY DEFENDNT.NAME                   {AUTOFIND}
+         ENTRY DEFENDNT.ADDR                   {SKIPFOUND}
+         ENTRY DEFENDNT.ADDR2                  {SKIPFOUND}
+         ENTRY DEFENDNT.CITY                   {SKIPFOUND}
+         ENTRY DEFENDNT.ST                     {SKIPFOUND}
+         ENTRY DEFENDNT.ZIP                    {SKIPFOUND}
+         ENTRY DEFENDNT.PHYS                   {SKIPFOUND}
+         ENTRY DEFENDNT.LIC                    {SKIPFOUND}
+         ENTRY DEFENDNT.SOCSEC                 {SKIPFOUND}
+         ENTRY DEFENDNT.OTHER                  {SKIPFOUND}
+         ENTRY DEFENDNT.OTHER2                 {SKIPFOUND}
+         ENTRY DEFENDNT.SEX                    {SKIPFOUND}
+         ENTRY DEFENDNT.RACE                   {SKIPFOUND}
+         ENTRY DEFENDNT.AGE                    {SKIPFOUND}
+         ENTRY DEFENDNT.FT                     {SKIPFOUND}
+         ENTRY DEFENDNT.IN                     {SKIPFOUND}
+         ENTRY DEFENDNT.LBS                    {SKIPFOUND}
+         ENTRY DEFENDNT.CREDIT                 {SKIPFOUND}
+         ENTRY DEFENDNT.BAL                    {SKIPFOUND}
+    ENDGROUP
+    MOVE PAGE2.1 TO DEF2
+    MOVE PAGE2.2  TO DEFNAME2
+    IF DEFNAME2 LT DEFNAME1 BEGIN
+         GOTOXY 24 0
+         SHOW 'LEDGERS PRINT ALPHABETICALLY - SO ENDING NAME MUST COME AFTER BEGINNING NAME'
+         CLEARFORM PAGE1
+         CLEARFORM PAGE2
+         CLEAR DEFENDNT
+         GOTO BEG_DEF
+    END
+	else if defname2 eq defname1 indicate ONEDEF true
+    CLEARSCREEN
+
+CLEAR DEFENDNT
+MOVE DEFNAME1 TO DEFENDNT.NAME
+MOVE DEF1 TO DEFENDNT.IDNO
+FIND GE DEFENDNT BY INDEX.2
+
+[ONEDEF] gosub determineOutput
+[~ONEDEF] direct_output "ledgrout.txt"
+
+DEF_FIND:
+
+  MOVE 0 TO D_MFEE
+  MOVE 0 TO PAID_HOLDER
+  MOVE 0 TO TOTAL_PFEE
+  MOVE 0 TO TOTAL_MFEE
+  MOVE 0 TO TOTAL_CHARGES
+  MOVE 0 TO TOTAL_PAID
+  MOVE 0 TO TOTAL_REST
+  MOVE 0 TO REST_AVAIL
+  MOVE 0 TO BALANCE
+  BLANKFORM TOTAL
+  BLANKFORM SUBHEADER1
+  BLANKFORM BODY
+  BLANKFORM UNPAID
+  
+CLEARSCREEN
+GOTOXY 12 10
+SHOW 'PROCESSING DEFENDENT ' DEFENDNT.NAME 
+PRINT DEFENDNT.IDNO TO HEADER.1
+PRINT DEFENDNT.NAME TO HEADER.2
+PRINT DEFENDNT.LIC  TO HEADER.3
+PRINT DEFENDNT.ADDR TO HEADER.4 
+PRINT DEFENDNT.CITY TO HEADER.5
+OUTPUT HEADER
+
+CLEAR OFFENSE     
+INDICATE NOTOT TRUE
+MOVE DEFENDNT.IDNO TO OFFENSE.IDNO
+FIND GT OFFENSE BY INDEX.3
+[FOUND] WHILE OFFENSE.IDNO EQ DEFENDNT.IDNO
+           RELATE OFFENSE
+           AUTOPAGE UNPAID
+           PRINT OFFENSE.CKDT
+           MOVE OFFENSE.MERCHANT TO MERCH
+           APPEND MERCH ' ' OFFENSE.NAME
+           PRINT MERCH
+           PRINT OFFENSE.ACTIVE
+           PRINT OFFENSE.CTRLNO
+           PRINT OFFENSE.CKAMT
+	   CALC (TOTAL_CHARGES + OFFENSE.CKAMT) TO TOTAL_CHARGES
+           PRINT OFFENSE.PFEE
+           CALC (TOTAL_PFEE + OFFENSE.PFEE) TO TOTAL_PFEE
+           PRINT OFFENSE.MFEE
+           CALC (TOTAL_MFEE + OFFENSE.MFEE) TO TOTAL_MFEE
+	   CALC (BALANCE + OFFENSE.PFEE + OFFENSE.MFEE + OFFENSE.CKAMT) TO BALANCE
+
+	   IF OFFENSE.ACTIVE IN 'BPFIM' BEGIN
+		
+	    CALC (TOTAL_CHARGES - OFFENSE.CKAMT) TO TOTAL_CHARGES
+		CALC (TOTAL_PFEE - OFFENSE.PFEE) TO TOTAL_PFEE 
+		CALC (TOTAL_MFEE - OFFENSE.MFEE) TO TOTAL_MFEE
+ 		CALC (BALANCE - OFFENSE.PFEE - OFFENSE.MFEE - OFFENSE.CKAMT) TO BALANCE
+	   END
+           PRINT BALANCE
+           PAGECHECK 2
+[PAGEBREAK] BEGIN
+              OUTPUT HEADER
+            END
+            OUTPUT UNPAID
+           FIND GT OFFENSE BY INDEX.3
+[FINDERR]  CLEAR OFFENSE
+        END
+
+CLEAR RESTITUT                                                  //Find receipts
+MOVE DEFENDNT.IDNO TO RESTITUT.IDNO
+SUBSREPORT RESTITUT BY INDEX.1 BREAK RESTITUT.OVERLAP
+
+INDICATE SELECT AS RESTITUT.IDNO EQ DEFENDNT.IDNO
+[~ SELECT] RETURN END.OF.REPORT
+
+SECTION SUBHEADER1
+        BLANKFORM SUBHEADER1
+        PRINT RESTITUT.RECDT 
+        MOVE 'Receipt #: ' TO LINE
+        APPEND LINE RESTITUT.SEQNO
+        IF RESTITUT.TYPE EQ 'J' APPEND LINE '  --  JE'
+        PRINT LINE
+        IF RESTITUT.TYPE NE 'J' BEGIN
+         CALC (TOTAL_REST + RESTITUT.RESAMT) TO TOTAL_REST
+         CALC (REST_AVAIL + RESTITUT.RESAMT) TO REST_AVAIL
+        END
+         PRINT RESTITUT.RESAMT TO SUBHEADER1.3
+        IF RESTITUT.TYPE EQ 'J' PRINT JE_AMT TO SUBHEADER1.3
+        PRINT REST_AVAIL TO SUBHEADER1.4
+        CALC (BALANCE - RESTITUT.RESAMT) TO BALANCE
+	
+        PRINT BALANCE TO SUBHEADER1.5
+        PAGECHECK 2
+[PAGEBREAK] BEGIN
+              OUTPUT HEADER
+            END
+        OUTPUT SUBHEADER1
+
+SECTION BODY                                          //Find disbursements
+        CLEAR DISBURSE
+        MOVE RESTITUT.OVERLAP TO DISBURSE.OVERLAP
+        FIND GE DISBURSE BY INDEX.1
+[FOUND] WHILE DISBURSE.OVERLAP EQ RESTITUT.OVERLAP
+          RELATE DISBURSE
+          AUTOPAGE BODY
+          PRINT DISBURSE.DISPDT
+          MOVE OFFENSE.MERCHANT TO LINE
+          TRIM OFFENSE.NAME TO MERCH
+          APPEND LINE ' ' MERCH
+          IF DISBURSE.MANUAL EQ 'J' APPEND LINE '  --  JE'
+          IF DISBURSE.MANUAL NE 'J' APPEND LINE ' Disb. Ck # ' DISBURSE.CHKNO
+          PRINT LINE
+          PRINT DISBURSE.SEQNO
+          IF DISBURSE.MANUAL NE 'J' BEGIN
+              CALC (REST_AVAIL - DISBURSE.DISPAMT) TO REST_AVAIL
+          END
+          PRINT REST_AVAIL
+          MOVE DISBURSE.DISPAMT TO PAID_HOLDER
+          PRINT PAID_HOLDER
+          PRINT OFFENSE.CKAMT
+          CALC (DISBURSE.DISPAMT - OFFENSE.CKAMT) TO D_MFEE
+          PRINT D_MFEE      
+          CALC (TOTAL_CHARGES - OFFENSE.CKAMT) TO TOTAL_CHARGES
+          CALC (TOTAL_MFEE - D_MFEE) TO TOTAL_MFEE
+          MOVE '' TO LINE
+          IF DISBURSE.MANUAL NE 'J' BEGIN
+            MOVE 'Pros. Ck # ' TO LINE
+            APPEND LINE DISBURSE.PCKNO
+          END
+          PRINT LINE
+          IF DISBURSE.MANUAL NE 'J' BEGIN
+              CALC (REST_AVAIL - DISBURSE.PROSAMT) TO REST_AVAIL
+          END
+          PRINT REST_AVAIL
+          MOVE DISBURSE.PROSAMT TO PAID_HOLDER
+          IF DISBURSE.MANUAL EQ 'J' MOVE JE_AMT TO PAID_HOLDER
+          PRINT PAID_HOLDER
+          PRINT DISBURSE.PROSAMT
+          CALC (TOTAL_PFEE - DISBURSE.PROSAMT) TO TOTAL_PFEE
+          IF DISBURSE.MANUAL NE 'J' BEGIN
+              CALC (BODY.5 + BODY.10 + TOTAL_PAID) TO TOTAL_PAID
+          END
+	  
+          PAGECHECK 3
+[PAGEBREAK] BEGIN
+              OUTPUT HEADER
+            END
+          OUTPUT BODY
+          FIND GT DISBURSE BY INDEX.1
+[FINDERR] CLEAR DISBURSE
+       END
+SECTION TOTAL
+        PRINT TOTAL_REST
+        PRINT REST_AVAIL
+        PRINT TOTAL_PAID
+        PRINT TOTAL_CHARGES
+        PRINT TOTAL_PFEE
+        PRINT TOTAL_MFEE
+        PRINT SUBHEADER1.5
+        PAGECHECK 2
+[PAGEBREAK] BEGIN
+              CLEARSCREEN
+              OUTPUT HEADER
+            END
+        OUTPUT TOTAL
+        INDICATE NOTOT FALSE
+        FORMFEED
+
+		REPORTEND
+		
+[NOTOT] BEGIN
+   BLANKFORM TOTAL
+   AUTOPAGE TOTAL 4
+   PRINT TOTAL_CHARGES
+   PRINT TOTAL_PFEE
+   PRINT TOTAL_MFEE
+   PRINT BALANCE
+   OUTPUT TOTAL
+   FORMFEED
+END
+
+BLANKFORM HEADER
+BLANKFORM SUBHEADER1
+BLANKFORM BODY
+BLANKFORM TOTAL
+BLANKFORM UNPAID
+FIND GT DEFENDNT BY INDEX.2
+[FOUND] IF DEFENDNT.NAME LE DEFNAME2 GOTO DEF_FIND  //GOES TO BEGINNING OF PROGRAM
+
+ABORT
+
+KEYPROC KEY.ESCAPE
+        ABORT
+
+
+//This sub calls that little "Press H to use handfed paper" screen. It should only apply to printed reports.
+handFeed:		
+MOVE 0 TO PAGEFEED
+ACCEPT SELECT.1
+IF SELECT.1 IN 'Hh' MOVE -1 TO PAGEFEED
+return
+				
+determineOutput:
+move "_" to underscore
+move DEFENDNT.NAME to outputFile
+trim outputFile to outputFile
+append outputFile underscore
+append outputFile DEFENDNT.IDNO
+if outputSelection eq 'P' direct_output "lpt1:"
+else if outputSelection eq 'S' direct_output outputFile		
+return

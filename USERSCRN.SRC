@@ -1,0 +1,158 @@
+/FORM1
+User Name and Password                 ________________________________________
+===============================================================================
+
+
+
+
+
+
+
+                       User Number  __.
+                         User Name  ____________________
+                     User Password  _______________
+                      Access Level  _.
+/*
+
+INTEGER USER_NUMB 
+INTEGER FROM_MENU
+#IFDEF  NEXT_MENU
+#ELSE
+INTEGER NEXT_MENU
+#ENDIF
+
+AUTOPAGE FORM1
+
+NAME       P1_REGS     USER_NUM   USER_NAME  USER_PASS  USER_ACC  
+
+STRING     REGI_TEMP$  
+STRING     REGI_NAME$ 
+STRING     RJ$1       
+STRING     RJ$2       
+STRING     REGI$TER  
+STRING     RESPONSE 1
+STRING     PROMPT 76  
+
+NUMBER     S$ERL_NUMB
+
+INDICATOR  OK          
+INDICATOR  USE_PASS   
+
+OPEN SYSTEM
+
+INDICATE USE_PASS AS SYSFILE.PASSWORD EQ 'Y'
+
+[USE_PASS] IF USER_NUMB LT 1 RUNPROGRAM SYSFILE.EXIT_PROG
+
+REGISTRATION REGI_NAME$ S$ERL_NUMB
+TRIM REGI_NAME$ TO REGI_NAME$
+MOVE '' TO REGI_TEMP$
+MOVE '                              ' TO REGI_TEMP$
+APPEND REGI_TEMP$ REGI_NAME$
+SCREENMODE 2
+RIGHT REGI_TEMP$ TO P1_REGS 40
+SCREENMODE 1
+
+PAGE FORM1
+
+GOTOXY 23 0
+SHOW '     Opening User File   '
+OPEN USER
+
+CLEARXY 23 0
+
+STRTFORM1:
+
+ENTERGROUP
+
+   ENTRY USERX.RECNUM       USER_NUM  {AUTOFIND,NOPUT}
+   ENTRY USERX.USER_NAME    USER_NAME
+   ENTRY USERX.PASSWORD     USER_PASS
+   ENTRY USERX.ACCS_LEVL    USER_ACC  
+
+ENDGROUP
+
+   GOSUB SAVFORM1
+   GOTO  STRTFORM1
+
+SAVFORM1:
+
+   MOVE '     Save this Information (Y/N)' TO PROMPT
+   GOSUB SURE
+[NOT OK] BEGIN
+      CLEARFORM USER_NUM THRU USER_ACC  
+      CLEAR USER
+      RETURN STRTFORM1
+   END
+[MULTIUSER] REREAD
+   ENTUPDATE
+   SAVERECORD USER
+[MULTIUSER] UNLOCK
+   CLEARFORM USER_NUM THRU USER_ACC  
+   CLEAR USER
+   RETURN STRTFORM1
+
+SURE:
+
+   GOTOXY 23 0
+   SHOW PROMPT
+
+YESNO:
+
+   INKEY RESPONSE
+   IF NOT RESPONSE IN "YNyn" GOTO YESNO
+[KEY.RETURN]  GOTO YESNO
+   INDICATE OK AS RESPONSE IN "Yy"
+   CLEARXY 23 0
+   RETURN
+
+KEYPROC KEY.SAVE
+
+   GOTO SAVFORM1
+
+KEYPROC KEY.DELETE
+
+   MOVE '     Are you SURE you wish to Delete This (Y/N) ? ' TO PROMPT
+   GOSUB SURE
+[NOT OK] BEGIN
+      ENTAGAIN
+      RETURN
+   END
+[MULTIUSER] REREAD
+   DELETE USER
+[MULTIUSER] UNLOCK
+   CLEARFORM USER_NUM THRU USER_ACC  
+   CLEAR USER
+   RETURN STRTFORM1
+
+KEYPROC KEY.ESCAPE
+
+   CLEARXY 23 0
+   GOTOXY 23 0
+   MOVE '     Leaving This Screen (Y/N)? ' TO PROMPT
+   GOSUB SURE
+[NOT OK] BEGIN
+      ENTAGAIN
+      RETURN
+   END
+   ABORT
+
+KEYPROC KEY.FIELD           
+
+   BACKFIELD
+   RETURN
+
+KEYPROC KEY.CLEAR
+
+   MOVE '     Clear this Screen (Y/N)? ' TO PROMPT
+   GOSUB SURE
+[NOT OK] BEGIN
+      ENTAGAIN
+      RETURN
+   END
+   CLEARFORM USER_NUM THRU USER_ACC  
+   CLEAR USER
+   RETURN STRTFORM1
+
+
+

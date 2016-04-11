@@ -1,0 +1,54 @@
+use login
+
+class Standard_Login_Client is a Login_Client
+    procedure Construct_Object integer Img
+        local string Name_Str
+
+        forward send Construct_Object Img
+
+        get_environment "DFSERVERNAME" to Name_Str
+        set value of (Server_Name(Current_Object)) to Name_Str
+        get_environment "DFUSERNAME" to Name_Str
+        set value of (User_Name(Current_Object)) to Name_Str
+    end_procedure
+
+    procedure Activating
+        set Last_Login_Result to DF_LOGIN_NOT_ATTEMPTED
+        forward send Activating
+    end_procedure
+
+    procedure Save_Login
+        local integer Idx Obj LI_State
+        local string SDriver PW SUser SServer
+
+        get Login_State to LI_State
+        get Value of (Driver_Name(Current_Object)) to SDriver
+        get Value of (Server_Name(Current_Object)) to SServer
+        get Value of (User_Name(Current_Object)) to SUser
+        get Password to PW
+
+        indicate Err FALSE
+
+        get Translate_Driver SDriver to SDriver
+
+        if LI_State ;
+            login SServer SUser PW SDriver
+        else ;
+            logout SDriver SServer
+
+        set Last_Login_Result to (if(Err, DF_LOGIN_FAILED, DF_LOGIN_SUCCEEDED))
+
+        [not Err] forward send Save_Login
+    end_procedure
+end_class
+
+object Login_Client is a Standard_Login_Client Login_Client_Img
+end_object
+
+procedure Login for Desktop
+    send Login to (Login_Client(Current_Object))
+end_procedure
+
+procedure Logout for Desktop
+    send Logout to (Login_Client(Current_Object))
+end_procedure

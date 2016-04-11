@@ -1,0 +1,25 @@
+        FILE DEFINITION LISTING FOR FILE #47
+*************************************************** 
+        FILE ROOT NAME     = USERX
+        USER DISPLAY NAME  = @:DF Users
+        DATAFLEX FILE NAME = USERX
+*************************************************** 
+        RECORD LENGTH = 64  (USED = 51)
+        MAX NUMBER OF RECORDS = 100  (USED = 11)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       1   NUMERIC   0    1     0     0     USER_NUMB
+   2       2      30   ASCII          0     0     0     USER_NAME
+   3      32      15   ASCII          0     0     0     PASSWORD
+   4      47       1   NUMERIC   0    0     0     0     ACCS_LEVL
+   5      48       1   NUMERIC   0    0     0     0     HC_LEVEL
+   6      49       1   NUMERIC   0    0     0     0     CM_LEVEL
+   7      50       1   NUMERIC   0    0     0     0     VR_LEVEL
+   8      51       1   NUMERIC   0    0     0     0     DISB
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   
+

@@ -1,0 +1,20 @@
+        FILE DEFINITION LISTING FOR FILE #21
+*************************************************** 
+        FILE ROOT NAME     = USERS
+        USER DISPLAY NAME  = @:VRS User
+        DATAFLEX FILE NAME = USERS
+*************************************************** 
+        RECORD LENGTH = 17  (USED = 17)
+        MAX NUMBER OF RECORDS = 100  (USED = 2)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       8   ASCII          1     0     0     USER_NAME
+   2       9       8   ASCII          0     0     0     PASSWORD
+   3      17       1   ASCII          0     0     0     USER_TYPE
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   
+

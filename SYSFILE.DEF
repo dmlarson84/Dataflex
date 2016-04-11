@@ -1,0 +1,29 @@
+        FILE DEFINITION LISTING FOR FILE #1
+*************************************************** 
+        FILE ROOT NAME     = SysFile
+        USER DISPLAY NAME  = @System Date File
+        DATAFLEX FILE NAME = SYSFILE
+*************************************************** 
+        RECORD LENGTH = 170  (USED = 140)
+        MAX NUMBER OF RECORDS = 1  (USED = 1)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1      30   ASCII          0     0     0     PROSNAME
+   2      31       4   NUMERIC   0    0     0     0     DEFENDANT
+   3      35       1   NUMERIC   0    0     0     0     YEAR
+   4      36       4   NUMERIC   0    0     0     0     CASE_NUMBER
+   5      40      25   ASCII          0     0     0     COUNTY
+   6      65      17   ASCII          0     0     0     DIST
+   7      82      30   ASCII          0     0     0     CLERK
+   8     112      20   ASCII          0     0     0     EXIT_PROG
+   9     132       1   NUMERIC   0    0     0     0     TIME_OUT
+  10     133       1   ASCII          0     0     0     PASSWORD
+  11     134       1   ASCII          0     0     0     SYSTEM_DATE
+  12     135       3   DATE           0     0     0     TODAY
+  13     138       3   DATE           0     0     0     LAST_DEP_DATE
+ 
+

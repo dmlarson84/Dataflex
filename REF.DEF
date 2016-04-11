@@ -1,0 +1,78 @@
+        FILE DEFINITION LISTING FOR FILE #30
+*************************************************** 
+        FILE ROOT NAME     = REF
+        USER DISPLAY NAME  = GL Prosecutor Reference File
+        DATAFLEX FILE NAME = REF
+*************************************************** 
+        RECORD LENGTH = 256  (USED = 217)
+        MAX NUMBER OF RECORDS = 1  (USED = 1)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1      30   ASCII          0     0     0     PROSECUTOR
+   2      31      30   ASCII          0     0     0     ADDRESS
+   3      61      30   ASCII          0     0     0     CITY_STATE
+   4      91       2   NUMERIC   0    0     0     0     TYRETAINED
+   5      93       2   NUMERIC   0    0     0     0     REFUNDS
+   6      95       4   NUMERIC   0    0     0     0     REF_NUM
+   7      99       5   NUMERIC   2    0     0     0     RUN_BAL
+   8     104       3   DATE           0     0     0     DATE
+   9     107       1   NUMERIC   0    0     0     0     PER1
+  10     108       1   NUMERIC   0    0     0     0     PER2
+  11     109       1   NUMERIC   0    0     0     0     PER3
+  12     110       1   NUMERIC   0    0     0     0     PER4
+  13     111       1   NUMERIC   0    0     0     0     PER5
+  14     112       1   NUMERIC   0    0     0     0     PER6
+  15     113       1   NUMERIC   0    0     0     0     PER7
+  16     114       1   NUMERIC   0    0     0     0     PER8
+  17     115       1   NUMERIC   0    0     0     0     PER9
+  18     116       1   NUMERIC   0    0     0     0     PER10
+  19     117       1   NUMERIC   0    0     0     0     PER11
+  20     118       1   NUMERIC   0    0     0     0     PER12
+  21     119       2   NUMERIC   0    0     0     0     ARMER
+  22     121       2   NUMERIC   0    0     0     0     ARPFEE
+  23     123       2   NUMERIC   0    0     0     0     APMER
+  24     125       2   NUMERIC   0    0     0     0     APPFEES
+  25     127       2   NUMERIC   0    0     0     0     APPROCESS
+  26     129       2   NUMERIC   0    0     0     0     RHC
+  27     131       2   NUMERIC   0    0     0     0     RMFEES
+  28     133       2   NUMERIC   0    0     0     0     RPFEES
+  29     135       2   NUMERIC   0    0     0     0     RCOSTS
+  30     137       2   NUMERIC   0    0     0     0     RJR
+  31     139       2   NUMERIC   0    0     0     0     DREST
+  32     141       2   NUMERIC   0    0     0     0     DMFEES
+  33     143       2   NUMERIC   0    0     0     0     DPFEES
+  34     145       2   NUMERIC   0    0     0     0     DCOSTS
+  35     147       2   NUMERIC   0    0     0     0     DJR
+  36     149       3   ASCII          0     0     0     DISTRICT
+  37     152       1   ASCII          0     0     0     DIVISION
+  38     153       1   NUMERIC   0    0     0     0     CURRENT_YR
+  39     154       2   ASCII          0     0     0     HC_BANK
+  40     156       4   NUMERIC   2    0     0     0     DEPOSITS
+  41     160       4   NUMERIC   2    0     0     0     CASH
+  42     164       4   NUMERIC   2    0     0     0     NEWOFF
+  43     168       1   ASCII          0     0     0     RECON
+  44     169       1   NUMERIC   0    0     0     0     RCPT_DEFAULT
+  45     170       6   ASCII          0     0     0     BOLD_ON
+  46     176       6   ASCII          0     0     0     BOLD_OFF
+  47     182       6   ASCII          0     0     0     UNDER_ON
+  48     188       6   ASCII          0     0     0     UNDER_OFF
+  49     194       6   ASCII          0     0     0     CONDENSE_ON
+  50     200       6   ASCII          0     0     0     CONDENSE_OFF
+  51     206       1   ASCII          0     0     0     SINGLE_LETT
+  52     207       1   ASCII          0     0     0     SINGLE_WARR
+  53     208       1   ASCII          0     0     0     HAND_FEED
+  54     209       1   ASCII          0     0     0     LEGAL_SIZE
+  55     210       1   ASCII          0     0     0     FEES_TABLE
+  56     211       1   ASCII          0     0     0     PRT_SUM_WAR_NON
+  57     212       1   ASCII          0     0     0     PRT_INFO_MIS
+  58     213       1   ASCII          0     0     0     PRT_DAT_FILED
+  59     214       1   ASCII          0     0     0     EXTRA1
+  60     215       1   ASCII          0     0     0     EXTRA2
+  61     216       1   ASCII          0     0     0     EXTRA3
+  62     217       1   ASCII          0     0     0     EXTRA4
+ 
+

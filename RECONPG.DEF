@@ -1,0 +1,35 @@
+-----------------------------------------------------------------------------
+  DATE: 01/28/111      TIME: 15:44                                  PAGE:  1
+  FILE DEFINITION FOR FILE: RECONPG (# 25)
+-----------------------------------------------------------------------------
+  DRIVER NAME               : DATAFLEX
+  FILE ROOT NAME            : RECONPG
+  USER DISPLAY NAME         : RECONPG
+  DATAFLEX FILE NAME        : RECONPG
+-----------------------------------------------------------------------------
+  RECORD LENGTH             : 128       ( USED: 124 )
+  MAX NUMBER OF RECORDS     : 1000000   ( USED: 75 )
+  FILE COMPRESSION          : NONE
+  RE-USE DELETED SPACE      : NO 
+  LOCKING TYPE              : FILE
+  HEADER INTEGRITY CHECKING : YES
+  TRANSACTION TYPE          : CLIENT ATOMIC
+  RECORD IDENTITY INDEX     : 0 ( 0 , 0 )
+  FILE LOGIN PARAMETER      : 
+  SYSTEM FILE               : NO 
+-----------------------------------------------------------------------------
+
+NUM  FIELD NAME       TYPE SIZE  OFFST IX   RELATES TO FILE.FIELD
+---  ---------------  ---- ----- ----- --   ---------------------------------
+  1  BANK_CODE        ASC      2     1      
+  2  CHECK_NUMBER     NUM    6.0     3      
+  3  TRANS_DATE       DAT      3     6      
+  4  PAYOR            ASC     30     9      
+  5  AMOUNT           NUM    6.2    39      
+  6  STATUS           ASC      1    43      
+  7  POSTING_DATE     DAT      3    44      
+  8  REFERENCE        ASC     15    47      
+  9  COMMENT          ASC     30    62      
+ 10  TYPE             ASC      1    92      
+ 11  PG_TIMESTAMP     TEX     32    93      
+

@@ -1,0 +1,28 @@
+        FILE DEFINITION LISTING FOR FILE #44
+*************************************************** 
+        FILE ROOT NAME     = RECON2
+        USER DISPLAY NAME  = GL Bank Reconcilation Deposits
+        DATAFLEX FILE NAME = RECON2
+*************************************************** 
+        RECORD LENGTH = 64  (USED = 60)
+        MAX NUMBER OF RECORDS = 1000  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       2   ASCII          2    36     1     BANK_CODE
+   2       3       3   DATE           2     0     0     TRANS_DATE
+   3       6       3   NUMERIC   0    2     0     0     SEQ_NUMBER
+   4       9       4   NUMERIC   2    0     0     0     AMOUNT
+   5      13       1   ASCII          0     0     0     STATUS
+   6      14       1   ASCII          0     0     0     POSTING_TYPE
+   7      15      15   ASCII          0     0     0     REFERENCE
+   8      30      30   ASCII          0     0     0     COMMENT
+   9       1       8   OVERLAP        2     0     0     BNK_TRN_SEQ
+  10      60       1   ASCII          0     0     0     TYPE
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   <2>   <3>   
+INDEX 2:  FIELD SEGMENTS:  <9>   
+

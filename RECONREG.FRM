@@ -1,0 +1,621 @@
+/HEADER       RESIDENT                                  RECONREG
+==============================================================================
+System Date: __/__/____  ______________________________          Page: ___.
+                          Bank Reconcilation Register
+Time: __:__               District: ___  Division: __
+
+/SUBHEADER    RESIDENT
+Bank Code: __ ______________________________
+
+/SUBHEADER2   RESIDENT
+Deposits and Adjustments:
+  Date  Type   Reference       Comment                   Debits    Credits  Clr
+-------------------------------------------------------------------------------
+/DEP          RESIDENT
+__/__/____ _ _____________ ____________________________ ______.__   ______.__ _
+/DEPTOT       RESIDENT
+                                                        ---------   ---------
+                            TOTAL POSTINGS              ______.__   ______.__
+
+/SUBHEADER3   RESIDENT
+Checks:
+ Check #    Date    Reference     Payee Name                        Amount  Clr
+-------------------------------------------------------------------------------
+/CHK          RESIDENT
+______.  __/__/____  _____________  ____________________________    ______.__ _
+/CHKTOT       RESIDENT
+                                                                    ---------
+                            Total of Checks                         ______.__
+/RECO 
+
+               Reconcilition Summary for bank __ as of __/__/____
+               
+                 Bank Statement Balance.........................    ______.__
+                 Plus __. Deposit in Transit....................    ______.__
+                 Less __. Adjustments Totaling..................    ______.__
+                 Less __. Checks Outstanding Totaling...........    ______.__
+                                                                    ----------
+                 Adjusted Bank Balance..........................    ______.__
+   
+                 Calculated General Ledger Balance..............    ______.__
+                 Out of Balance By..............................    ______.__
+/SELECT
+ออออออ< Bank Reconcilition Register >ออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+            Enter Bank Code ..............................{ __
+
+               Starting Date..............................{ __/__/____
+               Ending Date................................{ __/__/____
+
+ 
+
+            Output Options:
+                
+               P)rinter,  C)onsole ,  Q)uit...............{ _
+
+
+
+
+/VALID
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   You have entered an invalid Bank code please renter        บ
+บ                                                              บ
+บ                 PRESS ANY KEY TO CONTINUE                    บ
+บ                                                              บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/Shutoff
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   A key has been pressed... Do you wish to stop the report   บ
+บ                                                              บ
+บ                Y)es, N)o.........[ _ ]                       บ
+บ                                                              บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/STANDBY        RESIDENT
+อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+
+
+
+
+             Please Standby, Now Printing/Updating Record # : ______.
+
+
+
+
+
+/DEL       RESIDENT
+ษอออออออออออออออออออออออออออออออออออออออออออออป
+บ                                             บ
+บ  Now Purgeing Record Number.....{ ______.   บ
+บ                                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออผ
+/QUES       RESIDENT
+อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+
+
+
+     
+
+
+
+
+
+
+
+
+
+         Do You wish to purge cleared transactions now ? (Y/N)...{ _
+
+
+
+/info
+
+  change made 4/5/91 by gary grooms
+         added line to indicate found false if a record is found that does
+         not equal selected bank code in the deposit's routine.
+
+  Recompiled 12/17/96 By Gary Grooms
+         Started to add changes to the selection process but aborted the
+         change.
+
+  change made 12/27/96 By Gary Grooms
+         Added a keycheck routine so that the report could be stopped
+         Changed output lines from 24 to 28 when CON in selected for output
+
+
+    01-28-1999 By Gary Grooms
+        Modified program to comply with y2k - 4 digit years and changed
+        save routines to comply with v3.1d re-read, save, unlock etc.
+        edited the sysdate command to sysdate4 command (new V3.1d)
+
+  Change Made 08-17-99 By Gary Grooms
+        Changed the command "OUTFILE" to "Direct_Output"
+  Change made 08-26-99 By Gary Grooms
+         Modified where and how the messages display on the screen
+         IE: the valid,shutoff and del screen should now display toward the
+         middle of the screen and their color was changed to red
+
+  Recompiled on 01-20-2000 by Jeff March
+         Recognize backspace function in calcdate.inc
+
+  Change on 07-28-2010 by Jeff March
+         Move Purged RECON and RECON2 records to RECONPG and RECON2PG tables
+		 
+		 
+/*
+use y2k.pkg
+Read_dfini "df23ini.cfg"
+//----------------- Cannot Run Program From Command Line (DOS)
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+#include calcdate.inc
+#include macs.frm
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+#COMMAND CDISPLAY R#OBL "TO""" NDIE#LCG
+  #IF (!0=1)
+    AUTO4$ CDISPLAY !1 TO PAGE!f
+  #ELSE
+   #IFDEF TEMP$STR
+   #ELSE
+    STRING TEMP$STR 255
+   #ENDIF
+   #IFDEF TEMP$STR1
+   #ELSE
+    STRING TEMP$STR1 255
+   #ENDIF
+   TRIM !1 TO TEMP$STR
+   LENGTH TEMP$STR TO STRLEN
+   PRINT "" TO !3  {FILL=""}
+   LENGTH !3 TO STRMARK
+   PAD "" TO TEMP$STR1 ((STRMARK - STRLEN) / 2)
+   APPEND TEMP$STR1 TEMP$STR
+   DISPLAY TEMP$STR1 TO !3
+ #ENDIF
+#ENDCOMMAND
+   
+
+
+
+DATE_MACRO_INIT
+
+OPEN RECON INDEX.1
+OPEN RECON2 INDEX.1
+OPEN BANK
+OPEN REF
+OPEN SYSFILE
+OPEN RECON2PG
+OPEN RECONPG
+
+PAGE SET VALID AT 10 8 colors 79 79
+PAGE SET DEL AT 10 15  colors 79 79
+PAGE SET Shutoff at 15 8  colors 79 79
+
+INTEGER  TRANSFER ADAY AMONTH AYEAR HR MIN
+INTEGER ACCUM3 ACCUM4 ACCUM5 COUNT
+
+NUMBER ACCUM1 ACCUM2 ACCUM6 ACCUM7 ACCUM8
+NUMBER ACCUM9 ACCUM10 CALC_BAL
+
+STRING ANSW 1 PROSECUTOR 30 TIMESTAMP 25 
+
+INDICATOR PURGE BAL INSELECT PRT OKCHK
+
+DATE TODAY START_DATE END_DATE
+
+//ACCUMULATOR ID
+// ACCUM1         DEPOSITS IN TRANSIT
+// ACCUM2         ADJUSTMENTS TOTAL
+// ACCUM3         TOTAL NUMBER OF DEPOSITS IN TRANSIT
+// ACCUM4         TOTAL NUMBER OF ADJUSTMENTS
+// ACCUM5         TOTAL NUMBER OF OUTSTANDING CHECKS
+// ACCUM6         TOTAL AMOUNT OF OUTSTANDING CHECKS
+// ACCUM7         TOTAL AMOUNT OF CLEARED CHECKS
+// ACCUM8        
+// ACCUM9
+// ACCUM10
+
+
+GOSUB CLEAR_ACCUM
+SYSDATE4 TODAY HR MIN
+MOVE '' TO PROSECUTOR
+MOVE TODAY TO END_DATE
+
+//FIRST_DAY_OF_YEAR TODAY TO START_DATE
+Move "01/01/1950" to Start_Date
+MOVE TODAY TO TIMESTAMP
+APPEND TIMESTAMP "  "
+APPEND TIMESTAMP HR
+APPEND TIMESTAMP ":"
+IF MIN LE 9 APPEND TIMESTAMP "0"
+APPEND TIMESTAMP MIN
+
+REPEAT
+INDICATE INSELECT TRUE
+  ACCEPT SELECT.1                   {CAPSLOCK}
+    CLEAR BANK 
+    MOVE SELECT.1 TO BANK.CODE
+    FIND EQ BANK BY INDEX.1
+    [FINDERR] BEGIN
+      PAGE VALID
+      INKEY ANSW
+      CLEARFORM SELECT
+     END
+    [FINDERR] LOOP
+   DISPLAY START_DATE TO SELECT.2
+  ACCEPT SELECT.2
+   DISPLAY END_DATE TO SELECT.3
+  ACCEPT SELECT.3
+  MOVE SELECT.3 	TO END_DATE
+REPEAT
+  ACCEPT SELECT.4                  
+  UPPERCASE SELECT.4
+  IF ~ SELECT.4 IN 'PCQ' LOOP
+  IF SELECT.4 EQ 'Q' BEGIN
+     CLEARXY 24 0
+     GOTOXY 24 0
+     SHOW "Are you sure you wish to quit ? Y/N"
+     GOTOXY 24 35
+     REPEAT
+      INKEY ANSW
+      UPPERCASE ANSW
+      IF ~ ANSW IN 'YN' LOOP
+      IF ANSW EQ 'Y' ABORT
+      IF ANSW EQ 'N' CLEARXY 24 0
+    END
+   GOSUB SELECT_OUTPUT
+ 
+INDICATE INSELECT FALSE
+MOVE 1 TO PAGECOUNT
+GOSUB DO_HEADER
+GOSUB DO_SUBHEADER
+
+CLEAR RECON2
+   MOVE SELECT.1 TO RECON2.BANK_CODE
+   MOVE SELECT.2 TO RECON2.TRANS_DATE
+   MOVE (0) TO RECON2.SEQ_NUMBER
+     FIND GE RECON2 BY INDEX.1
+     [found] if recon2.bank_code ne select.1 indicate found false
+     [found] Indicate OkChk as Recon2.Trans_Date GE Select.2
+     [OKCHK] Indicate OkChk as Recon2.Trans_Date LE Select.3
+     [FOUND] BEGIN
+             OUTPUT SUBHEADER2
+             [PRT] PAGE STANDBY
+             GOTO START_DEP
+      END
+     [FINDERR] GOTO DO_CHECKS 
+  
+
+REPEAT
+START_DEP:
+ [OKCHK] Begin
+  PAGECHECK 10
+  [PAGEBREAK] BEGIN
+         GOSUB DO_HEADER
+         GOSUB DO_SUBHEADER
+         OUTPUT SUBHEADER2
+     END
+  DISPLAY RECON2.RECNUM TO    STANDBY.1
+  PRINT RECON2.TRANS_DATE     TO DEP.1
+  PRINT RECON2.POSTING_TYPE   TO DEP.2
+  PRINT RECON2.REFERENCE      TO DEP.3
+  PRINT RECON2.COMMENT        TO DEP.4
+  IF RECON2.POSTING_TYPE IN 'ID' BEGIN
+     PRINT (0.00) TO DEP.5
+     PRINT RECON2.AMOUNT TO DEP.6
+  END
+  IF RECON2.POSTING_TYPE IN 'BWN' BEGIN
+     PRINT RECON2.AMOUNT TO DEP.5
+     PRINT (0.00) TO DEP.6
+  END
+  IF RECON2.POSTING_TYPE EQ 'A' BEGIN
+     IF RECON2.AMOUNT LT (0.00) BEGIN
+          PRINT RECON2.AMOUNT TO DEP.5
+          PRINT (0.00) TO DEP.6
+     END
+     IF RECON2.AMOUNT GT (0.00) BEGIN
+          PRINT (0.00) TO DEP.5
+          PRINT RECON2.AMOUNT TO DEP.6
+     END
+  END      
+
+  PRINT RECON2.STATUS         TO DEP.7
+  IF RECON2.POSTING_TYPE EQ 'D' IF RECON2.STATUS EQ 'N' BEGIN
+       MOVE (RECON2.AMOUNT + ACCUM1) TO ACCUM1
+       INCREMENT ACCUM3
+  END
+  IF RECON2.POSTING_TYPE IN 'AB' IF RECON2.STATUS EQ 'N' BEGIN
+       MOVE (ACCUM2 + RECON2.AMOUNT) TO ACCUM2
+       INCREMENT ACCUM4
+  END
+
+  OUTPUT DEP
+End
+
+  FIND GT RECON2 BY INDEX.1
+  [found] if recon2.bank_code ne select.1 indicate found false
+  [found] Indicate OkChk as Recon2.Trans_Date GE Select.2
+  [OKCHK] Indicate OkChk as Recon2.Trans_Date LE Select.3
+   KeyCheck gosub shutdown
+  [FOUND] LOOP
+
+  [FINDERR] BEGIN
+  PAGECHECK 5 
+  [PAGEBREAK] BEGIN
+         GOSUB DO_HEADER
+         GOSUB DO_SUBHEADER
+         OUTPUT SUBHEADER2
+     END 
+    SUBTOTAL DEP.5      TO DEPTOT.1
+    SUBTOTAL DEP.6      TO DEPTOT.2
+
+    OUTPUT DEPTOT
+  END
+
+DO_CHECKS:
+  MOVE (BANK.PRIOR_STMT_BAL - DEPTOT.1 + DEPTOT.2) TO CALC_BAL
+CLEAR RECON
+  PAGECHECK 10
+  [PAGEBREAK] BEGIN
+         GOSUB DO_HEADER
+         GOSUB DO_SUBHEADER
+     END
+   OUTPUT SUBHEADER3
+   MOVE SELECT.1 TO RECON.BANK_CODE
+   FIND GE RECON BY INDEX.1
+   [FOUND] IF RECON.BANK_CODE NE SELECT.1 INDICATE FOUND FALSE
+   [FOUND] Indicate OkChk as Recon.Trans_Date GE Select.2
+   [OkChk] Indicate OkChk as Recon.Trans_Date LE Select.3
+   [FOUND] GOTO START_CHK
+   [FINDERR] GOTO END_REPORT
+REPEAT
+START_CHK:
+[OkChk] Begin
+  PAGECHECK 5 
+  [PAGEBREAK] BEGIN
+         GOSUB DO_HEADER
+         GOSUB DO_SUBHEADER
+         OUTPUT SUBHEADER3
+     END
+   KeyCheck gosub shutdown
+   DISPLAY RECON.RECNUM       TO STANDBY.1
+   PRINT RECON.CHECK_NUMBER   TO CHK.1
+   PRINT RECON.TRANS_DATE     TO CHK.2
+   PRINT RECON.REFERENCE      TO CHK.3
+   PRINT RECON.PAYOR          TO CHK.4
+   PRINT RECON.AMOUNT         TO CHK.5
+   PRINT RECON.STATUS         TO CHK.6
+   IF RECON.STATUS EQ 'N' BEGIN
+      MOVE (ACCUM6 + RECON.AMOUNT) TO ACCUM6
+      INCREMENT ACCUM5
+   END
+    IF RECON.STATUS EQ 'Y' MOVE (ACCUM7 + RECON.AMOUNT) TO ACCUM7
+
+ OUTPUT CHK
+End
+ FIND GT RECON BY INDEX.1
+ [FOUND] IF RECON.BANK_CODE NE SELECT.1 INDICATE FOUND FALSE
+ [FOUND] Indicate OkChk as Recon.Trans_Date GE Select.2
+ [OkChk] Indicate OkChk as Recon.Trans_Date LE Select.3
+
+ [FOUND] LOOP
+ [FINDERR] BEGIN
+  PAGECHECK 5 
+  [PAGEBREAK] BEGIN
+         GOSUB DO_HEADER
+         GOSUB DO_SUBHEADER
+         OUTPUT SUBHEADER3
+     END
+   SUBTOTAL CHK.5 TO CHKTOT.1
+   MOVE (CALC_BAL - ACCUM7) TO CALC_BAL
+  OUTPUT CHKTOT
+ END
+
+
+START_SUMMARY:
+  PAGECHECK 15
+  [PAGEBREAK] BEGIN
+         GOSUB DO_HEADER
+         GOSUB DO_SUBHEADER
+     END 
+   PRINT BANK.CODE     TO RECO.1
+   PRINT Select.3      TO RECO.2
+//   PRINT TODAY         TO RECO.2
+   PRINT BANK.STMT_BAL TO RECO.3
+   PRINT ACCUM3        TO RECO.4
+   PRINT ACCUM1        TO RECO.5
+   PRINT ACCUM4        TO RECO.6
+   PRINT ACCUM2        TO RECO.7
+   PRINT ACCUM5        TO RECO.8
+   PRINT ACCUM6        TO RECO.9
+   PRINT (RECO.3 + RECO.5 - RECO.7 -RECO.9) TO RECO.10
+   PRINT (CALC_BAL - ACCUM6) TO RECO.11
+   PRINT (RECO.10 - RECO.11) TO RECO.12
+   INDICATE PURGE AS RECO.12 EQ (0.00)
+   OUTPUT RECO
+
+END_REPORT:
+  [PRT][PURGE] BEGIN // must print before purgeing
+     PAGE QUES
+     REPEAT
+       ACCEPT QUES.1
+       UPPERCASE QUES.1
+       IF ~ QUES.1 IN 'YN' LOOP
+       IF QUES.1 EQ 'Y' GOSUB PURGE_TRANS
+   END
+  FORMFEED
+  DESPOOL
+  CHAIN "RECON"
+
+
+//=====< SUBROUTINES >=========================================================
+
+
+
+DO_HEADER:
+   PRINT TODAY                  TO HEADER.1
+   MOVE SYSFILE.PROSNAME TO PROSECUTOR
+   CDISPLAY PROSECUTOR TO HEADER.2
+   PRINT PAGECOUNT              TO HEADER.3
+   PRINT HR                     TO HEADER.4
+   PRINT MIN                    TO HEADER.5
+   PRINT BANK.GL_DIST           TO HEADER.6
+   PRINT BANK.GL_DIV            TO HEADER.7
+OUTPUT HEADER
+RETURN
+
+DO_SUBHEADER:
+   PRINT BANK.CODE              TO SUBHEADER.1
+   PRINT BANK.NAME              TO SUBHEADER.2
+OUTPUT SUBHEADER
+RETURN
+
+
+SELECT_OUTPUT:
+    IF SELECT.4 EQ 'P' BEGIN
+      INDICATE PRT TRUE
+      Direct_Output "LPT1:"
+      MOVE 60 TO PAGEEND
+      MOVE 0 TO PAGEFEED
+    END
+    IF SELECT.4 EQ 'C' BEGIN
+      INDICATE PRT FALSE
+      Direct_Output "CON:"
+      MOVE 28 TO PAGEEND
+      MOVE -1 TO PAGEFEED
+      CLEARSCREEN
+    END
+
+
+RETURN
+
+
+CLEAR_ACCUM:
+  MOVE (0.00) TO CALC_BAL
+  MOVE (0.00) TO ACCUM1
+  MOVE (0.00) TO ACCUM2
+  MOVE (0.00) TO ACCUM3
+  MOVE (0.00) TO ACCUM4
+  MOVE (0.00) TO ACCUM5
+  MOVE (0.00) TO ACCUM6
+  MOVE (0.00) TO ACCUM7
+  MOVE (0.00) TO ACCUM8
+  MOVE (0.00) TO ACCUM9
+  MOVE (0.00) TO ACCUM10
+RETURN
+
+PURGE_TRANS:
+  PAGE DEL
+  CLEAR RECON2
+  FIND GE RECON2 BY RECNUM
+  [FOUND] IF RECON2.BANK_CODE NE SELECT.1 GOTO PASS_DEPS2
+  [FINDERR] GOTO PASS_DEPS
+  [FOUND] MOVE RECON2.RECNUM TO COUNT
+   REPEAT
+    IF RECON2.STATUS EQ 'Y' BEGIN
+      DISPLAY RECON2.RECNUM TO DEL.1
+		  MOVE RECON2.BANK_CODE TO RECON2PG.BANK_CODE
+		  MOVE RECON2.TRANS_DATE TO RECON2PG.TRANS_DATE
+		  MOVE RECON2.SEQ_NUMBER TO RECON2PG.SEQ_NUMBER
+		  MOVE RECON2.AMOUNT TO RECON2PG.AMOUNT
+		  MOVE RECON2.STATUS TO RECON2PG.STATUS
+		  MOVE RECON2.POSTING_TYPE TO RECON2PG.POSTING_TYPE 
+		  MOVE RECON2.REFERENCE TO RECON2PG.REFERENCE
+		  MOVE RECON2.COMMENT TO RECON2PG.COMMENT
+		  MOVE RECON2.TYPE TO RECON2PG.TYPE
+		  MOVE TIMESTAMP TO RECON2PG.PG_TIMESTAMP
+		  SAVERECORD RECON2PG
+	  MOVE (RECON2PG.RECNUM + 1) to RECON2PG.RECNUM
+      DELETE RECON2
+      MOVE COUNT TO RECON2.RECNUM
+     END
+ PASS_DEPS2:
+      FIND GT RECON2 BY RECNUM
+      [FOUND] MOVE RECON2.RECNUM TO COUNT
+      [FOUND] LOOP
+PASS_DEPS:
+  CLEAR RECON
+  FIND GE RECON BY RECNUM
+  [FOUND] IF RECON.BANK_CODE NE SELECT.1 GOTO PASS_CHKS2
+  [FINDERR] GOTO PASS_CHKS
+  [FOUND] MOVE RECON.RECNUM TO COUNT
+   REPEAT
+    IF RECON.STATUS EQ 'Y' BEGIN
+      DISPLAY RECON.RECNUM TO DEL.1
+		  MOVE RECON.BANK_CODE TO RECONPG.BANK_CODE
+		  MOVE RECON.CHECK_NUMBER TO RECONPG.CHECK_NUMBER
+		  MOVE RECON.TRANS_DATE TO RECONPG.TRANS_DATE
+		  MOVE RECON.PAYOR TO RECONPG.PAYOR
+		  MOVE RECON.AMOUNT TO RECONPG.AMOUNT
+		  MOVE RECON.STATUS TO RECONPG.STATUS
+		  MOVE RECON.POSTING_DATE TO RECONPG.POSTING_DATE
+		  MOVE RECON.REFERENCE TO RECONPG.REFERENCE
+		  MOVE RECON.COMMENT TO RECONPG.COMMENT
+		  MOVE RECON.TYPE TO RECONPG.TYPE
+		  MOVE TIMESTAMP TO RECONPG.PG_TIMESTAMP
+	  SAVERECORD RECONPG
+	  MOVE (RECONPG.RECNUM + 1) to RECONPG.RECNUM
+	  DELETE RECON
+      MOVE COUNT TO RECON.RECNUM
+     END
+ PASS_CHKS2:
+      FIND GT RECON BY RECNUM
+      [FOUND] MOVE RECON.RECNUM TO COUNT
+      [FOUND] LOOP
+PASS_CHKS:
+   REREAD
+   MOVE BANK.STMT_BAL TO BANK.PRIOR_STMT_BAL
+   MOVE (0.00) TO BANK.CLEARED
+   SAVERECORD BANK
+   UNLOCK
+   INDICATE PURGE FALSE
+RETURN
+
+Shutdown:
+    Repeat
+      clearform shutoff.1
+      accept shutoff.1
+      uppercase shutoff.1
+         If ~ shutoff.1 in "YN" Loop
+         If shutoff.1 eq "Y" begin
+            gosub clear_accum
+            Abort
+         End
+Return
+
+
+//====< KEYPROC'S >============================================================
+
+KEYPROC KEY.ESCAPE
+   [INSELECT] BEGIN
+     CLEARXY 24 0
+     GOTOXY 24 0
+     SHOW 'Do you wish to abort this program ? Y/N'
+     GOTOXY 24 45
+   REPEAT
+     INKEY ANSW
+     UPPERCASE ANSW
+     IF ~ ANSW IN 'YN' LOOP
+     IF ANSW EQ 'Y' ABORT
+     IF ANSW EQ 'N' RETURN
+  END
+
+ENTAGAIN
+RETURN

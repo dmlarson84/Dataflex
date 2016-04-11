@@ -1,0 +1,207 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Confidential Trade Secret.
+// Copyright 1987-1994 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//      
+// Module: 
+//      seq_chnl.pkg
+//      
+// Purpose:
+//      Defines global sequential device management operations.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      11/2/94
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+use ui
+#INCLUDE errornum.inc
+
+define DF_SEQ_CHANNEL_NOT_AVAILABLE for -2
+define DF_SEQ_CHANNEL_ERROR         for -1
+define DF_SEQ_CHANNEL_MIN           for 0
+define DF_SEQ_CHANNEL_MAX           for 9
+define DF_SEQ_START_CHANNEL         for 2 // leave 0 and 1 til last
+                            // so that programs that use direct_input/output
+                            // w/o specifying a channel will work.
+enum_list
+    define DF_SEQ_CHANNEL_MODE_CLOSED
+    define DF_SEQ_CHANNEL_MODE_OPEN
+    define DF_SEQ_CHANNEL_MODE_OUTPUT
+    define DF_SEQ_CHANNEL_MODE_INPUT
+end_enum_list
+
+enum_list
+    define DF_SEQ_CHANNEL_ERROR_MODE_NONE
+    define DF_SEQ_CHANNEL_ERROR_MODE_ALL
+end_enum_list
+
+integer Seq$Channel$Error$Mode
+
+procedure set Seq_Channel_Error_Mode GLOBAL integer Mode
+    move Mode to Seq$Channel$Error$Mode
+end_procedure
+
+function Seq_Channel_Error_Mode GLOBAL returns integer
+    function_return Seq$Channel$Error$Mode
+end_procedure
+
+object Seq_Channel_List is an Array
+    procedure Initialize
+        local integer Itm
+
+        move DF_SEQ_CHANNEL_MIN to Itm
+
+        while Itm LE DF_SEQ_CHANNEL_MAX
+            set Array_Value item Itm to DF_SEQ_CHANNEL_MODE_CLOSED
+            increment Itm
+        end
+    end_procedure
+
+    send Initialize
+end_object
+
+set Seq_Channel_Error_Mode to DF_SEQ_CHANNEL_ERROR_MODE_ALL
+
+function Seq_Channel_Mode GLOBAL integer Chnl returns integer
+    function_return (Integer_Value(Seq_Channel_List(Current_Object), Chnl))
+end_function
+
+procedure set Seq_Channel_Mode GLOBAL integer Chnl integer Mode
+    set Array_Value of (Seq_Channel_List(Current_Object)) item Chnl to Mode
+end_procedure
+
+function Seq_New_Channel GLOBAL returns integer
+    local integer Obj Chnl
+
+    move DF_SEQ_START_CHANNEL to Chnl
+
+    while Chnl LE DF_SEQ_CHANNEL_MAX
+        if (Seq_Channel_Mode(Chnl)) EQ DF_SEQ_CHANNEL_MODE_CLOSED begin
+            set Seq_Channel_Mode Chnl DF_SEQ_CHANNEL_MODE_OPEN
+            function_return Chnl
+        end
+
+        increment Chnl
+    end
+
+    // wrap back to beginning
+    move 0 to Chnl
+
+    while Chnl LT DF_SEQ_START_CHANNEL
+        if (Seq_Channel_Mode(Chnl)) EQ DF_SEQ_CHANNEL_MODE_CLOSED begin
+            set Seq_Channel_Mode Chnl DF_SEQ_CHANNEL_MODE_OPEN
+            function_return Chnl
+        end
+
+        increment Chnl
+    end
+
+    function_return DF_SEQ_CHANNEL_NOT_AVAILABLE
+end_procedure
+
+procedure Seq_Release_Channel GLOBAL integer Chnl
+    if ((Chnl >= DF_SEQ_CHANNEL_MIN) and (Chnl <= DF_SEQ_CHANNEL_MAX)) ;
+        set Seq_Channel_Mode Chnl to DF_SEQ_CHANNEL_MODE_CLOSED
+end_procedure
+
+function Seq_Open_Input_Channel GLOBAL string Dvc returns integer
+    local integer Chnl
+
+    get Seq_New_Channel to Chnl
+
+    if Chnl LE DF_SEQ_CHANNEL_ERROR begin
+        if (Seq_Channel_Error_Mode()) EQ DF_SEQ_CHANNEL_ERROR_MODE_ALL ;
+            error DFERR_CANT_OPEN_INPUT_FILE (Dvc + ": no open channels")
+        function_return Chnl
+    end
+
+    indicate Err FALSE
+    direct_input channel Chnl Dvc
+
+    [Err] begin
+        send Seq_Release_Channel Chnl
+        function_return DF_SEQ_CHANNEL_ERROR
+    end
+
+    set Seq_Channel_Mode Chnl to DF_SEQ_CHANNEL_MODE_INPUT
+
+    function_return Chnl
+end_function
+
+function Seq_Open_Output_Channel GLOBAL string Dvc returns integer
+    local integer Chnl
+
+    get Seq_New_Channel to Chnl
+
+    if Chnl LE DF_SEQ_CHANNEL_ERROR begin
+        if (Seq_Channel_Error_Mode()) EQ DF_SEQ_CHANNEL_ERROR_MODE_ALL begin
+            error DFERR_CANT_OPEN_OUTPUT_FILE (Dvc + ": channel not available")
+            move DF_SEQ_CHANNEL_ERROR to Chnl
+        end
+
+        function_return Chnl
+    end
+
+    indicate Err FALSE
+    direct_output channel Chnl Dvc
+
+    [Err] begin
+        send Seq_Release_Channel Chnl
+        function_return DF_SEQ_CHANNEL_ERROR
+    end
+
+    set Seq_Channel_Mode Chnl to DF_SEQ_CHANNEL_MODE_OUTPUT
+
+    function_return Chnl
+end_function
+
+function Seq_Append_Output_Channel GLOBAL string Dvc returns integer
+    local integer Chnl
+
+    get Seq_New_Channel to Chnl
+
+    if Chnl LE DF_SEQ_CHANNEL_ERROR begin
+        if (Seq_Channel_Error_Mode()) EQ DF_SEQ_CHANNEL_ERROR_MODE_ALL begin
+            error DFERR_CANT_OPEN_OUTPUT_FILE (Dvc + ": channel not available")
+            move DF_SEQ_CHANNEL_ERROR to Chnl
+        end
+
+        function_return Chnl
+    end
+
+    indicate Err FALSE
+    append_output channel Chnl Dvc
+
+    [Err] begin
+        send Seq_Release_Channel Chnl
+        function_return DF_SEQ_CHANNEL_ERROR
+    end
+
+    set Seq_Channel_Mode Chnl to DF_SEQ_CHANNEL_MODE_OUTPUT
+
+    function_return Chnl
+end_function
+
+procedure Seq_Close_Channel GLOBAL integer Chnl
+    local integer Mode
+
+    if ((Chnl >= DF_SEQ_CHANNEL_MIN) and (Chnl <= DF_SEQ_CHANNEL_MAX)) begin
+        get Seq_Channel_Mode Chnl to Mode
+
+        if Mode EQ DF_SEQ_CHANNEL_MODE_OUTPUT ;
+            close_output channel Chnl
+        else if Mode EQ DF_SEQ_CHANNEL_MODE_INPUT ;
+            close_input channel Chnl
+        else begin
+            error DFERR_FILE_NOT_OPEN ("Channel: " + Chnl)
+            procedure_return
+        end
+
+        send Seq_Release_Channel Chnl
+    end
+end_procedure

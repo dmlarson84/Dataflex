@@ -1,0 +1,384 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//********************************************************************
+// STDRPT.PKG
+//
+// Version: 3.1
+// Copyright (c) 1995 Data Access Corporation
+// Fri  08-23-1991
+//
+// Author: John J. Tuohy
+//
+//  STANDARD_REPORT is a sub-class of REPORTDS.
+//
+//  This includes various UI objects to handle a working message, a
+//  cancel/continue report handler, and an end of screen handler. It
+//  also automatically uses a VCONSOLE as the CON: device when printing
+//  to screen
+//
+//  This is provided as part of the report package
+//  documentation to demonstrate how a sub-class can be created from
+//  the Report Class which is customized to handle a developer's
+//  print report needs.
+//
+// Sat  11-21-1992 JJT  Altered all object references that global and made
+//                      them all use current_object and delegation which
+//                      fits more into my current theory of how objects
+//                      should interact.
+// Mon  11-23-1992 JJT  Changed scr_width and scr_len to logical system
+//                      values.
+// Wed  02-24-1993 JJT  Altered so that standard_report is a sub-class of
+//                      REPORTDS and not REPORT (which is what it was in
+//                      version 1.0). This way Standard_Report can support
+//                      data_sets.
+// Wed  04-12-1995 LS   Copied Report1 to Standard_Report for inclusion
+//                      in DF 3.1 for use with DFQuery.
+// Thu  04-15-1995 LS   Changed popup images somewhat.
+//                      Now using PAGEEND and PAGEFEED for default values
+//                      when output to non-CON:. Added Output_Device
+//                      property. Added Update_Status message to update
+//                      the look-busy image once every page. Added some
+//                      new messages to make augmentations/overrides
+//                      easier: Update_Status, Show_Status,
+//                      Report_Interrupt, Update_End_Of_Screen_Status,
+//                      End_Of_Screen.
+// Fri  06-05-1995 LS   Added Constraint_Values array (dynamically) and
+//                      added Update_Status_PAge procedure which is now
+//                      only provided for use in augmentation of
+//                      Page_Top.
+// 06/10/95 (JJT)       Altered internal UI interface for report cancel
+//                      and end of screen. UI_Accept now encapsulated.
+//                      Set attach_parent_state of client_window objects
+//                      to false.
+//**********************************************************************
+
+Use ReportDS
+Use DFMisc
+Use ClWindow
+
+//
+// Global Object Standard_Report_Status
+//
+// This can be displayed on the screen and has one message handler
+// Look_Busy which is passed an item for it to print in order to make it
+// look like it is doing something.
+//
+// This could have been a global object (of the desktop) or set as a child
+// inside of the report. The reason we did it way is so the same object could
+// be easily used by any report in the program.
+//
+
+/Standard_Report_Status
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³______________________________________³
+³                                      ³
+³  __________________________________  ³
+³                                      ³
+³  Press any key to interrupt report.  ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+/*
+
+Object Standard_Report_Status is a Message
+   Send Locate_In_Center_Of_Screen
+   Set Object_Color to 1 1
+   Set Center_State item 0 to TRUE
+   Set Value Item 0 to "Printing Report"
+
+   Procedure Look_Busy String Val // print whatever is passed to you
+     Set Value Item 1 to Val
+   End_Procedure
+End_Object
+
+//  Global UI button which is called when you need to ask about stopping
+//  a report. Made global so all reports in a program can use it.
+//
+// Public Interface: Get report_Interrupt to rval
+//                       non-zero rval = cancel, 0 = continue                
+//
+/Standard_Report_Interrupt
+ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+º_______________________________________º
+º                                       º
+º    A key has been pressed. Do you     º
+º    wish to cancel the report?         º
+º                                       º
+º                                       º
+ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+/Standard_Report_Interrupt_Button
+  _____________   ___________________  
+/*
+  
+Object Standard_Report_Interrupt is a Client_Window
+   Send Locate_In_Center_Of_Screen
+   Set Object_Color to 1 1
+   Set Center_State item 0 to TRUE
+   Set Value item 0 to "Report Interrupted"
+   Set Attach_Parent_state to False
+
+   On_key KSave_Record Send OK
+   On_Key KCancel      Send Cancel
+   on_Key kExit_Application Send Cancel
+
+   Object Button is a Button Standard_Report_Interrupt_Button
+     Set Object_Color to 1 1
+     Set Location to 6 1 RELATIVE
+
+     Item_list
+       On_Item '<F2=Continue>'  Send Ok
+       On_Item '<Esc=Cancel Report>' Send Cancel
+     End_Item_List
+   End_Object
+
+  // Return non-zero to cancel
+  Function Report_Interrupt Returns Integer
+     Local Integer rVal
+     UI_Accept Current_Object to rVal
+     Function_Return (rVal=MSG_Cancel)
+  End_Function
+
+End_Object
+
+//  UI Button object to pop up at the bottom of the screen (when output is
+//  to screen) allowing user to continue or exit.
+//
+// Public Interface: Get End_Of_Screen to rval
+//                       non-zero rval = cancel, 0 = continue                
+//
+/Standard_Report_Screenend
+_____________ ____________
+/*
+
+Object Standard_Report_Screenend is a Button
+    Set Object_Color to 1 1
+    Set Location to ScreenEnd 0 Absolute
+
+    Item_List
+      On_Item '<F2=Continue>' Send Ok
+      On_Item '<Esc=Cancel>'  Send Cancel
+    End_Item_List
+
+    On_key KSave_Record Send OK
+    On_Key KCancel      Send Cancel
+    on_Key kExit_Application Send Cancel
+
+    Function End_Of_Screen Returns Integer
+      Local Integer rVal                  
+      UI_Accept Current_Object to rVal
+      Function_Return (rVal=MSG_Cancel)
+    End_Function
+
+End_Object
+
+Object System_Default_Page_Settings is an Array
+  Set Array_Value item 0 to Pageend
+  Set Array_Value item 1 to Pagefeed
+End_Object
+
+Enum_List
+    Define SYSTEM_DEFAULT_PAGEEND
+    Define SYSTEM_DEFAULT_PAGEFEED
+End_Enum_List
+
+Class Standard_Report is a Report_DS
+  Register_Object Constraint_Values
+  Register_Procedure Report_Callback Integer Obj
+
+  Procedure Construct_Object
+    Forward Send Construct_Object
+
+    Property String  Out_Dev          Public "LST:"
+    Property Integer To_Scr           Public False
+
+    Property Integer Constr_Val_Obj_ID Public 0
+                                    // 0 = user-supplied object that
+                                    // must be named Constraint_Values.
+                                    // > 0 = object id of an array object.
+
+    Property Integer Scr_Row          Public 0
+    Property Integer Scr_Col          Public 0
+    Property Integer Scr_Len          Public ScreenEnd
+    Property Integer Scr_Width        Public (Screen_Width+1)
+  End_Procedure  
+
+  Procedure Set Constraint_Values_Object_ID Integer Obj
+    Set Constr_Val_Obj_ID to Obj
+  End_Procedure
+    
+  Function Constraint_Values_Object_ID Returns Integer
+    Local Integer Obj
+    Get Constr_Val_Obj_ID to Obj
+    If Obj NE 0 Function_Return Obj
+    Object Constraint_Values is an Array
+        Move Current_Object to Obj
+    End_Object
+    Set Constr_Val_Obj_ID to Obj
+    Function_Return Obj
+  End_Function
+
+  Procedure Set Output_Device String Val
+    Local String UVal
+    Uppercase Val to UVal
+    Set To_Scr to ((Uval = "CON") or (UVal = "CON:"))
+    Set Out_Dev to Val
+  End_Procedure
+
+  Function Output_Device Returns String
+    Function_Return (Out_Dev(Current_Object))
+  End_Function
+
+  Procedure Set Constraint_Value Integer Itm String Val
+    Set Array_Value of (Constraint_Values_Object_ID(Current_Object)) ;
+       Item Itm to Val
+  End_procedure
+
+  Function Constraint_Value Integer Itm returns String
+      Function_Return (String_Value(Constraint_Values_Object_ID(Current_Object), Itm))
+  End_Function
+
+  Procedure Set To_Screen_State Integer State
+    If State Set Out_Dev to "CON:"
+    Set To_Scr to State
+  End_Procedure
+
+  Function To_Screen_State Returns Integer
+    Function_Return (To_Scr(Current_Object))
+  End_Function
+
+  Procedure Update_Status string Val
+     Send Look_Busy to (Standard_Report_Status(Current_Object)) Val
+  End_Procedure
+
+  Procedure Show_Status integer Flag
+     If Flag ;
+       Send Activate to (Standard_Report_Status(Current_Object))
+     Else ;
+       Send Deactivate to (Standard_Report_Status(Current_Object))
+  End_Procedure
+
+  Function Starting_Main_Report Returns Integer
+     Local Integer RetVal SRow SCol SLen SWid Obj
+     
+     Forward Get Starting_Main_Report to RetVal
+     If RetVal ne 0 Function_Return RetVal
+     
+     Get Scr_Row      to SRow
+     Get Scr_Col      to SCol
+     Get Scr_Len      to SLen
+     Get Scr_Width    to SWid
+     //
+     If (To_Screen_State(Current_Object)) Begin
+       Object VC is a Vconsole
+         set Size     to SLen SWid
+         Set Location to SRow SCol
+       End_Object
+       Send Activate        to (VC(Current_Object))  // sets it up
+       // This command sends all screen IO to the virtual console.
+       Send virtual_console to (VC(Current_Object))
+       Set Page_End  to  (Slen-1)    // lines/screen
+       Set Page_Feed to -2           // stop at bottom of each page --no FF
+       Direct_Output 'CON:'
+     End    
+     Else Begin
+       // use system default settings for Page_End and Page_Feed
+       Move (System_Default_Page_Settings(Desktop)) to Obj
+       Set Page_End to (Integer_Value(Obj, SYSTEM_DEFAULT_PAGEEND))
+       Set Page_Feed to (Integer_Value(Obj, SYSTEM_DEFAULT_PAGEFEED))
+       Direct_Output (Output_Device(Current_Object))
+       //
+       // Note that this is a change. Now the working message only appears if
+       // you are not printing to the screen. This makes this a more universal
+       // and therefore reuseable class.
+       // make the working popup visible
+       Send Update_Status ""
+       Send Show_Status TRUE
+     End  
+  End_Function
+
+  Procedure Update_Status_Page
+     If (Page_End(Current_Object)) EQ 0 ;
+        Send Update_Status ("Record: " + String(Page_Count(Current_Object)))
+     Else Send Update_Status ("Page: " + String(Page_Count(Current_Object)))
+  End_Procedure
+
+  Procedure Ending_Main_Report // close down the report
+    If (To_Screen_State(Current_Object)) Begin
+      Send virtual_console to Desktop  // make screen IO normal again
+      Send Deactivate     to (VC(Current_Object)) // remove  virtual_console
+      Send Destroy_object to (VC(Current_Object)) // destroy virtual_console
+    End  
+    Else begin
+        Send Show_Status FALSE
+        Close_Output
+    End
+  End_Procedure
+
+  Function Report_Interrupt Returns Integer
+     Local integer i
+     Get Report_Interrupt of (Standard_Report_Interrupt(Current_Object)) to i
+     function_return i
+  End_Function
+
+  Procedure Flush_Keystrokes
+     Local String Key_Val
+     Repeat // flush extra keystrokes
+         Move "" to Key_Val
+         Inkey$ Key_Val
+     Until Key_Val LE ""
+  End_Procedure
+  
+  // check for report interrupt handler
+  // Return True to stop report, false to continue
+  //
+  Function Test_KeyPressed Returns Integer
+     KeyCheck Begin
+       indicate Keypress FALSE
+//       send Flush_Keystrokes
+       Function_Return (Report_Interrupt(Current_Object))
+     End
+  End_Function
+
+  Procedure Update_End_Of_Screen_Status
+  End_Procedure
+
+  Function End_Of_Screen Returns Integer        // wait for continue/cancel
+     local integer i
+     Get End_of_Screen of (Standard_Report_Screenend(Current_Object)) to i
+     function_return i
+  End_Function
+
+  //  Formfeed handler. If not to screen just do standard formfeed.
+  //  if to screen do custom button at the bottom of the screen allowing
+  //  you to continue or exit.
+  //
+  Procedure Formfeed
+     Forward send Formfeed
+     // if page_feed is -2 then we have a special UI on screen handler
+     // condition.
+     If (Page_Feed(Current_Object)) eq -2 Begin
+       Send Update_End_Of_Screen_Status
+       If (End_Of_Screen(Current_Object)) Begin // if non-zero, we should exit
+          Set Cancelled_State to TRUE
+          // when you cancel a report from a formfeed it is in the middle
+          // of printing images. The report doesn't catch on to the cancel
+          // right away. The result is that you see a bunch of stuff on the
+          // screen blip by you before it ends. This looks bad so in order to
+          // get around that we redirect that output to the nul device.
+          Direct_Output 'NUL:'
+       End
+       Else Send Delete_Data to (VC(Current_Object)) // clearscreen
+     End
+  End_Procedure
+
+  Procedure Calling_All_Reports Integer Obj
+     Local Integer Cur_Obj
+     Move Current_Object to Cur_Obj
+     Send Report_Callback to Obj Cur_Obj
+  End_Procedure
+End_Class     

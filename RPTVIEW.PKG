@@ -1,0 +1,158 @@
+// RPTVIEW.PKG
+// 
+// Report View Object
+// Data Access Corporation
+//
+// 06/08/95 LS & JJT - Converted from what is now Query_View
+//
+// Report_View
+//
+// Container class for reports.
+//
+// This creates a modal view running it own UI level. It expects a
+// standard_report object to be nested inside of it.
+// The FIRST Standard_Report object is used by default, the others are
+// ignored. You can manually set the Report_Object_Id override this behavior.
+// This is used by the run_report message. When you have multiple reports
+// which may be run you would either augment run_report to run whatever child
+// report you wanted, or change the Report_object_id property manually
+//
+// The public message protocol:
+//
+// Property Integer Report_Object_ID
+//
+// Object ID of the Standard_Report object to communicate with. If during
+// end_construct_object it is 0, it will attempt to find a child report
+// object for you. 
+//
+// Property integer Modal_state dflts True
+//
+// If true, a new level of modal UI will be started when the object
+// activates. 
+//
+// Procedure Activate
+//
+// This will activate itself. If newly activated and modal_state is
+// true it will send the message start_modal_ui to start a new modal
+// UI session. This message makes sure that the object will deactivate the
+// same time that its UI is halted (or visa versa).
+// 
+// Procedure Popup
+//
+// This will activate itself. If newly activated and modal_state is
+// true it will send the message start_modal_ui to start a new modal
+// UI session. This message makes sure that the object will deactivate the
+// same time that its UI is halted (or visa versa).
+// 
+//
+// Procedure Request_Cancel <or> Cancel
+// 
+// This will deactivate the object. 
+//
+// Procedure Run_Report
+//
+// This runs the report in Report_object_id. While this could be used to
+// run a batch report (no UI is involved) it is expected that batch report
+// running will not be that simple. To run a batch report you will most
+// certainly need to create some new messages. You will either need to create
+// properties that you would set and the send run_report, or, you would create
+// a new message (e.g., run_vendor_report) which would expect you to pass
+// the required parameters to set-up and run the report.
+//
+
+Use ViewClnt
+
+class Report_View is a View_Client
+
+
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        property integer Report_Object_ID PUBLIC 0
+        Property integer Modal_State      PUBLIC TRUE
+    end_procedure
+
+    procedure Report_Callback integer Obj
+        if (Report_Object_ID(Current_Object)) EQ 0 ;
+            set Report_Object_ID to Obj
+    end_procedure
+
+    procedure End_Construct_Object
+        local integer Cur_Obj
+
+        // if the report id has not been set yet:
+        // ask the first report object to identify itself. If it does not
+        // leave it at 0.
+        move Current_Object to Cur_Obj
+
+        if (Report_Object_ID(Current_Object)) EQ 0 ;
+            broadcast send Calling_All_Reports Cur_Obj
+
+        forward send End_Construct_Object
+    end_procedure
+
+    procedure Run_Report
+        Local integer Obj
+        Get Report_Object_Id to Obj
+        If Obj send Run_Report to Obj
+    end_procedure
+
+    procedure Request_Cancel
+      Send Deactivate
+    end_procedure
+
+    Procedure Exit_Client
+       Send Request_Cancel
+    End_Procedure
+
+    //  This starts a new modal UI.
+    //  It also makes sure that the UI is stopped when the object
+    //  is deactivated, and, that the object is deactivated if the
+    //  UI is stopped. So stopping UI and Deactivate now do the same thing.
+    //
+    //  This is not a public message. It should NOT be sent. Only Activate
+    //  and popup should send this message. It may be augmented.
+    //
+    Procedure Start_Modal_UI
+       local integer OldBl OldAP
+       
+       Get Block_Mouse_State to Oldbl
+       Get Attach_parent_State to OldAp
+       
+       Set Block_Mouse_State to TRUE
+       Set Attach_parent_State to False
+       
+       Set Stop_UI_State to True // this way deactivate will also
+                                 // stop the UI. Note that Stop_UI_State
+                                 // should no longer be considered public!
+       Start_UI
+
+       Set Stop_UI_State to False
+       
+       // If we are here and the object is still active then we stopped
+       // the UI without deactivating. So, turn off stop_ui_state and
+       // deactivate the object.
+       If (active_state(Current_Object)) Send deactivate
+       
+       Set Block_Mouse_State   to OldBl
+       Set Attach_parent_State to OldAp
+
+    End_Procedure // Start_Modal_UI
+
+    procedure Activate returns integer
+        local integer Ret_Val old_active
+        Get active_state to Old_Active
+        forward get MSG_Activate to Ret_Val // this is not expected
+        If (Modal_State(Current_Object) AND Old_Active=0 AND Ret_Val=0) ;
+           Send Start_Modal_UI
+    end_procedure
+
+    procedure Popup
+        local integer Ret_Val old_active
+        Get active_state to Old_Active
+        forward get MSG_Popup to Ret_Val // this is not expected
+        If (Modal_State(Current_Object) AND Old_Active=0 AND Ret_Val=0) ;
+           Send Start_Modal_UI
+    end_procedure
+
+end_class

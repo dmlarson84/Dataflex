@@ -1,0 +1,1258 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Report.Pkg
+// Version: 1.1
+//  Sun  08-25-1991
+//  Wed  06-17-1992  Changed print wrap. It was printing a blank line. Altered
+//                   procedure Output_wrap_pagecheck and command
+//                   output_wrap_pagecheck.
+//  Sat  11-21-1992  Moved Rpt_End into End_Construct_Object
+//  Sat  11-21-1992  Set delegation_mode to default (it was no_delegation)
+//  Sat  11-21-1992  Set Focus_mode to non-focusable
+//  Sat  11-21-1992  Added Main_report_Id which is the obj# of the main outer
+//                   report. All child reports have this id.
+//  Sun  11-22-1992  Added end report checking to make FF conditional (if
+//                   new_page_state is true no FF).
+//  Wed  11-25-1992  Changed begin_constraint/end_contraint to move forward
+//                   send to the end. I did this because DAC did this.
+//  Wed  12-23-1992  Changed Start_report to turn delegation back on after
+//                   a broadcast would have shut it off.
+//  Wed  12-30-1992  Altered Test_One_BreakPoint to replace a 0 byte values
+//                   in passed string to 255. This was needed because strings
+//                   with 0 value in them can not get stored (or at least get
+//                   retrieved) in an array. Yuck.
+//
+// Thu   04-15-1995  LS   Using Seq_Chnl package now. Added Assigned_Channel
+//                        to help with this.
+//
+// 05/18/95 JJT      Created a Clear_Breakpoints which is called in
+//                   setup_report. This solves a problem where skipped
+//                   bpoints (like a blank for first item) causes 0s to
+//                   get placed in the array. Also, it is possible that
+//                   nested reports may not break because of old data in
+//                   the breakpoints.
+// 05/18/95 JJT      Output_Wrap_Pagecheck relies on global indicator |122
+//                   which is used by other commands. Push/Pop this value
+//                   in this procedure.
+// 09/07/95 JJT      Replaced define_symbol w/ define
+//
+// Author: John J. Tuohy
+//
+//************************************************************************
+
+use UI
+use Seq_Chnl
+
+#COMMAND OUTPUT_IMAGENUM R     // Output by ImageNumber
+  #IFSAME !1 CHANNEL
+    Direct_OutPut Channel !2  // set channel--optional syntax
+    #IF !0>2
+      OutPut_ImageNum !3
+    #ENDIF
+  #ELSE
+    !A [] $202 !1
+  #ENDIF
+#ENDCOMMAND
+
+// ---values for Rpt_Status
+
+
+enum_list
+  define  RPT_OK         for 0  // All is well, record found
+  define  RPT_END        for 1  // Normal end of report
+  define  RPT_NOT_SELECT for 2  // Special..used with selection procedure
+  define  RPT_CANCEL     for 3  // Report was cancelled
+end_enum_list
+
+
+Define MAX_BREAKS_ALLOWED FOR 9  // this allows one to override maximum breaks.
+                                 // if you want more increase this.
+
+//
+//Class: Report
+//
+// SuperClass: VConsole
+//
+//
+//Usage: Declaration syntax is:
+//  Object <name> is a Report {MAIN_FILE <Main_File>} {BY|DOWN <Index>} ;
+//      {BREAK ...... ** }
+//   :
+//  End_Object
+//
+//  Preferred Usage is:
+//
+//  Object <name> is a Report
+//    Report_Main_File <Main_File>
+//    Report_Index BY <Index>
+//    Report_Breaks Brk_1 {..Brk_n}
+//   :
+//  End_Object
+//
+//
+Class Report is an VConsole STARTMAC RptStart
+  Procedure Construct_Object // Integer Img
+    Forward send Construct_Object // Img
+    // use default delegation_mode Sat  11-21-1992
+    //**Set Delegation_Mode to NO_DELEGATION // we DO NOT delegate to Parent objects!
+    Set Focus_mode to NonFocusable //** Sat  11-21-1992 just in case
+    //
+    // Properties that can be set. All can be set with the SET command.
+    // Some are set during the object (or sub-class) declaration.
+    //
+    Property Integer No_Finding_State          PUBLIC  False
+    Property Integer No_Constrained_Find_State PUBLIC  False
+    Property Integer No_Relate_State           PUBLIC  False // only if No_Cfind_State
+    Property Integer Main_File                 PUBLIC  0
+    Property Integer Ordering                  PUBLIC  -1    // let flex guess
+    Property Integer Find_Down_state           PUBLIC  False
+    Property Integer Refind_for_SubTotal_State PUBLIC  True  // Advanced use only
+    //
+    // Internal Properties..maintained by object
+    //
+    Property Integer Child_Rpt_State           PUBLIC  False
+    Property Integer Has_Children_Rpt_State    PUBLIC  False
+    //*** new property keeps track of who the main report is. Speeds things up
+    Property Integer Main_Report_Id            PUBLIC  Current_Object
+    Property Integer Num_Breaks                PUBLIC  0
+    Property Integer Find_Mode                 PUBLIC  0  // only if No_Cfind_State
+    Property Integer Found_Rec                 PUBLIC  0
+    Property Integer Current_Rec               PUBLIC  0
+    Property Integer Last_Rec                  PUBLIC  0
+    Property Integer Rec_Count                 PUBLIC  0
+    Property Integer Footer_Lines              PUBLIC  0
+    Property Integer Report_Footer_Lines       PUBLIC  0
+    Property Integer Page_Footer_Lines         PUBLIC  0
+    Property Integer Sub_Totaling_State        PUBLIC  False
+    Property Integer No_PageCheck_State        PUBLIC  False
+    Property Integer Rpt_Ttl_Level             PUBLIC  0
+    //
+    // -- these properties only need to be maintained by the
+    //    outermost report object..All children will operate on the parent
+    //
+    Property Integer Page_End                  PRIVATE  59   // s/b set
+    Property Integer Page_Feed                 PRIVATE  0    // s/b set *
+    Property Integer Page_Count                PRIVATE  0
+    Property Integer Report_Channel            PRIVATE -1    // s/b set **
+    Property Integer Assigned_Channel          PRIVATE  0
+    Property Integer Cancelled_State           PRIVATE  False
+    Property Integer Page_End_State            PRIVATE  False // needs end of page
+    Property Integer New_Page_State            PRIVATE  False // needs new header
+    //
+    //  *  Note on Page_Feed Values. These are the same as the PAGEFEED
+    //     integer variable with one new value (-2).
+    //     Page_Feed >  0 on formfeed print the # of lines
+    //              =  0 on formfeed print a FF character
+    //              = -1 to screen. on Formfeed print TYPE ANY KEY
+    //              = -2 to screen. On formfeed expect a custom routine to
+    //                              handle the press any key message.
+    //
+    //  ** Note on Report_Channel: If channel is -1 then the report uses
+    //     whatever channel happens to be open (default). Any positive value,
+    //     then that channel is used. If channel is -2, then a free channel
+    //     from the Seq_Chnl pkg is used and stored in Assigned_Channel.
+
+    Object Break_Array is an Array   // these keep track of breakpoint values
+    //
+    End_Object
+    //
+  End_Procedure
+
+  //
+  // These routines let you set and Get the private properties.
+  // In all cases the Get or Set is delegated to the ultimate parent
+  //
+  #COMMAND Make$Private$Set_Get R
+     Procedure SET !1 integer Val
+       //**if (Child_Rpt_State(Current_Object)) Delegate Set !1 Val
+       //**else Set Report.!1 to Val
+       Local Integer Obj#
+       Get Main_report_Id to Obj#
+       Set Report.!1 of Obj# to Val
+     End_Procedure
+
+     Function !1 returns integer
+        local integer retval
+        //If (Child_Rpt_State(Current_Object)) Delegate Get !1 to RetVal
+        //Else Get Report.!1 to retval
+        Local Integer Obj#
+        Get Main_report_Id to Obj#
+        Get Report.!1 of Obj# to retval
+        Function_Return RetVal
+     End_Function
+  #ENDCOMMAND
+
+  Multi$ Make$Private$Set_Get  Page_End    New_Page_State   Page_End_State
+  Multi$ Make$Private$Set_Get  Page_Feed   Cancelled_State
+  Multi$ Make$Private$Set_Get  Page_Count  Report_Channel   Assigned_Channel
+
+  //---Create all the default Message handlers for all Sections. These all do
+  //   nothing and are intended for override
+  //
+
+  //
+  // This will make routines for all SubHeader_Init, SubHeader, and
+  // SubTotal Procedures. They all do nothing and are intended for
+  // override.
+  //
+  // Procedure: SubHeader_Init1..n
+  //      This is called when a new subheader is started. It is
+  //      called only once for each new subheader. It is not called when
+  //      subheaders are printed during a page break.
+  //
+  // Procedure: SubHeader1..n
+  //      This is called each time a subheader needs to be printed -
+  //      both the first time a subheader is printed and during the
+  //      reprinting of subheaders during page breaks.
+  //
+  // Procedure: SubTotal1..n
+  //      This is called when a subtotal needs to be processed
+  //
+  #COMMAND Make$Procs R R R // Procedure_Name Crnt_Num End_Num
+    #SET I$ !2
+    Procedure !1!i
+    End_Procedure
+    #IF (!i<!3)
+      Make$Procs !1 !I !3
+    #ENDIF
+  #ENDCOMMAND
+  #PUSH !i
+  Make$Procs SubHeader      1 MAX_BREAKS_ALLOWED // subheader1...subheadern
+  Make$Procs SubTotal       1 MAX_BREAKS_ALLOWED // subtotal1....subtotaln
+  Make$Procs SubHeader_Init 1 MAX_BREAKS_ALLOWED // subheader_init1...subheader_initn
+  #POP I$
+
+  // Procedure: Total
+  //      Called at the end of the report. Intended for override.
+  //
+  Procedure Total
+  End_Procedure
+
+  //
+  // Page break related procedures. Note that the procedure names are
+  // identical in name and function as their FlexQL counterparts.
+  //
+  // Procedures Page_Top thru Page_Bottom ONLY get used by the outermost report
+  // object... All other objects delegate messages to this ultimate parent.
+  // creating these procedures in child reports will have NO effect.
+  //
+  Procedure Page_Top        // Printed at the Top of EVERY page
+  End_Procedure
+
+  Procedure Report_Header   // Printed after Page_Top..First Page ONLY
+  End_Procedure
+
+  Procedure Page_Header     // Printer after Page_Top..Every page but 1st.
+  End_Procedure
+
+  Procedure Page_Title      // Printed after Page_Header or Report_Header
+  End_Procedure             // for all pages
+
+  Procedure Page_Total      // Printed at end of each page
+  End_Procedure
+
+  Procedure Page_Footer     // Printed after Page_Total every page but last
+  End_Procedure
+
+  Procedure Report_Footer   // Printed after Page_Total last page only
+  End_Procedure
+
+  Procedure Page_Bottom     // last thing printed on every page
+  End_Procedure
+
+  // Function: Handle_KeyPressed
+  //      This message is delegated to the outermost parent. It then
+  //      calls the function Test_Keypressed. If Test_KeyPressed returns
+  //      a non-zero value it will set cancelled_state to TRUE and
+  //      return RPT_CANCEL
+  //
+  Function Handle_KeyPressed Returns Integer
+    Local integer Rpt_Status
+    If (Child_Rpt_State(Current_Object)) ;
+      //**Delegate Get Handle_KeyPressed to Rpt_Status
+      Get Handle_KeyPressed of (Main_Report_Id(Current_Object)) to Rpt_Status
+    Else Begin                        // once here we are always at the outermost
+      Get Test_KeyPressed to Rpt_Status // report..the ultimate parent
+      If Rpt_Status ne 0 Begin
+         Set Cancelled_State to True
+         Function_Return RPT_CANCEL
+      End
+    End
+    Function_Return Rpt_Status
+  End_Function
+
+  // Function: Test_KeyPressed
+  //      This returns a 1 if any key is pressed which will cause a
+  //      report to be cancelled. This is not a very simple handler and
+  //      is inteded for override.
+  //
+  Function Test_KeyPressed Returns Integer // 0 - ok 1 - abort
+    KeyCheck Function_Return 1
+  End_Function // this'll return a default 0
+
+  //  Function: Test_BreakPoints
+  //      A fairly complex override procedure gets automatically
+  //      created by the BREAK command line option or the REPORT_BREAKS
+  //      command.
+  //
+  Function Test_BreakPoints Returns Integer
+  End_Function
+
+  //
+  //  Function: Test_One_BreakPoint
+  //      Pass: BNum - current breakpoint number to test
+  //            BStr - New breakpoint value to test
+  //            Arr# - Object ID# of breakpoint array
+  //            CBreak - Current highest breakpoint which has been
+  //              already triggered (0-none, 1-highest, n-lowest).
+  //            RCount - Current Record Count (rec_Count).
+  //      Return: Highest breakpoint set.
+  //
+  //      This function is called by Test_BreakPoints for each
+  //      breakpoint item that needs testing. It must set the highest
+  //      break level and place the current break value in the break
+  //      array.
+  //
+  Function Test_One_BreakPoint Integer BNum String BStr Integer Arr# ;
+                               Integer CBreak Integer RCount ;
+                       Returns Integer
+    Local integer retval Is_Break
+    // Overlap fields might contain an imbedded zero value. These get passed
+    // properly in BStr but can not be stored and retreived in an array object.
+    // We will convert all 0s to 255s. This is imperfect but better than nothing.
+    Local String Ch_0 Ch_255
+    Character 0   to CH_0
+    Character 255 to CH_255
+    Move (Replaces(Ch_0,BStr,Ch_255)) to BStr
+    Move CBreak to RetVal // is there a current break level?
+    Move (String_Value(Arr#,BNum)<>BStr) to Is_Break // change in break?
+    If Is_Break ne 0 Set Array_Value of Arr# Item BNum to BStr // store latest break value
+    If RetVal eq 0 Begin  // if not..then check for a break change
+       If RCount eq 0 Move 1 to RetVal // first time..break from top
+       Else If Is_Break ne 0 Move BNum to RetVal // break if change
+    End
+    Function_Return RetVal // return new Cu rrent break level
+  End_Function
+
+  // record finding support
+  //
+  //
+  //
+  // Procedure: Find_Init
+  // set up this file for finding... This clears the needed buffers
+  //
+  Procedure Find_Init
+    Local Integer File# Ndx# Mode
+
+    If (Find_Down_State(Current_Object)) Move 1 to Mode // LE
+    else                                 Move 3 to Mode // GE
+
+    If (No_Constrained_Find_State(Current_Object)) Set Find_Mode to Mode
+    Else Begin
+      Send Rebuild_Constraints
+      Get main_file to File#
+      Get Ordering to Ndx#
+      Constraint_Set Current_Object
+      Constrained_Clear Mode File# BY Ndx#
+    End
+  End_Procedure
+
+  //  Function: Find_Rec
+  //
+  //     This is the reports main record finding procedure
+  //     Ret  : Integer RPT_OK or RPT_END (plus record in buffer)
+  //
+  //     This is the routine to augment or override to handle Custon Finding.
+  //     If a record is returned we must set the property Found_Rec to the
+  //      record number. Remember this if you override this routine!
+  //
+  Function Find_Rec Returns Integer
+    Local Integer Mode
+    If (No_Constrained_Find_State(Current_Object)) Begin
+       Get main_file to FileNumber
+       Get Find_Mode to Mode
+       vFind FileNumber (Ordering(Current_Object)) Mode
+       If Mode eq 1 Set Find_Mode to 0       // LE -->  LT
+       Else if Mode eq 3 Set Find_Mode to 4  // GE -->  GT
+       [Found] If Not (No_Relate_State(Current_Object)) Begin
+         Move 0 to fieldindex
+         Relate Indirect_File
+         Indicate Found True
+       End
+    End
+    Else Constrained_Find NEXT Current_Object
+    [Found] Begin                               // set Found_Rec
+      Get Main_File to filenumber               // to new rcord #
+      Move 0 to fieldindex
+      Set Found_Rec to  Indirect_File.RecNum
+      Send Relate_Main_File  // custom relate records
+      Function_Return RPT_OK
+    End
+    Function_return RPT_END
+  End_Function
+
+  //
+  //  Procedure : Read_By_RecNum
+  //     Find a record by its record number. Used by the report object
+  //     to refind records
+  //
+  Procedure Read_by_RecNum Integer Rec#
+    Get main_file to FileNumber
+    If (FileNumber<>0 AND Rec#<>0) begin
+       Move 0 to fieldindex
+       Move Rec# to Indirect_File.RECNUM
+       Find eq Indirect_File.RECNUM
+       [Found] Begin
+         If Not (No_Constrained_Find_State(Current_Object) and ;
+                 No_Relate_State(Current_Object)) Relate Indirect_File
+         Send Relate_Main_File  // custom relate records
+         Indicate Found True
+       End
+    End
+    Else Indicate Found False
+  End_procedure
+
+  //
+  //  Procedure Relate_Main_File
+  //      Called when custom relates are needed in a report. Intended
+  //      for Override
+  //
+  Procedure Relate_Main_File // for override
+  End_Procedure
+
+  //
+  // Function: Start_Report
+  //     Main entry point for report. It has two operation modes:
+  //
+  //     1. If NO_FINDING_STATE is False (the default when MAIN_FILE is
+  //        set) then this runs the entire report.
+  //     2. If NO_FIND_STATE is True because it was set that way or
+  //        MAIN_FILE was never set then this initializes the report and
+  //        returns. You then run the report by sending it
+  //        Handle_Report_Line messages and then ending it with a
+  //        End_Report message
+  //
+  //     Main Logic:
+  //
+  //       Get Setup_Report  <--- initializes report
+  //       If a full report begin
+  //         Repeat
+  //           Get Handle_Report_Line <-- finds and prints a line
+  //         until the report is ended or cancelled
+  //         get End_Report   <--- ends the report
+  //       end
+  //       Function_Return Report_status
+  //
+  //
+  Function Start_Report Returns Integer
+    Local Integer Rpt_Status ChildState
+    Get Child_Rpt_State to ChildState
+    // When start_report is started from within another report via a broadcast
+    // command the broadcast command will change the Delegation_mode to
+    // no_delegate_or_error. We will reset the delegation_mode back to what
+    // we want it to be thus allowing child reports to take full advantage
+    // of delegation.
+    if ChildState Set Delegation_Mode to DELEGATE_TO_PARENT
+    If (ChildState and Cancelled_state(Current_Object)) ; // for broadcast
+       Function_Return RPT_CANCEL                               // child reports
+    Get Setup_Report to Rpt_Status // ret: 0-OK 1-Abort
+    If Rpt_Status ne RPT_OK Function_Return Rpt_Status
+    If Not (No_Finding_State(Current_Object)) Begin
+       Repeat
+         Get Handle_Report_Line to Rpt_Status
+       Until ((Rpt_Status ne RPT_OK) and (Rpt_Status ne RPT_NOT_SELECT))
+       Get End_Report Rpt_Status to Rpt_Status
+       If ChildState Send Restore_Parent_Rec // if child..restore orig parent rec.
+    End
+    Function_Return Rpt_Status
+  End_Function
+
+  // Procedure: Run_Report
+  //  This runs an entire report. It is just like start_report except that it
+  //  does not return a value. If you use this then you will not know how the
+  //  report was ended. On the up side the syntax is clearer. DO NOT use this
+  //  with external (no_find_State) reports.
+  //
+  Procedure Run_Report
+    Local Integer Dump
+    Get Start_Report to Dump
+  End_Procedure
+
+  // 05/18/95 - When a report is started all breakpoints should be
+  //            cleared.
+  Procedure clear_breakpoints
+     local integer cnt i Arr#
+     Move (Break_Array(Current_Object)) to Arr#
+     Get num_Breaks to cnt
+     for i from 0 to cnt
+         Set Array_Value of Arr# Item i to ''
+     Loop
+  End_Procedure // clear_breakpoints
+
+  //
+  // Function_Setup Report
+  //    If a non-zero value is returned the report will not be run
+  //
+  Function Setup_Report Returns Integer
+    Local Integer retval
+    Send Clear_BreakPoints // 05/18/95 - Start w/ all bpoints blank
+    If not (Child_Rpt_State(Current_Object)) Begin
+      Get Starting_Main_Report to RetVal
+      If RetVal ne RPT_OK Function_Return RetVal
+    End
+    Get Starting_Report to RetVal
+    If RetVal ne RPT_OK Function_Return RetVal
+    Set Rec_Count  to 0                  // number items found
+    If not (No_Finding_state(Current_Object)) Send Find_Init
+    If not (Child_Rpt_State(Current_Object)) Begin
+      // set the start-up info
+      Set Cancelled_state to False
+      Send Assign_Report_Channel
+      Move 0 to LineCount                  // start with an empty page
+      Set Page_Count to 1                  // Start w/ page 1
+      Set New_Page_State  to True          // we start needing a new page
+      Set Page_End_State  to False
+    End
+  End_Function
+
+  //
+  //  Function: Starting_Report
+  //     User Handler Intended for override. This is called by setup
+  //     for all reports. If the report is nested this IS called every
+  //     time the nested report is entered.
+  //
+  //     If a non-zero value is returned the report will be cancelled
+  //
+  Function Starting_Report Returns Integer // Pre report prep. For Override by user
+    Function_Return RPT_OK
+  End_Function
+
+  //  Function: Starting_Main_Report
+  //     User Handler Intended for override. This is the same as
+  //     Starting_report except this message is only sent to the main
+  //     (parent) outer report. Nested reports do not send this message.
+  //     This is very useful for setting indexes, output channels, etc.
+  //
+  //     If a non-zero value is returned the report will be cancelled
+  //
+  Function Starting_Main_Report Returns Integer // Pre report prep. For Override by user
+    Local Integer RptChannel
+    If (Report_Channel(Current_Object)) EQ -2 begin
+      Get Seq_New_Channel to RptChannel
+      Set Assigned_Channel to RptChannel
+    End
+    Function_Return RPT_OK
+  End_Function
+
+  // Function: End_Report
+  //    Called to shut down the report.
+  //    Pass: Rpt_Status - If Rpt_Status=RPT_CANCEL then the report was
+  //    cancelled.
+  //
+  //    Main_Logic
+  //       If Rpt_Status ne RPT_CANCEL   <---normal end of report
+  //          send Handle_End_Report   <---final subtotals, totals, etc
+  //          Move RPT_OK to Rpt_Status  <---we want a normal report to end
+  //                                       with a RPT_OK
+  //       Else
+  //          Send Handle_Cancelled_Report
+  //       send Ending_Report
+  //       If main outer report send Ending_Main_report
+  //       return Rpt_Status
+  //
+  Function End_Report Integer Rpt_Status Returns Integer
+    If Rpt_Status ne RPT_CANCEL Begin
+       Send Handle_End_Report
+       Move RPT_OK to Rpt_Status
+    End
+    Else Send Handle_Cancelled_Report
+    Send Ending_Report
+    If not (Child_Rpt_State(Current_Object)) Begin
+      Send Ending_Main_report
+    End
+    Function_Return Rpt_Status
+  End_Function
+
+  //
+  //  Procedure: Ending_Report
+  //     User Handler Intended for override. This is called by end_report
+  //     for all reports. If the report is nested this IS called every
+  //     time the nested report is entered.
+  //
+  Procedure Ending_Report
+  End_Procedure
+
+  //  Procedure: Ending_Main_Report
+  //     User Handler Intended for override. This is the same as
+  //     Ending_report except this message is only sent to the main
+  //     (parent) outer report. Nested reports do not send this message.
+  //     This is very useful for closing files, io channels, etc.
+  //
+  Procedure Ending_Main_Report
+    If (Report_Channel(Current_Object)) EQ -2 ;
+        Send Seq_Release_Channel (Assigned_Channel(Current_Object))
+  End_Procedure
+
+
+  //  Function: Handle_Report_Line
+  //    Handle 1 line of a report doing headers,totals as needed.
+  //    Returns Integer Rpt_Status as what happened (RPT_OK-Record found and
+  //    printed, RPT_END-Record not found/end report, RPT_CANCEL-report
+  //    has been cancelled, RPT_NOT_SELECT - (special) means current
+  //    record was not valid - but keep looking
+  //
+  //    If NO_FINDING_STATE is TRUE then you should call this function
+  //    with a record already in place. Otherwise this will find the
+  //    record for you.
+  //
+  Function Handle_Report_Line Returns Integer
+    Local Integer RCount Rpt_Status CBreak
+    Get Rec_Count   to RCount     // how many records found so far
+    Send Assign_Report_Channel       // set channel and Linecount
+    //
+    If (No_Finding_state(Current_Object)) Move RPT_OK to Rpt_Status
+    Else Get Find_Rec to Rpt_Status
+    //
+    If Rpt_Status eq RPT_OK Begin
+       Get Selection to Rpt_Status
+       If Rpt_Status eq RPT_OK begin
+          Set Current_Rec to (Found_Rec(Current_Object))
+          Get Test_BreakPoints to CBreak
+          If (RCount>0 and CBreak>0) Send Handle_SubTotals CBreak // print needed subtotals
+          If CBreak Gt 0 Send Handle_SubHeaders CBreak // Print needed sub headers as needed
+          Set Last_Rec to (Current_Rec(Current_Object))
+          Increment RCount
+          Set Rec_Count to RCount
+          Send Body
+          If (Cancelled_State(Current_Object)) Move RPT_CANCEL to Rpt_Status
+       End
+       If (Rpt_Status=RPT_OK or Rpt_Status=RPT_NOT_SELECT) ;
+           Get Handle_KeyPressed to Rpt_Status
+    End
+    Function_Return Rpt_Status
+  End_Function
+
+  // Procedure: Handle_End_Report
+  //   Shut down report in normal manner. Print final subtotals, totals
+  //   and footers
+  //
+  Procedure Handle_End_Report
+    If (Rec_Count(Current_Object)) Begin
+       Send Assign_Report_Channel
+       If (Num_Breaks(Current_Object)>0) Send Handle_SubTotals 1 // 1 will do all
+       If Not (Child_Rpt_State(Current_Object)) Begin
+          Set Sub_Totaling_State to True // Break down for TOTAL
+          Set Rpt_Ttl_Level to 0
+          Send Total               // Print TOTAL
+          Set Sub_Totaling_State to False
+          Send Handle_Footer 1 // Print any footer  1 means last time
+          //*** 11-22-1992 added newpage check
+          If (New_page_State(Current_Object)=0) Send Final_Formfeed
+       End
+    End
+  End_Procedure
+
+  // Procedure: Handle_Cancelled_Report
+  //   Shut down a cancelled report. This prints the final formfeed if
+  //   anything was printed and the report was not a screen report and
+  //   it is the main outer report.
+  //
+  Procedure Handle_Cancelled_Report
+    If (Rec_Count(Current_Object) and Not (Child_Rpt_State(Current_Object)) ;
+        and (Page_Feed(Current_Object) > -1) ;
+        and (New_page_State(Current_Object)=0) ) Send Final_Formfeed
+        //*** 11-22-1992 added newpage check
+  End_Procedure
+
+  //
+  //  Procedure: Body
+  //    Normally this is overridden. In nested reports this can be sued
+  //    by the parent to start all of the inner reports.
+  //
+  Procedure Body
+    Local Integer Rpt_Status
+    if (Has_Children_Rpt_State(Current_Object)) ;
+       Broadcast Get Start_Report to Rpt_Status // send to all child reports
+  End_Procedure
+
+  //  Function: Selection
+  //        returns: Rpt_Status
+  //    Called after a record has been found. Intended for override. If
+  //    you are using constraints you probably won't need this.
+  //
+  Function Selection Returns Integer
+    Function_Return RPT_OK
+  End_Function
+
+  Procedure Filler  // print 1 filler line as needed
+    Send WriteLn ''
+  End_Procedure
+
+  // Procedure: Restore_Parent_Rec
+  //
+  //
+  Procedure Restore_Parent_Rec
+    Local Integer Rec#
+    If (Child_Rpt_State(Current_Object)) Begin  // if child report then
+        Delegate Get Current_Rec to Rec#     // make sure original parent
+        Delegate Send Read_by_RecNum Rec#    // related
+    End
+  End_Procedure
+
+  //  Procedure: Assign_Report_Channel
+  //      This makes sure the the correct channel is set. This called by
+  //      the report's critical entry points (start_Report,
+  //      Handle_report_Line, End_report).
+  //
+  Procedure Assign_Report_Channel
+    Local Integer RptChannel
+    Get Report_Channel to RptChannel // this will set LineCount Global Integer
+    // -2 means use channel assigned from seq_chnl pkg
+    If RptChannel EQ -2 Get Assigned_Channel to RptChannel
+    // -1 means don't mess with the output channel
+    If RptChannel NE -1 Direct_Output Channel RptChannel
+  End_Procedure
+
+  // Procedure: Handle_SubTotals (Internal)
+  //
+  Procedure Handle_SubTotals Integer CBrk
+    Local Integer Flag i R_S MSG
+    Get Num_Breaks to i
+    Get Refind_For_SubTotal_state to R_S
+    Move 0 to Flag
+    Set Sub_totaling_State to TRUE
+    While i ge CBrk
+      If (R_S and (Flag=0)) Begin
+         Send Read_by_RecNum (Last_Rec(Current_Object))
+         Move 1 to Flag
+      End
+      Set Rpt_Ttl_Level to i
+      Move (MSG_SubTotal1+i-1) to Msg
+      Send Msg to Current_Object
+      Decrement i
+    Loop
+    Set Rpt_Ttl_Level to 0
+    If Flag ne 0 ; // restore current record if needed
+       Send Read_by_RecNum (Current_Rec(Current_Object))
+    Set Sub_totaling_State to FALSE
+  End_Procedure
+
+  // Procedure: Handle_SubHeaders (Internal)
+  //
+  Procedure Handle_SubHeaders Integer CBrk
+    Local integer NBrks i Msg
+    If CBrk eq 0 Procedure_Return
+    Get Num_Breaks to NBrks
+    For i from CBrk to NBrks
+        Set Rpt_Ttl_Level to i  // keep track of current break level
+        Move (MSG_SubHeader_Init1+i-1) to Msg
+        Send Msg to Current_Object
+        Move (MSG_SubHeader1+i-1) to Msg
+        Send Msg to Current_Object
+    Loop
+    Set Rpt_Ttl_Level to 0
+  End_Procedure
+
+  // Procedure: RePrint_SubHeaders (Internal)
+  //
+  //    RePrint SubHeaders as part of a page break
+  //
+  Procedure RePrint_SubHeaders
+    Local integer i Lvl Msg
+    Set No_PageCheck_State to True      // repaging..don't check line length
+    Get Rpt_Ttl_Level to Lvl
+    If Not (Sub_totaling_State(Current_Object)) Begin
+      If Lvl eq 0 Get Num_Breaks to Lvl
+      Else Decrement Lvl
+    End
+    For i from 1 to Lvl
+      Move (MSG_SubHeader1+i-1) to Msg
+      Send Msg to Current_Object
+    Loop
+    Set No_PageCheck_State to False     // No longer Paging
+  End_Procedure
+
+  // Procedure: New_Page  (internal)
+  //
+  Procedure New_Page
+    If (Child_Rpt_State(Current_Object)) ; //*** delegate Send New_Page
+      Send New_Page to (Main_Report_Id(Current_Object))
+    Else Begin
+      Set No_PageCheck_State to True         // reprinting..don't check line length
+      Send Page_Top
+      If (Page_Count(Current_Object)) eq 1 Send Report_Header
+      Else                                 Send Page_Header
+      Send Page_Title
+      Set New_Page_State to False
+      Set No_PageCheck_State to False        // No longer Paging
+    End
+    Send RePrint_SubHeaders            // reprint sub headers
+  End_Procedure
+
+  //  Procedure: Hanle_Footer (Internal)
+  //
+  Procedure Handle_Footer Integer LastTime // Do Filler and footer
+    Local Integer i PE
+    If (Child_Rpt_State(Current_Object)) ; //***Delegate Send Handle_Footer LastTime
+       Send Handle_Footer to (Main_Report_Id(Current_Object)) LastTime
+    Else Begin
+      Get Footer_Lines to i
+      if LastTime ne 0 ;
+         Move (i + (Report_Footer_Lines(Current_Object)) - (Page_Footer_Lines(Current_Object)) ) to i
+      If i gt 0 begin
+        Set No_PageCheck_State to True
+        Get Page_end to PE
+        While LineCount lt (PE - i)
+           Send Filler
+        End
+        Send Page_Total
+        If LastTime eq 0 Send Page_Footer
+        else             Send Report_Footer
+        Send Page_Bottom
+        Set No_PageCheck_State to False
+      End
+    End
+  End_Procedure
+
+  // Procedure Final_Formfeed
+  //
+  // intended for augmentation/override
+  // Called to eject the last page after the main report has
+  // processed all records.
+  Procedure Final_Formfeed
+    Send Formfeed
+  End_procedure
+
+  // Procedure FormFeed
+  //
+  // intended for augmentation/override
+  // Formfeed is responsible for handling an end of page break
+  // AND incrementing the property Page_Count AND zeroing the
+  // integer LINECOUNT
+  Procedure Formfeed
+    Local Integer Lnes Cnt
+    Get Page_Feed  to PageFeed  // do it the old fashioned df
+    Get Page_End   to PageEnd   // way with PageFeed, PageEnd and
+    Get Page_Count to PageCount // PageCount
+    Set Page_Count to (PageCount+1)
+    If PageFeed ge -1 Formfeed  // this'll zero Linecount
+    Else Move 0 to LineCount
+  End_procedure
+
+  // Function: Page_End_Check (internal)
+  //
+  Function Page_End_Check Integer Lines Returns Integer
+    Local Integer i Stat
+    If ( Child_Rpt_State(Current_Object) ) ; //*** Delegate Get Page_End_Check to Lines Stat
+       Get Page_End_Check of (Main_Report_Id(Current_Object)) Lines to Stat
+    Else Begin
+        Get Footer_Lines to i
+        If (LineCount + Lines) gt (Page_End(Current_Object) - i)  Move 1 to Stat
+        Else Move 0 to Stat
+    End
+    Function_Return Stat
+  End_Function
+
+  // Procedure: Page_Check (internal)
+  //
+  Procedure Page_Check Integer Lines  // check if room for new image..if not new page
+     If ( (Page_End_State(Current_Object)) or ;
+          (Page_End_Check(Current_Object,Lines)) ) ;
+     Begin // if new page needed
+        Send Handle_Footer 0         // do the footer
+        Send FormFeed
+        Set Page_End_State to False
+        Set New_Page_State to True
+     End
+     If (New_Page_State(Current_Object)) Send New_Page
+  End_Procedure
+
+  //  Procedure: OutPut_ImageNum
+  //     Possibly useful for override and augmentation in that all
+  //     image output goes through this handler.
+  //
+  Procedure Output_ImageNum Integer ImageNum
+     Output_ImageNum ImageNum
+  End_Procedure
+
+  // Procedure: OutPut_PageCheck (internal)
+  //
+  Procedure OutPut_PageCheck Integer ImageNum Integer Lines
+     If Not (No_PageCheck_State(Current_Object)) Send Page_Check Lines
+     Send Output_ImageNum ImageNum
+  End_Procedure
+
+  //  Output_Wrap_PageCheck (internal)
+  //  06-17-1992 added PrintReq as parameter. If true print line always
+  //  05/18/95   it is possible for |122 to get clobbered (with increment
+  //             ifchange or for commands). Push and pop it first.
+  Procedure OutPut_Wrap_PageCheck Integer ImageNum Integer Lines Integer PrintReq
+     Local integer Save122#
+     If Not (No_PageCheck_State(Current_Object)) Send Page_Check Lines
+     !A [] $20A ImageNum // Fill wrap fields and set |122 if empty
+     // if empty and print is not required we are done
+     [|122] If PrintReq eq 0 Procedure_Return
+     Move (|122) to Save122#    // save this global value
+     Send Output_ImageNum ImageNum
+     Indicate |122 as (Save122#) // restore global indicator
+     [~|122] If (Cancelled_State(Current_Object) or ;
+                 Handle_Keypressed(Current_Object) ) Indicate |122 True
+  End_Procedure
+
+  //  Procedure: Writeln
+  //     Possibly useful for override and augmentation in that all
+  //     non image writeln goes through this handler.
+  //
+  Procedure WriteLn String WrStr
+     WriteLn WrStr
+  End_Procedure
+
+  //  Procedure: Writeln_PageCheck  (Advanced use)
+  //
+  Procedure Writeln_PageCheck String WrStr Integer Lines
+     Local Integer L
+     If Num_Arguments lt 2 Move 1 to L
+     Else Move Lines to L
+     If Not (No_PageCheck_State(Current_Object)) Send Page_Check L
+     Send WriteLn WrStr
+  End_Procedure
+
+  // these procedures get created during object or class creation.
+  // They will create handlers that set the value of the
+  // associated properties. This allow this package to be used
+  // for class construction.
+  //
+  Procedure Breaks_Set
+  End_Procedure
+
+  Procedure Page_Footer_set
+  End_Procedure
+
+  Procedure Page_bottom_Set
+  End_Procedure
+
+  Procedure Page_total_Set
+  End_Procedure
+
+  Procedure Report_Footer_Set
+  End_Procedure
+
+  // Mark this child report object's Main report Id along with all of
+  // its children
+  Procedure Mark_Main_Report_Id Integer Obj#
+    Set Main_report_Id to Obj#                // mark self
+    Broadcast Send Mark_Main_Report_Id Obj#   // mark all children
+  End_Procedure
+
+  Procedure Mark_Rpt_Children
+    Set Child_Rpt_State to false
+    Broadcast send Mark_as_Rpt_Child
+    Broadcast send Mark_Main_report_Id Current_Object
+  End_Procedure
+
+  Procedure Mark_as_Rpt_Child
+    set Child_Rpt_State to true
+    delegate set Has_Children_Rpt_State to True
+  End_Procedure
+
+  Procedure constrain   //intended for override/augmentation
+    if (Child_Rpt_State(current_object)) ;
+      CONSTRAIN (Main_File(current_object)) RELATES TO ;
+          (Main_File(Parent(current_object)))
+  End_Procedure
+
+  Procedure rebuild_constraints
+    Constraint_Set current_object CLEAR
+    Send constrain
+  End_procedure
+
+  //
+  // returns index# (incl. 0) or 0 if unindexed/error
+  //
+  Function which_index integer file# integer field# returns integer
+    local integer fldNdx
+    if file# ne 0 Begin
+      FIELD_DEF file# field# TO fldNdx fldNdx
+      function_return fldNdx
+    End
+  End_function
+
+  Procedure End_Construct_Object
+    send Mark_Rpt_Children   //mark components
+    // If no Main_File we assume we have a No_Finding_State condition
+    If (Main_File(Current_Object)=0) Set No_Finding_State to TRUE
+    Send Breaks_Set  // sets Num_Breaks property
+    Send Page_Footer_Set
+    Send Page_Bottom_Set
+    Send Page_Total_Set
+    Send Report_Footer_Set
+    Forward Send End_Construct_Object
+  End_Procedure
+
+End_Class  // end of REPORT class
+
+
+//
+//  RptStart <className>
+//     {MAIN_FILE <Main_File>}
+//     {BY <Index> }
+//     {BREAK  ..............}
+//
+// this macro handles the optional syntax of Reports
+//
+#COMMAND RptStart R
+  FORWARD_BEGIN_CONSTRUCT !1 !2 !3 !4 !5 !6 !7 !8 !9
+  Bind_Main_File !2 !3 !4 !5 !6 !7 !8 !9
+  Bind_Index     !2 !3 !4 !5 !6 !7 !8 !9
+  Bind_Breaks    !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+#COMMAND Bind_Breaks
+  #IF (!0>1)
+    #IFSAME !1 BREAK
+      Report_Breaks !2 !3 !4 !5 !6 !7 !8 !9
+    #ELSE
+      Bind_Breaks !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+#COMMAND Setup$Breaks R .          
+   // we pass as much as possible to speed things up.
+   Get Test_One_BreakPoint !I !1 Arr# CBreak RCount to CBreak
+#ENDCOMMAND
+
+#COMMAND bind_main_file
+  #IF (!0>1)
+    #IFSAME !1 MAIN_FILE
+      Report_Main_File !2
+    #ELSE
+      bind_main_file !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+#COMMAND bind_index  // Set Ordering & Find_down_state properties
+  #IF (!0>1)
+    #IFSAME !1 BY DOWN
+      Report_Index !1 !2
+    #ELSE
+      Bind_index !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+// These are identical to the commands found in Data_Set.pkg...
+#COMMAND BEGIN_CONSTRAINTS
+  procedure constrain
+#ENDCOMMAND
+
+#COMMAND END_CONSTRAINTS
+    forward send constrain
+  end_procedure
+#ENDCOMMAND
+
+
+// ------------special macro commands to be used by Report Objects
+//
+//  Output_PageCheck command for Report Package.
+//  Formats are: OutPut_PageCheck Image Length
+//               OutPut_PageCheck Image     - uses Image.LINES for length
+//               OutPut_PageCheck           - Uses OutPut_Image & OutPut_Lines
+//                                            which Procedure_Section creates.  
+//
+#COMMAND Output_PageCheck  // does an output for reports w/ a page check
+  #IFSAME !1 CHANNEL
+    Direct_OutPut Channel !2  // set channel--optional syntax
+    #IF !0>2
+      OutPut_PageCheck !3 !4
+    #ENDIF
+  #ELSE  
+    #IF (!0>1)                // and prints new page if needed
+      Send OutPut_PageCheck !1.N !2
+    #ELSE
+      #IF (!0>0)           // and prints new page if needed
+         Output_PageCheck !1 !1.LINES
+       #ELSE
+         Output_PageCheck OutPut_Image OutPut_Lines
+       #ENDIF  
+    #ENDIF
+  #ENDIF  
+#ENDCOMMAND
+
+//
+//  Output_Wrap_PageCheck command for Report Package.
+//  Formats are: OutPut_PageCheck Image Length
+//               OutPut_PageCheck Image     - uses Image.LINES for length
+//
+#COMMAND Output_Wrap_PageCheck R // does an output for reports w/ a page check
+  #IFSAME !1 CHANNEL
+    Direct_OutPut Channel !2  // set channel--optional syntax
+    #IF !0>2
+      OutPut_Wrap_PageCheck !3 !4
+    #ENDIF
+  #ELSE  
+    #IF (!0>1)                     // and prints new page if needed
+      Send OutPut_Wrap_PageCheck !1.N !2 TRUE // unconditional print
+      [~|122] Repeat
+        BlankForm !1
+        Send OutPut_Wrap_PageCheck !1.N !2 FALSE // print if not empty
+      [~|122] Loop
+    #ELSE
+      Output_Wrap_PageCheck !1 !1.LINES
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+
+//  Procedure_Section
+//  Formats are:
+//      Procedure_Section Section_Name {AS Image_Name} {Lines}
+//
+//   Note: these commands are identical:
+//
+//     1. Procedure_Section Body as VndrBody 
+//     2. Procedure_Section Body as VndrBody Body.LINES
+//     3. Procedure Body
+//           Autopage VndrBody
+//           Local Integer OutPut_Image
+//           Move VndrBody.N to OutPut_Image
+//
+//
+#COMMAND Procedure_Section R
+  #IF !0=1
+    #IFDEF !1.LINES
+      Procedure_Section !1 AS !1 !1.Lines
+    #ELSE
+      Procedure !1
+    #ENDIF
+  #ELSE
+    #IF !0=2
+      Procedure_Section !1 AS !1 !2
+    #ELSE
+      #IF !0=3
+        #CHECK !3.N _R#LGVU
+        Procedure_Section !1 !2 !3 !3.Lines
+      #ELSE
+        #CHECK !2 "AS"
+        #IFSAME !1 PAGE_FOOTER PAGE_BOTTOM PAGE_TOTAL REPORT_FOOTER // if a footer...handle w/ special macro
+          FOOTER$SETS !1 !4
+        #ENDIF
+        //
+        Procedure !1   // Set the procedure Name
+          Local Integer OutPut_Lines
+          Move !4 to OutPut_Lines
+        //
+        #IFDEF !3.N
+          Autopage !3         
+          Local Integer OutPut_Image
+          Move !3.N to OutPut_Image
+        #ENDIF  
+      #ENDIF
+    #ENDIF
+  #ENDIF      
+#ENDCOMMAND
+
+#COMMAND FOOTER$SETS "PAGE_FOOTER""PAGE_BOTTOM""PAGE_TOTAL""REPORT_FOOTER" R
+  #IFSAME !1 PAGE_FOOTER
+    Procedure Page_Footer_Set
+      Set Footer_Lines to (!2 + (Footer_Lines(Current_Object)) )
+      Set Page_Footer_Lines to !2
+    End_Procedure
+  #ELSE
+    #IFSAME !1 PAGE_BOTTOM
+      Procedure Page_bottom_Set
+        Set Footer_Lines to (!2 + (Footer_Lines(Current_Object)) )
+      End_Procedure
+    #ELSE
+      #IFSAME !1 PAGE_TOTAL
+        Procedure Page_total_Set
+          Set Footer_Lines to (!2 + (Footer_Lines(Current_Object)) )
+        End_Procedure  
+      #ELSE   // must be REPORT_FOOTER
+        Procedure Report_Footer_Set
+          Set Report_Footer_Lines to !2
+        End_Procedure  
+      #ENDIF
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+//
+//  Set a reports Main_File:
+//   Format is: REPORT_MAIN_FILE FileName
+//
+#COMMAND Report_Main_File R .
+  #IFDEF !1.File_Number
+    Set Main_File to !1.File_Number
+  #ELSE
+    #ERROR 778 If !1 is a file it is unopened
+  #ENDIF
+#ENDCOMMAND
+
+//
+//  Set a Reports Index and direction
+//     Format is: REPORT_INDEX BY|DOWN Index#|File.Field
+//
+#COMMAND Report_Index "BY""DOWN" R . // Set Ordering property
+  #IFSAME !1 DOWN
+    Set Find_Down_State to True
+  #ELSE
+    Set Find_Down_State to False
+  #ENDIF
+  #IFCLASS !2 "F"     // if File.Field then figure out which
+    #PUSH !i          // index number to use at run-time
+    #PUSH !l
+    #SET L$ !2        // get file#
+    #SET I$ %!2       // get field# -- aha-new undocumented features
+    Set Ordering to (Which_Index(Current_Object,!l,!i))
+    #POP L$
+    #POP I$
+  #ELSE
+    Set ordering to !2 // if Index.# or # set ordering at compile-time
+  #ENDIF  
+#ENDCOMMAND
+
+//
+//  Set the report Breaks
+//    Format: Report_Breaks Brk_1 Brk_2 ... Brk_n
+//
+//
+#COMMAND Report_Breaks R
+  #PUSH !i
+  #SET I$ 0 // set I$ to the number of breakpoint arguments
+  // This returns the outermost break level...if 0
+  // then there was no break at all
+  Function Test_BreakPoints Returns Integer
+    Local Integer Arr# CBreak RCount
+    Move (Break_Array(Current_Object)) to Arr#  // do this to optimize
+    Move 0 to CBreak                            // parsing speed  
+    Get Rec_Count to RCount
+    // Create a "Get Test_One_BreakPoint" command for each breakpoint
+    Multi$ Setup$Breaks !1 !2 !3 !4 !5 !6 !7 !8 !9
+    Function_Return CBreak
+  End_Function
+ 
+  Procedure Breaks_Set
+    Set Num_Breaks to !i
+  End_Procedure  
+ 
+  #POP I$
+#ENDCOMMAND   
+
+// Zero_Accumulator
+#COMMAND Zero_SubTotals R // handy routine to zero any subtotals that
+  Move 0 to !1%          // might need zeroing before a report is run
+  #IF !0>1               // i.e. Zero_SubTotal SubTotal.1 Subtotal.2 SubWindowName
+    Zero_SubTotals !2 !3 !4 !5 !6 !7 !8   !9
+  #ENDIF
+#ENDCOMMAND
+

@@ -1,0 +1,123 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Suptrace.Pkg
+// Version: 1.0
+//  04-27-1993 : Created
+//
+// Author: John J. Tuohy
+//
+//************************************************************************
+
+//
+//
+//
+
+Use UI
+
+//
+//  This defines the external entry keys used by the trace package. 
+//  These must be defined before the strace2 package is used. If they are
+//  not, the default values built into the packages are used (which in this
+//  case is the same as the values listed here)
+//
+
+Define KEY_EXPRESSION   for KEY_CTRL+KEY_E
+Define KEY_TOGGLE_TRACE for KEY_CTRL+KEY_F9 
+Define KEY_TOGGLE_SPEED for KEY_CTRL+KEY_F3 
+Define KEY_TOGGLE_STEP  for KEY_ALT+KEY_F3
+Define KEY_OBJECT_TREE  for KEY_CTRL+KEY_F10  // *tree*
+Define KEY_FOCUS_TREE   for KEY_ALT+KEY_F10   // *tree*
+
+
+Use strace2 // super_trace class w/ focus and object tree support
+            //
+            // Note: If you changed this to Use strace1, comment out the
+            //       lines that contain *tree* and change "is a super_trace"
+            //       to "is a s_trace this will compile without the
+            //       object/focus tree support. I only advise this if you have
+            //       another package providing this support or you are so tight
+            //       on resources that you can't afford to use this (Yuck). 
+
+
+//
+//  Define the Images that we will need.
+//
+//  We must supply three images:
+//
+//    1.  Tracer frame: Must contain 4 windows (memory,staus,line,col. It
+//        should be big enough to contain the trace edit object.
+//
+//    2.  Expression Entry Form: This needs two windows and should be able to
+//        fit inside of the tracer frame.
+//
+//    3.  Help screen. This locates at 1 3 absolute. Say whatever you want.
+//
+
+/Tracer_Status
+ษอSuper Trace อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ Memory:_________Trace Status: ________________________  Line: ___ Col:___  บ
+บ                                                                            บ
+บ                                                                            บ
+บ                                                                            บ
+บ                                                                            บ
+บ                                                                            บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+
+/Expres_Enter
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ Enter Expression: _______________________________________________________บ
+บ  Last Expression: _______________________________________________________บ
+ศอออออ <Alt+W=Add/Remove Watch> ออออออออออ<Alt+R=Remove All Watches>อออออออผ
+/*
+
+/Trace_Help
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                           Super Trace Help                             บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤยฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ  ------Trace Commands----------  ณ  ------View Mode Commands---------  บ
+บ  Ctrl+F9   Toggle Tracer         ณ  Ctrl+Right  Scroll Right 1 Screen  บ
+บ  Alt+F3    Toggle Single Step    ณ  Ctrl+Left   Scroll Left 1 Screen   บ
+บ  Ctrl+F3   Toggle Speed Mode     ณ  Ctrl+Up     Move Window up         บ
+บ  Ctrl+F10  Object Tree/List      ณ  Ctrl+Down   Move Window Down       บ
+บ  Alt+F10   Focus Tree            ณ  Alt+F9      Toggle Zoom            บ
+บ  Ctrl+E    Expression Evaluator  ณ                                     บ
+บ  Alt+M     Show Memory           ณ  Up, Down, Right, Left, PgUp, PgDn, บ
+บ  F8        Step Over             ณ  Home, End, Ctrl+Home, Ctrl+End     บ
+บ  Alt+F4    Exit Application      ณ  all perform standard functions.    บ
+ศออออออออออออออออออออออออออออออออออฯอออออออออออออออออออออออออออออออออออออผ
+/*
+
+//
+//  When we create this object we must pass all three image names on
+//  the object creation line (frame, expression, help).
+//
+Object Tracer Is a Super_Trace Tracer_Status Expres_Enter Trace_Help
+  Set  User_FileName to '.\Trace.trc'
+End_Object
+
+// Define global access keys to the tracer
+//
+On_Key KEY_TOGGLE_TRACE Send Toggle_Tracer       to (Tracer(Current_Object))
+On_Key KEY_TOGGLE_STEP  Send Toggle_Step         to (Tracer(Current_Object))
+On_Key KEY_TOGGLE_SPEED Send Toggle_Speed_State  to (Tracer(Current_Object))
+On_Key KEY_EXPRESSION   Send Calc_String         to (Tracer(Current_Object))
+On_Key KEY_FOCUS_TREE   Send Process_Focus_Tree  to (Tracer(Current_Object)) // *tree*
+On_Key KEY_OBJECT_TREE  Send Process_Object_Tree to (Tracer(Current_Object)) // *tree*
+
+// test code
+//
+//object x is an edit
+//   set size to 5 30
+//end_object
+//start_ui x
+
+

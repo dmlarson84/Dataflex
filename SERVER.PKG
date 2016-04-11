@@ -1,0 +1,796 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************/
+// 12/20/94 (JJT) Added Change_disabled_state.
+//                Altered SET Changed_state to respect above property
+//                Removed Validate_items (added to Val_mx.pkg)
+//                Added Explicit_server_state and altered Set Server to
+//                support it.
+// 12/27/94 (JJT) Deferred_state is now respected in set changed_state
+//                procedure (see comments for that proc.).
+//
+//************************************************************************/
+
+//************************************************************************
+// Server.Pkg
+// Version: 1.0
+//  06-13-1992 : Created
+//
+// Author: John J. Tuohy
+//
+// Except for the lines marked "===mods to server===" this is an exact 
+// copy of the server package. This is used to add request_destroy_object
+// using what is now considered to be a fairly standard C/D method. The main
+// change is to include an additonal file named SERVMOD.PKG which add the
+// C/D support for server based DEOs.
+//
+//=================================mods to server===================
+//   John Tuohy...added to support request_destroy_object
+//************************************************************************
+  
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\source.30b\pkg\rcs\server.pkg $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: steve-l $
+//     $Locker:  $
+//
+//     $Log:	server.pkg $
+//Revision 1.9  92/06/01  14:38:27  steve-l
+//changed ADD_WATCHER and REMOVE_WATCHER to ADD_USER_INTERFACE and
+//REMOVE_USER_INTERFACE, respectively - "Watcher" distinction no longer
+//made by data-sets (but still tracked by DEOs).
+//
+//Revision 1.8  92/05/14  17:15:59  SWM
+//Updated Copyright slug.
+//
+//Revision 1.7  92/04/07  18:03:21  lee
+//added NO_STOP option for broadcasting to override default behavior of
+//stopping broadcast on a non-zero return value.
+//
+//Revision 1.6  92/04/03  18:00:19  lee
+//updated add_focus/activate/deactivate/release_focus overrides to use (new)
+//return value properly.
+//
+//Revision 1.5  92/03/29  18:45:15  lee
+//added MSG_END_CONSTRUCT_OBJECT, moved ENDMAC macro stuff into END_CONSTRUCT-
+//OBJECT procedures (in .pkgs). moved Flag_ITems to list.pkg after generalizing
+//it based on PROTOTYPE_OBJECT instead of Whether or not it is a table-oriented
+//object. Moved define_access_keys mechanism completely into actionbr.pkg.
+//fixed two typos: import_class_protocol used !# instead of !3, and register-
+//procedure used !1 instead of !2.
+//
+//Revision 1.4  92/03/09  19:04:23  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.3  92/01/17  14:25:32  steve-l
+//guard isclient=0 added to send UPDATE_DEPENDENT_ITEMS at end of ATTACH_DEO...
+//
+//Revision 1.2  91/11/08  09:13:08  steve-l
+//the procedure ATTACH_DEO_to_SERVER was altered to send the new
+//message UPDATE_DEPENDENT_ITEMS as its last action [DAR #1905]
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: Server.pkg
+// Creation Date: January 1, 1991
+// Modified Date: January 17, 1992
+//     Author(s): Steven A. Lowe
+//
+// This module defines the operations and properties required to support
+// a seperate database 'server' object (as exemplified by Data_Set),
+// collected in the abstract class Server_Mixin.
+//
+// This file should be USEd prior to and IMPORTed within the scope of the
+// class definition by any user-interface (esp. data-entry) class which
+// must support the data-entry object standards.
+//
+// This file is used by ENTRYFRM.PKG, TEXT_WIN.PKG, DATALIST.PKG,
+// ENCLIENT.PKG, and PICKLIST.PKG.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+//=================================mods to server===================
+use DestObj // object def for Dest_Obj
+use brdcster
+
+//
+// Description
+//
+//   These declarations permit forward-referencing of the messages provided
+//   by the Data_Set class (in its role as database server).
+//
+// Assumptions/Preconditions
+//
+//   None.
+//
+// Exceptions
+//
+//   None.
+//
+// Notes
+//
+//   None.
+//
+Register_Procedure Item_Find integer mode integer datafile integer datafield ;
+      integer entUpdtFlag integer errFlag integer dfrdFlag
+Register_Procedure Add_User_Interface integer obj#
+Register_Procedure Remove_User_Interface integer obj#
+Register_Procedure Clear
+Register_Function  Component_State returns integer
+Register_Function  Can_Delete returns integer
+Register_Object Element
+
+
+class server_mixin is a message
+
+  //
+  // Description
+  //
+  //   This procedure defines the properties which are required to support a
+  //   server-object for database access.
+  //
+  // Assumptions/Preconditions
+  //
+  //   The global function MAKE_BROADCASTER must be defined to return the 
+  //   object id of a new instance of the Broadcaster class (see BRDCSTER.PKG).
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Server is the object id of the database agent for this object.
+  //
+  //   Watched_Servers is a set of object ids for database agents whose state
+  //   must also be monitored by this object (but which never receive requests
+  //   directly from this object, unlike the Server).
+  //
+  //   Servers_Scanned determines if the items of this object have been
+  //   scanned to see if this object should be connected to other database
+  //   agents as 'just watching' (see Watched_Servers, above).
+  //
+  //   Auto_Fill_State determines if this object should always automatically
+  //   fill itself with data when it is activated.
+  //
+  //   Deferred_State determines if this object's browsing in database files
+  //   should be reflected immediately in this object's database agent (and
+  //   the agents' agents, etc.), or not.
+  //
+  //
+  procedure define_server
+    local integer obj#
+    Property integer private.Server          PUBLIC 0
+    Property integer Watched_Servers         PUBLIC 0
+    Property integer private.Servers_Scanned PUBLIC 0
+    move (make_broadcaster(DESKTOP)) to obj#
+    set Watched_Servers to obj#
+    set broadcast_state of obj# to TRUE
+    Property integer Auto_Fill_State PUBLIC  0
+    Property integer Deferred_State  PUBLIC  0
+
+    // (JJT) added to support DEO request-delegation. This is set true
+    // if the server is explicitly set in this DEO (normally via a
+    // USING parameter).
+    property integer explicit_server_state public FALSE
+
+    // (JJT) Since this package's SET changed_state is using change_
+    // disabled_state we might as well define it here. This gets changed
+    // by Clear_mx to support setting of defaults without changing the
+    // objects changed_state.
+
+    // This stops changed_state from getting changed. It allows item_changed_
+    // state to chagne without the object's changed_state getting changed.
+    // This should be considered protected (i.e., likely to change). The new
+    // messages Entry_Defaults and Set Default_Value are both public and use
+    // this. Try to use these messages instead of this property.
+    Property Integer Change_Disabled_State  Public FALSE
+
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure establishes a connection between this object and its
+  //   database agent(s) (Server and Watched_Servers).
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Client_Area_State; its database agent(s)
+  //   must understand Add_User_Interface.
+  //
+  // Exceptions
+  //
+  //   If this object has no database agents, no action is taken.
+  //
+  // Notes
+  //
+  //   During the establishment of the connection, the database agent(s) may
+  //   direct this object to Display or Clear, depending on the state of the
+  //   record buffers and Auto_Fill_State.
+  //
+  procedure attach_deo_to_server
+    local integer obj# isclient
+    get Server to obj#
+    get client_area_state to isclient
+    if (obj# <> 0 AND isclient = 0) ;
+        send add_user_interface to obj# current_object
+    if isclient eq 0 send add_user_interface ;
+        to (Watched_Servers(current_object)) current_object TRUE // TRUE for watchers
+    if (obj# <> 0 AND isclient = 0) send update_dependent_items
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure discontinues the connection between this object and its
+  //   database agent(s) (Server and Watched_Servers).
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Client_Area_State; its database agent(s)
+  //   must understand Remove_User_Interface.
+  //
+  // Exceptions
+  //
+  //   If this object has no database agents, no action is taken.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure remove_deo_from_server
+    local integer obj# isclient
+    get Server to obj#
+    get client_area_state to isclient
+    if (obj# <> 0 AND isclient = 0) ;
+        send remove_user_interface to obj# current_object
+    if isclient eq 0 send remove_user_interface ;
+        to (Watched_Servers(current_object)) current_object TRUE // TRUE for watchers
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure adds this object into the focus-tree as a child of the
+  //   specified toObj#, and also add the child-objects of this object into
+  //   the focus-tree as children of this object.  If necessary, it also
+  //   scans the fields of this object's items  to determine which database
+  //   agents to 'watch', and creates a connection between this object and its
+  //   database agents.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Client_Area_State.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Client-objects already automatically add their children into the focus-
+  //   tree.
+  //
+  procedure add_focus integer toObj# returns integer
+    local integer srvscn retval
+    //
+    // standard DEO behavior
+    //
+    forward get msg_add_focus toObj# to retval
+    if retval procedure_return retval
+
+    if (client_area_State(current_object) = 0) ; //clients already broadcast
+        broadcast NO_STOP send add_focus current_object
+    //
+    // server augmentation
+    //
+    get private.Servers_Scanned to srvscn
+    if srvscn eq 0 send scan_servers
+    if (focus_mode(current_object) <> NO_ACTIVATE AND Active_State(current_object)) ;
+        send attach_DEO_to_server
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure removes this object from the focus-tree, and disconnects
+  //   it from its database agents, if any.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Changed_State.
+  //
+  // Exceptions
+  //
+  //   If this object has been changed, it will not be detached from its
+  //   database agents until the changes are saved or abandoned.
+  //
+  // Notes
+  //
+  //   Opposite of Add_Focus.
+  //
+  procedure remove_object
+    forward send remove_object
+    if (Changed_State(current_object) = 0) ; //only detach if unchanged!
+        send remove_DEO_from_server
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This function returns the object id of the database server which
+  //   encloses this object, if any.  Note that only the Data_Set class
+  //   defines this function to return anything other than 0.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   This function is used with delegation to locate the Data_Set
+  //   which is the closest parent of this object.
+  //
+  function Find_Server returns integer
+  end_function   //returns 0; only Data_Set returns non-zero
+
+  Register_Function Server returns integer
+
+
+  //
+  // Description
+  //
+  //   This function returns the object id of the database agent of this object,
+  //   or 0.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   See the Server function. below.
+  //
+  function Locate_Server returns integer
+    function_return (Server(current_object))
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function returns the object id of the database agent of this
+  //   object, or 0.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Component_State.
+  //
+  // Exceptions
+  //
+  //   If this object's Server is 0, this object's parent's Server is
+  //   returned, if any.
+  //
+  // Notes
+  //
+  //   This function is used to allow nested data-entry objects to use the
+  //   database agent defined by their parent object.
+  //
+  function Server returns integer
+    local integer obj#
+    get private.Server to obj#
+    if (obj# = 0 AND Component_State(current_object)) ;
+        function_return (Locate_Server(parent(current_object)))
+    function_return obj#
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This procedure sets the value of the Server property of this object,
+  //   notifying child-objects of the change, and destroying and creating
+  //   connections with database agents, as required.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Active_State.
+  //
+  // Exceptions
+  //
+  //   If the Server of this object is changed while this object is inactive,
+  //   no notification of child-objects is required or performed.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure set Server integer newVal
+    local integer oldVal
+    set explicit_server_state to (newVal <> 0) // (JJT) from DEODLG
+    get Server to oldVal
+    if newVal ne 0 set private.Server to (object_id(newVal))
+    else set private.Server to newVal
+    if (active_state(current_object)) begin
+      broadcast send server_changed oldVal newVal
+      if oldVal ne 0 send remove_deo_from_server  //detach from current server
+      if newval ne 0 send attach_deo_to_server    //attach to new server
+    end
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure servers as notification of a change in the connection
+  //   of this object's parent to its database agent.  If this object uses
+  //   its parent's database agent by default (see the Server and Find_Server
+  //   functions, above), it must disconnect from the old agent and connect
+  //   with the new agent.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Client_Area_State.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure server_changed integer oldVal integer newVal
+    local integer oldSrvr
+    if (client_area_state(current_object) = 0) begin
+      get private.Server to oldSrvr
+      if (oldSrvr = 0) begin  //assumes Server(current_object) = oldVal by deleg
+        if oldVal ne 0 send remove_user_interface to oldVal current_object
+        if newVal ne 0 send add_user_interface to newVal current_object
+      end
+    end
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure empties the Watched_Servers broadcaster, after
+  //   detaching this object from all of the broadcaster's elements.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   This procedure is invoked by Find_Servers_to_Watch, in preparation
+  //   for a scan.
+  //
+  procedure delete_watched_servers
+    local integer vis#
+    get watched_servers to vis#
+    send Remove_User_Interface to vis# current_object TRUE //detach from all, TRUE for watchers
+    set broadcast_state of vis# to false
+    send delete_Data to vis#                    //empty it
+    set broadcast_state of vis# to true
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure adds the specified object id (obj#) to this object's
+  //   set of database agents who are merely 'watched', and establishes a
+  //   connection between the database agent and this object.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Active_State.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure add_watched_server integer obj#
+    local integer vis# ndx
+    get watched_servers to vis#
+    set broadcast_state of vis# to false
+    get find_element of vis# obj# to ndx
+    if ndx lt 0 send add_element to vis# obj#
+    set broadcast_state of vis# to true
+    if (ndx lt 0 AND active_State(current_object)) ;
+      send add_user_interface to obj# current_object TRUE // TRUE for watchers
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure removes the specified object id (obj#) from this object's
+  //   set of database agents who are merely 'watched', and destroys the
+  //   connection between the database agent and this object.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Active_State.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure remove_watched_server integer obj#
+    local integer vis# ndx
+    get watched_servers to vis#
+    set broadcast_state of vis# to false
+    get find_element of vis# obj# to ndx
+    if ndx ge 0 send remove_element to vis# obj#
+    set broadcast_state of vis# to true
+    if (ndx >= 0 AND active_State(current_object)) ;
+        send remove_user_interface to obj# current_object TRUE // TRUE for watchers
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure causes the scanning of this object's items' fields,
+  //   and the production of a set of database agents who should be 'watched'.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   This procedure depends completely upon Find_Servers_To_Watch, below.
+  //
+  procedure Scan_Servers
+    send find_servers_to_watch FALSE
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure scans the fields of this object's items to determine
+  //   what other database agents (data_sets) other than this object's Server
+  //   should be 'watched' (for data changes).
+  //
+  // Assumptions/Preconditions
+  //
+  //   tableFlag is a boolean determining whether this object relies on a
+  //   prototype row (TRUE) or an item list (FALSE).
+  //
+  //   This object must understand Client_Area_State, and have a private
+  //   boolean property named Private.Servers_Scanned to note the event.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   This procedure is invoked once per object, the first time the object
+  //   is activated.  If the data_file, data_field, and/or main_file of this
+  //   object are changed (don't change them while this object is active!),
+  //   set Private.Servers_Scanned to FALSE to force this object to scan
+  //   again (when it is next activated).
+  //
+  procedure find_servers_to_watch integer tableFlag
+    local integer i file# obj# maxitems count p srvr# self#
+    local string fileStr fStr
+    set private.Servers_Scanned to TRUE
+    if tableFlag ne 0 get Prototype_Object to self#
+    else move current_object to self#
+    get Server to srvr#
+    if (srvr# <> 0 AND client_area_state(current_object) = 0) begin
+      move "," to fileStr
+      if tableFlag ne 0 begin
+        get main_file to i
+        append fileStr i ","   //insert mainfile to be sure it's watched
+      end
+      move 0 to count
+      get item_count of self# to maxitems
+      for i from 0 to (maxitems - 1)
+        get data_file of self# item i to file#
+        if (file# > 0 AND not(fileStr contains (","+string(file#)+","))) begin
+          move (fileStr+string(file#) + ",") to fileStr
+          increment count
+        end
+      loop
+      right fileStr to fileStr (length(fileStr) - 1)  //remove leading comma
+      send delete_watched_servers  //empty Watched_Servers broadcaster first
+      for i from 0 to count
+        pos "," in fileStr to p
+        if p gt 1 begin
+          left fileStr to fStr (p-1)
+          right fileStr to fileStr (length(fileStr) - p)
+          move fStr to file#
+          get which_data_set of srvr# file# to obj#
+          if (obj# <> 0 AND obj# <> srvr#) send add_Watched_server obj#
+        end
+      loop
+    end
+  end_procedure
+
+  //
+  // created for Nesting support
+  //
+  procedure Mark_As_Component
+    local integer ser#
+    set Component_State to true
+    delegate set Has_Components_State to true
+    get private.Server to ser#
+    if ser# eq 0 begin
+      delegate get Locate_Server to ser#
+      if ser# ne 0 set private.Server to ser#
+    end
+  end_procedure
+
+  // (JJT) Changed so that this respects Change_disabled_state. I don't
+  //       like this here but its the best I can think of. Therefore, all
+  //       objects using server.pkg must understand Change_disabled_state.
+  //
+  //12/27/94 (JJT) Checks deferred_state and if set do not change the
+  // changed state of the server object. This had been in datalist and is
+  // required to make deferred_state work right. Deferred_state was created
+  // to make selection-lists work correctly and as far as I am concerned it
+  // should be the only supported use of this. Therefore, I would not *ever*
+  // expect deferred_state to be set true in tables, entry_forms, or text_
+  // windows. Since deferred-state is known to this mixin the change 
+  // belongs here - but I expect it to only ever change behaviors in
+  // selection-lists.
+
+  procedure SET Changed_State integer newVal
+    local integer srvr#
+    If Not (Change_Disabled_State(Current_Object)) Begin
+       forward set Changed_State to newVal
+       get server to srvr#
+
+       // if deferred keep the server out of it.
+       if not (deferred_State(Current_Object)) begin
+          if (newVal AND srvr#) set Changed_State of srvr# to TRUE
+          if (newVal) set Changed_State of (Watched_Servers(current_object)) to TRUE
+          if (not(newVal) AND not(Active_State(current_object))) ;
+              send remove_DEO_from_Server
+       End
+    End
+  end_procedure
+
+// (JJT) Moved to Val_mx
+//  function validate_items integer flag returns integer
+//    local integer retval oldautotop
+//    forward get validate_items flag to retval
+//    if (retval <> 0 AND focus(desktop) <> current_object) begin
+//      get auto_top_item_state to oldautotop
+//      set auto_top_item_state to false
+//      send activate  //take focus w/out changing current_item
+//      set auto_top_item_state to oldautotop
+//    end
+//    function_return retval
+//  end_function
+
+//************************************************************************
+// Servmod.Pkg
+// Version: 1.0
+//  04-22-1992 : Created
+//
+// Author: John J. Tuohy
+//
+// Mod for Server.pkg package   
+//   
+// 04-22-1992 Altered to fix watched server bug
+// 07-07-1992 Altered for 3.01 to destroy bcaster after the object. Suggested
+//            by Doug G. and Bob W.
+// 09-12-1992 Altered to support reverse order child destruction using new
+//            desktop procedure request_destroy_children.
+//************************************************************************
+
+  Procedure Request_Destroy_Object
+    Local Integer Obj#
+    Set Changed_State To False
+    Send Request_Destroy_Children // added 09-12-1992 
+    // removed 09-12-1992 
+    //Broadcast Recursive_Up Send Request_Destroy_Object // handle all children
+    //
+    Get Watched_Servers To Obj#
+    Set Broadcast_State Of Obj# To False
+    Send Destroy_Object             // 1st destroy DS
+    Send Destroy_Object To Obj#     // and then destroy the bcaster
+  End_Procedure
+
+// (LS) moved into server.pkg from various pkgs.
+  Function Should_Save Returns Integer
+    Local Integer Obj# Chngd
+    Get Server to Obj#
+    get Changed_state to Chngd
+    Function_Return ( Chngd OR (obj# <> 0 AND Should_Save(obj#)) )
+  End_function
+end_class
+
+
+//
+// Description
+//
+//   This macro processes the optional USING argument on an object-creation
+//   command line, by setting the Server of this object as appropriate.
+//
+// Assumptions/Preconditions
+//
+//   None.
+//
+// Exceptions
+//
+//   If the USING option does not appear on the command line, no action is
+//   taken.
+//
+// Notes
+//
+//   None.
+//
+#COMMAND bind_using
+  #IF (!0>0)
+    #IFSAME !1 USING
+      #IFDEF !2
+        set Server to !2
+      #ELSE
+        set Server to !2.obj
+      #ENDIF
+    #ELSE
+      bind_using !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+                                                                                                                
+

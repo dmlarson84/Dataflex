@@ -1,0 +1,74 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Strace2.Pkg
+// Version: 1.0
+//  04-27-1993 : Created
+//
+// Author: John J. Tuohy
+//
+//************************************************************************
+
+Use Strace1    // Standard super trace class support
+Use ObjList2   // object tree/list browser
+Use Focus4     // focus tree browser
+
+//==========================================================================
+// Super_Trace Class <--S_Trace
+//
+//
+//  Super_trace class with Object tree and Focus tree support
+//==========================================================================
+
+Class Super_Trace is an S_Trace
+   
+   //
+   // Procedure Process_Focus_Tree - popup the focus tree browser
+   //
+   Procedure Process_Focus_Tree
+     If (Tracing_Mode(Current_Object)=TRACE_ON) Begin
+         Set Tracing_Mode to TRACE_SUSPEND
+         Send Trace_Switch False False // shut tracer off
+         Delegate Send Process_Focus_Tree
+         Send Trace_Switch True False
+         Set Tracing_Mode to TRACE_ON
+     end
+     Else Delegate Send Process_Focus_Tree
+   End_Procedure
+     
+   //
+   // Procedure Process_Object_Tree - popup the object tree browser
+   //
+   Procedure Process_Object_Tree
+     If (Tracing_Mode(Current_Object)=TRACE_ON) Begin
+         Set Tracing_Mode to TRACE_SUSPEND
+         Send Trace_Switch False False // shut tracer off
+         Delegate Send Process_Object_Tree
+         Send Trace_Switch True False
+         Set Tracing_Mode to TRACE_ON
+     end
+     Else Delegate Send Process_Object_Tree
+   End_Procedure
+   
+   // Process_View_Key:
+   // Augment to Check for focus tree and object tree keys while in view mode
+   //
+   Function Process_View_Key Integer Ch Returns Integer
+     Local Integer Rval
+     Forward Get Process_View_Key Ch to Rval
+     If Rval Begin // if unknown
+        If      (Ch = KEY_FOCUS_TREE)   Send Process_Focus_Tree 
+        Else If (Ch = KEY_OBJECT_TREE)  Send Process_Object_Tree
+        Else Function_Return 1
+     End   
+   End_Function 
+
+End_Class
+

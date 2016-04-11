@@ -1,0 +1,31 @@
+        FILE DEFINITION LISTING FOR FILE #20
+*************************************************** 
+        FILE ROOT NAME     = TRANS
+        USER DISPLAY NAME  = VRS Transaction File
+        DATAFLEX FILE NAME = TRANS
+*************************************************** 
+        RECORD LENGTH = 64  (USED = 59)
+        MAX NUMBER OF RECORDS = 100000  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       1   ASCII          4     0     0     RECORD_ID
+   2       2       3   NUMERIC   0    1    10     1     DEFENDANT_NUM
+   3       5       3   NUMERIC   0    2    11     1     VICTIM_NUM
+   4       8       3   DATE           3     0     0     TRANS_DATE
+   5      11       1   ASCII          0     0     0     PAY_METHOD
+   6      12       3   NUMERIC   0    3     0     0     CONTROL_NUM
+   7      15       4   NUMERIC   2    0     0     0     AMOUNT
+   8      19      20   ASCII          0     0     0     PAID_BY
+   9      39      20   ASCII          0     0     0     RECEIVED_BY
+  10      59       1   ASCII          0     0     0     STATUS
+ 
+INDEX 1:  FIELD SEGMENTS:  <2>   <4>   <0>   
+INDEX 2:  FIELD SEGMENTS:  <3>   <4>   <0>   
+INDEX 3:  FIELD SEGMENTS:  <4>   <6>   <0>   
+INDEX 4:  FIELD SEGMENTS:  <2>   <1>   <4>   <0>   
+INDEX 5:  FIELD SEGMENTS:  <3>   <6>   <0>   
+

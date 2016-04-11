@@ -1,0 +1,776 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\text_win.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: text_win.pkg,v $
+//Revision 2.1  1993/08/25  17:49:49  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:09  james
+//Initial revision
+//
+//Revision 1.14  92/06/10  02:27:53  lee
+//child wrapping now saves if autosave in origin OR in current object
+//
+//Revision 1.13  92/06/03  15:17:46  steve-l
+//altered Child_Wrapping for proper argument dereferencing
+//
+//Revision 1.12  92/06/03  15:10:46  steve-l
+//altered child_Wrapping for new argument
+//
+//Revision 1.11  92/06/01  17:57:26  steve-l
+//guarded REQUEST_SAVE behavior with server=0 | not(read-only(server))
+//
+//Revision 1.10  92/05/29  19:14:53  steve-l
+//REFRESH message altered to send entry_clear_all or entry_clear plus entry_display.
+//Old code retained commented-out in case of later re-optimization.
+//
+//Revision 1.9  92/05/29  14:05:54  lee
+//removed end_construct_* messages from mixins; now, classes that use the mixin
+//send the message that used to be sent by the end_construct_* message (for
+//efficiency).
+//
+//Revision 1.8  92/05/14  17:11:41  SWM
+//Updated Copyright slug.
+//
+//Revision 1.7  92/03/29  18:45:20  lee
+//added MSG_END_CONSTRUCT_OBJECT, moved ENDMAC macro stuff into END_CONSTRUCT-
+//OBJECT procedures (in .pkgs). moved Flag_ITems to list.pkg after generalizing
+//it based on PROTOTYPE_OBJECT instead of Whether or not it is a table-oriented
+//object. Moved define_access_keys mechanism completely into actionbr.pkg.
+//fixed two typos: import_class_protocol used !# instead of !3, and register-
+//procedure used !1 instead of !2.
+//
+//Revision 1.6  92/03/09  19:05:02  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of
+//compiler.
+//
+//Revision 1.5  92/03/05  15:44:40  steve-l
+//Request_Superfind changed to set ERR false before calling server and to
+//check err (with found) afterward, in case of non-file-boundary errors.
+//Cut_Marked_Area and Paste messages altered to set Changed_State to true.
+//
+//Revision 1.4  92/01/13  14:49:12  steve-l
+//Added MSG_REFRESH
+//
+//Revision 1.3  92/01/12  15:27:38  steve-l
+//*** empty log message ***
+//
+//Revision 1.2  91/11/08  09:19:47  steve-l
+//it
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: Text_Win.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: January 13, 1992
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Text_Window class definition.
+//
+// This package implements an editing object for variable-length text fields
+// and sequential files.
+//************************************************************************/
+
+//************************************************************************
+// Version: 1.0
+//  12-92-1992 : Created
+//
+// Author: John J. Tuohy
+//
+// 1. Adds Stop_UI_State Support
+// 2. Adds Should_Save Property // (LS) moved into server.pkg
+// 3. Modifies Changed_State to check Should_save (fixes DAC bug) (LS - undid this mod)
+//
+// 10-07-1993  Add include file with new exit_function procedure. DAC bug
+// 03-21-1994  (LS) v1.1 Added Non_Dependent_Item_Mixin (for manual
+//             bcst/delg).
+// 04-08-1994  (LS) v1.1 Added DEO delegation.
+//************************************************************************/
+
+//************************************************************************/
+// 12/22/94 JJT Merge Changes
+//              Merged the 0 class into entry_form.
+//              Added DEO delegate logic to request_???? messages.
+//              Changed Request_save to set chagned_state to false
+//              after a server-less save performs a write
+// 05/22/95 JJT Added object_validation to focus support in request_clear
+//              and request_clear_all (also see deodlgmx.pkg)
+// 08/29/95 JJT Fixed entry_update to respect parameters properly.
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+//************************************************************************/
+
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+use NESTING     //include DEO nesting standard support module
+use NAVIGATE    //include DEO navigation standard support module
+use VERIFY      //include Verification support module
+use SERVER      //include Server support module
+use ACTIONBR    //include action-bar support module
+use FINDEDIT    //include Finding/Editing support module
+use refmodes    //refresh mode constants
+Use Dep_Item   // Auto-Dependent_Item Support v1.1
+Use DEODlgMx   // v1.1 DEO delegation support
+Use Code_DEO   // v1.1 Code file support
+
+//
+//Class: Text_Window
+//
+//SuperClass: EDIT
+//
+//Description: This class implements a text-editing object suitable for
+//  use with Entry_Form and Table objects, which may be bound to a
+//  sequential ASCII file or a database memo-field
+//
+//  Usage: object tw is a Text_Window FOR file.fieldname
+//           set location to ...
+//           set right_margin to ...
+//           set size to ...
+//         end_object
+//
+Class Text_Window is an EDIT STARTMAC TxtEdStart
+  //
+  //Operation: CONSTRUCT_OBJECT
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): define an instance with appropriate keys and properties
+  //
+  //Algorithm: relies on support module constructors
+  //
+  //Usage: used internally
+  //
+  procedure construct_object
+    forward send construct_object
+    on_key kPrompt SEND Prompt PRIVATE
+    on_key kZoom   SEND Zoom   PRIVATE
+    Property integer Data_File  PRIVATE 0
+    Property integer Data_Field PRIVATE 0
+    send define_nesting    //invoke DEO nesting standard support constructor
+    send define_navigation //invoke DEO navigation standard support constructor
+    send define_verify     //invoke verify support constructor
+    send define_server     //invoke server support constructor
+    send define_action_bar //invoke action-bar support constructor
+    send define_find_edit  //invoke Finding/Editing support constructor
+    Send Define_DEO_Delegate // v1.1
+  end_procedure
+
+  IMPORT_CLASS_PROTOCOL Nesting_Mixin     //these statements
+  IMPORT_CLASS_PROTOCOL Navigate_Mixin    //import the methods
+  IMPORT_CLASS_PROTOCOL Verify_Mixin      //from the mixins
+  IMPORT_CLASS_PROTOCOL Server_Mixin      //into the current class
+  IMPORT_CLASS_PROTOCOL Action_Bar_Mixin  //instead of using
+  IMPORT_CLASS_PROTOCOL Find_Edit_Mixin   //bulky include-files
+  IMPORT_CLASS_PROTOCOL Code_DEO_Mixin
+  IMPORT_CLASS_PROTOCOL Non_Dependent_Item_Mixin // v1.1
+  IMPORT_CLASS_PROTOCOL DEO_Delegate_Mixin // ver 1.1
+
+  procedure Zoom
+  end_procedure
+
+  procedure Prompt
+  end_procedure
+
+  //
+  // created for server and EntItem support
+  //
+  // returns non-zero if data invalid, 0 if no error (valid)
+  // no action by default; intended for augmentation/override
+  //
+  // NOTE: if this object's validation fails, this object should
+  //       take the focus.
+  //
+  function validate_items integer flag returns integer
+  end_function
+
+  //
+  // created for Server support
+  //
+  procedure display
+    send entry_display 0 0
+  end_procedure
+
+  //
+  // created for Server support
+  //
+  procedure clear
+    send entry_clear 1
+  end_procedure
+
+  //
+  // created for Server support
+  //
+  procedure clear_all
+    send entry_clear_all 1
+  end_procedure
+
+  //
+  // created for Server support
+  //
+  procedure clear_set
+    send entry_clear 1
+  end_procedure
+
+  //
+  // created for FindEdit support
+  //
+  procedure Request_Clear
+    local integer obj# foc retval
+    If (Should_delegate_Clear(Current_Object)) ;
+       Delegate Send Request_Clear
+    Else Begin
+       get Server to obj#
+       //
+       // modification for Verify support
+       //
+       if (Should_Save(current_object) AND ;
+           (Verify_Data_Loss(current_object) <> 0)) ;
+         procedure_return
+
+       Get Focus to Foc
+       get Object_Item_Validation of Foc to retval
+       set Object_Item_Validation of Foc to false
+       //
+       // modification for Server support
+       //
+       if obj# ne 0 send clear to obj#
+       else send entry_clear 0
+       if (Auto_Top_Panel_State(current_object)) send beginning_of_panel
+       set Object_Item_Validation of Foc to retval
+    End
+  end_procedure
+
+  //
+  // created for FindEdit support
+  //
+  procedure Request_Clear_All
+    local integer obj# foc retval
+    If (Should_delegate_Clear(Current_Object)) ;
+       Delegate Send Request_Clear_all
+    Else Begin
+       get Server to obj#
+       //
+       // modification for Verify support
+       //
+       if (Should_Save(current_object) AND ;
+           (Verify_Data_Loss(current_object) <> 0)) ;
+         procedure_return
+
+       Get Focus to Foc
+       get Object_Item_Validation of Foc to retval
+       set Object_Item_Validation of Foc to false
+       //
+       // modification for Server support
+       //
+       if obj# ne 0 send clear_all to obj#
+       else send entry_clear_all 0
+       if (Auto_Top_Panel_State(current_object)) send beginning_of_panel
+       set Object_Item_Validation of Foc to retval
+    End
+  end_procedure
+
+  //
+  // created for FindEdit support
+  //
+  procedure Request_Delete
+    local integer obj#
+    If (Should_delegate_Delete(Current_Object)) ;
+       Delegate Send Request_Delete
+    Else Begin
+       indicate err false
+       get Server to obj#
+       if (obj# <> 0 AND can_delete(obj#) <> 0) begin
+         //
+         // modification for Verify support
+         //
+         if (Verify_Delete(current_object) <> 0) procedure_return
+         //
+         // modification for Server support
+         //
+         set changed_State to false
+         if (Deferred_State(current_object)) ;
+             send Request_Assign to obj# 0  //0 means main_file of Server
+         send Request_Delete to obj#
+         [not err] if (Auto_Clear_DEO_State(current_object)) send Request_Clear
+       end
+    end
+  end_procedure
+
+  //
+  // created for FindEdit support
+  //
+  procedure Request_Save
+    local integer obj# chgdFlag retval
+    If (Should_delegate_Save(Current_Object)) ;
+       Delegate Send Request_Save
+    Else Begin
+       get Server to obj#
+       if (obj# = 0 OR not(Read_Only_State(obj#))) begin
+         indicate err false
+         if (Should_Save(current_object)) begin
+           if obj# ne 0 get Request_Validate of obj# to retval
+           else get Validate_Items FALSE to retval
+           if retval ne 0 procedure_Return
+           //
+           // modification for Verify support
+           //
+           if (Verify_Save(current_object) <> 0) procedure_return
+           //
+           // modification for Server support
+           //
+           if obj# ne 0 begin
+             if (Deferred_State(current_object)) ;
+                 send Request_Assign to obj# 0   //0 means main_file of server
+             send Request_Save to obj#
+           end
+           else Begin
+              send write
+              // (JJT) added to make non-server text file unchanged after
+              //       save.
+              Set Changed_state to False
+           end
+         end
+         [not err] if (Auto_Clear_DEO_State(current_object)) send Request_Clear
+       end
+    end
+  end_procedure
+
+  // this allows us to save a record without it clearing regardless of
+  // the Auto_Clear_DEO_State value
+  //
+  Procedure Request_Save_No_Clear
+    Local integer oldclr
+    If (Should_delegate_Save(Current_Object)) ;
+       Delegate Send Request_Save_no_Clear
+    Else Begin
+       Get Auto_Clear_DEO_State to OldClr  // whatever it was
+       Set Auto_Clear_DEO_State to False   // it is now NO!
+       send request_save                   // do your magic
+       Set Auto_Clear_DEO_State to OldClr  // back to whatever it was
+    End
+  End_procedure
+
+  //
+  // FindEdit support behavior
+  //
+  procedure Request_Find integer mode integer entUpdtFlag
+    local integer dataFile srvr# dfrdState
+    If (Should_delegate_Find(Current_Object)) ;
+       Delegate Send Request_Find mode entUpdtFlag
+    Else Begin
+       get Data_File to dataFile
+       get Server to srvr#
+       get Deferred_State to dfrdState
+
+       //
+       // server augmentation
+       //
+       if (srvr# <> 0 AND dataFile > 0) begin
+         send Item_Find to srvr# mode dataFile ;
+           (Data_Field(current_object,CURRENT)) entUpdtFlag TRUE dfrdState
+         [found] if dfrdState send entry_display 0 0
+       end
+    End
+  end_procedure
+
+  //
+  // created for FindEdit support
+  //
+  procedure Request_SuperFind integer mode
+    local integer obj#
+    If (Should_delegate_Find(Current_Object)) ;
+       Delegate Send Request_SuperFind mode
+    Else Begin
+       //
+       // modification for Server support
+       //
+       get Server to obj#
+       if obj# ne 0 begin
+         indicate err false
+         send Request_SuperFind to obj# mode (data_file(current_object,CURRENT)) ;
+             (data_field(current_object,CURRENT))
+         [not found not err] begin
+           if mode lt 2 error 41
+           else error 42
+         end
+       end
+    end
+  end_procedure
+
+  //
+  // created for navigation support
+  //
+  procedure child_Wrapping integer direction integer xorigID
+    local integer origID
+
+    if NUM_ARGUMENTS gt 1 move xorigID to origID
+    else get focus of desktop to origID
+    if origID eq 0 move current_object to origID
+
+    send activate
+    if direction EQ 1 begin
+        if (Auto_Save_State(origID)) send request_Save to origID
+        else if (auto_save_state(current_object)) send request_save
+    end
+    procedure_return 1
+  end_procedure
+
+  //
+  // created for Navigation support
+  //
+  procedure Top_of_Panel
+    if (focus(desktop) <> current_object) send activate
+    forward send beginning_of_panel
+  end_procedure
+
+  //
+  // created for Navigation support
+  //
+  procedure Bottom_of_Panel
+    local integer lastChild
+    //
+    // modification for Composition support
+    //
+    if (Has_Components_State(current_object)) begin
+      get Find_Last_DEO to lastChild
+      if lastChild ne 0 begin
+        send Bottom_Of_Panel to lastChild
+        procedure_return
+      end
+    end
+    send activate
+    forward send End_of_Panel
+  end_procedure
+
+  //
+  // created for EntItem simulation
+  //
+  function data_file integer item# returns integer
+    local integer retval
+    get Text_Window.Data_File to retval
+    function_Return retval
+  end_function
+
+  //
+  // created for EntItem simulation
+  //
+  procedure set data_File integer item# integer newval
+    set Text_Window.Data_File to newval
+  end_procedure
+
+  //
+  // created for EntItem simulation
+  //
+  function data_field integer item# returns integer
+    local integer retval
+    get Text_Window.Data_Field to retval
+    function_Return retval
+  end_function
+
+  //
+  // created for EntItem simulation
+  //
+  function item_count returns integer
+    function_return 1  //pretend to be a single item
+  end_function
+
+  //
+  // created for EntItem simulation
+  //
+  procedure set data_Field integer item# integer newval
+    set Text_Window.Data_Field to newval
+  end_procedure
+
+  //
+  // created for EntItem simulation: ecflag <> 0 means use Cleared-array
+  //
+  procedure Entry_Clear integer ecflag
+    local integer dfile
+    indicate FOUND as ecflag eq 0
+    [NOT FOUND] begin
+      get data_file item 0 to dfile
+      if dfile eq 0 indicate found TRUE
+      else is_file_included dfile 0
+    end
+    [FOUND] send Delete_Data
+  end_procedure
+
+  //
+  // created for EntItem simulation:
+  // must clear if ecaDoneFlag = 0 OR if Data_File î DONE-array
+  //
+  procedure Entry_Clear_All integer ecaDoneFlag
+    local integer dfile
+    indicate FOUND as ecaDoneFlag eq 0
+    [NOT FOUND] begin
+      get data_file item 0 to dfile
+      if dfile eq 0 indicate found TRUE
+      else is_file_included dfile 0
+    end
+    [FOUND] send Delete_Data
+  end_procedure
+
+  procedure Read_File            //msg for action_bar
+    send entry_display 0 0
+  end_procedure
+
+  //
+  // created for EntItem simulation and Server support:
+  //  if file# = 0, display only if Data_File is in Done-array
+  //  else display only if file# = Data_File
+  //
+  procedure Entry_Display integer file# integer flag
+    local integer oldval dFile
+    get data_file to dFile
+    if dfile eq 0 indicate found TRUE
+    else if file# eq 0 is_file_included dFile 1
+    else indicate found as (file# = dFile OR flag = TRUE)
+    [FOUND] begin
+      get dynamic_update_state to oldVal
+      set dynamic_update_state to false
+      send Delete_Data   //init buffer
+      send read  //read buffer from file
+      send beginning_of_data
+      set changed_state to FALSE          //read leaves it TRUE, so must reset!
+      set dynamic_update_state to oldVal
+    end
+  end_procedure
+
+  //
+  // created for EntItem simulation and Server support
+  //  if file# = 0, display only if Data_File is in Done-array
+  //  else display only if file# = Data_File
+  //
+  procedure Entry_Update integer file# integer flag
+    local integer dFile
+    get Data_File to dFile
+    if (dfile=0 AND flag<>1) ;  // if Ascii file, update if
+      indicate found TRUE       // not a find. 
+    else if (file# = 0 AND flag = 3) ;   // A DSO Save
+      is_file_included dFile 1
+    else indicate FOUND as (file# = dFile OR file# = 0)
+    [FOUND] if (flag=1 OR changed_State(current_object)) ne 0 send write
+  end_procedure
+
+  //
+  //Operation: MODE_INSERT
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): set INSERT_MODE to True
+  //
+  //Algorithm: sets INSERT_MODE to True
+  //
+  //Usage:
+  //
+  procedure Mode_Insert
+    set insert_mode to true
+  end_procedure
+  //
+  //Operation: MODE_OVERWRITE
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): set INSERT_MODE to False
+  //
+  //Algorithm: sets INSERT_MODE to False
+  //
+  //Usage:
+  //
+  procedure Mode_Overwrite
+    set insert_mode to false
+  end_procedure
+  //
+  //Operation: MARK_BLOCK
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): begin mark of text block in buffer
+  //
+  //Algorithm: sets COLUMN_MODE to False and sends MARK_ON
+  //
+  //Usage:
+  //
+  procedure Mark_Block
+    set column_mode to false
+    send Mark_On
+  end_procedure
+  //
+  //Operation: MARK_COLUMN
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): mark columnar area of text in buffer
+  //
+  //Algorithm: sets COLUMN_MODE to True and sends MARK_ON
+  //
+  //Usage:
+  //
+  procedure Mark_Column
+    set column_mode to true
+    send Mark_On
+  end_procedure
+  //
+  //Operation: CUT_MARKED_AREA
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): cut marked text to ClipBoard object
+  //
+  //Algorithm: sends CUT
+  //
+  //Usage:
+  //
+  procedure Cut_Marked_Area
+    send cut true ClipBoard true
+    set changed_state to true
+  end_procedure
+  //
+  //Operation: COPY_MARKED_AREA
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): copy marked text to ClipBoard
+  //
+  //Algorithm: sends CUT
+  //
+  //Usage:
+  //
+  procedure Copy_Marked_Area
+    send cut true ClipBoard  false
+  end_procedure
+  //
+  //Operation: PASTE_BLOCK
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): insert text from ClipBoard into buffer at current position
+  //
+  //Algorithm: sends PASTE to ClipBoard object
+  //
+  //Usage:
+  //
+  procedure Paste_Block
+    send paste to clipBoard false current_object false
+    set changed_state to true
+  end_procedure
+
+  //
+  //Operation: UPDATE_DEPENDENT_ITEMS
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): do nothing (cancels message sent by Server-mixin)
+  //
+  //Algorithm: none
+  //
+  //Usage:
+  //
+  procedure update_dependent_items
+  end_procedure
+
+  procedure refresh integer notifyMode
+//    local integer datafile oldVal
+
+//    get data_file item current  to datafile
+//    is_file_included datafile 0                     //look in cleared
+//    [found] send delete_data                        //clear if present
+//    is_file_included datafile 1                     //look in done
+//    [FOUND] begin                                   //read data
+//      get dynamic_update_state to oldVal
+//      set dynamic_update_state to false
+//      send Delete_Data                              //init buffer
+//      send read                                     //read buffer from file
+//      send beginning_of_data
+//      set changed_state to FALSE      //read leaves it TRUE, so must reset!
+//      set dynamic_update_state to oldVal
+//    end
+
+    //
+    // above commented out and below added for backward compatibility
+    //
+
+    if notifyMode eq MODE_CLEAR_ALL send entry_clear_all 1
+    else begin
+      send entry_clear 1
+      send entry_display 0 0
+    end
+
+  end_procedure
+
+  procedure End_Construct_Object
+    send Mark_Components      // nesting
+    send Define_Access_Keys 0 // action_bar_keys
+    forward send End_Construct_Object
+  end_procedure
+end_class
+
+
+//
+//Support Commands
+//
+
+//
+// TxtEdStart <className> <ImageName> {ACTION_BAR <ActionBar#>} {POP_UP}
+//     {RING} {USING <DataSetID>} { FOR [{DMBS} <MemoFieldName>] |
+//     [FILE <SequentialFileName>] }
+//
+// this macro handles the setting of a TextEditor's FILE_NAME attribute to
+// a default sequential file name or memo-field ID, in addition to the std.
+// DEO options
+//
+#COMMAND TxtEdStart R
+  FORWARD_BEGIN_CONSTRUCT !1 0 !2 !3 !4 !5 !6 !7 !8 !9  //0 for null image
+  bind_For !2 !3 !4 !5 !6 !7 !8 !9
+  bind_using !2 !3 !4 !5 !6 !7 !8 !9
+  bind_action_bar !2 !3 !4 !5 !6 !7 !8 !9
+  bind_pop_up !2 !3 !4 !5 !6 !7 !8 !9
+  bind_ring !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+#COMMAND Bind_For
+  #IF (!0>1)
+    #IFSAME !1 FOR
+      #IFSAME !2 FILE
+        set file_name to !3
+      #ELSE
+        #IFSAME !2 DBMS
+          #PUSH !u
+          #SET U$ !3  //get file#
+          set Data_File item 0 to |CI!u
+          #SET U$ %!3 //get field#
+          set Data_Field item 0 to |CI!u
+          #POP U$
+          send READ_DBMS !3 TRUE  //sets FILE_NAME to field ID (w/out read)
+        #ELSE
+          #PUSH !u
+          #SET U$ !2  //get file#
+          set Data_File item 0 to |CI!u
+          #SET U$ %!2 //get field#
+          set Data_Field item 0 to |CI!u
+          #POP U$
+          send READ_DBMS !2 TRUE  //sets FILE_NAME to field ID (w/out read)
+        #ENDIF
+      #ENDIF
+    #ELSE
+      Bind_For !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND

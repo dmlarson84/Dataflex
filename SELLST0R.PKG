@@ -1,0 +1,3 @@
+use sellistr
+define Selection_List_Row0 for Selection_List_Row
+define U_Selection_List_Row0 for U_Selection_List_Row

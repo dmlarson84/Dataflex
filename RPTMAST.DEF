@@ -1,0 +1,27 @@
+        FILE DEFINITION LISTING FOR FILE #34
+*************************************************** 
+        FILE ROOT NAME     = RPTMAST
+        USER DISPLAY NAME  = GL Report Master
+        DATAFLEX FILE NAME = RPTMAST
+*************************************************** 
+        RECORD LENGTH = 64  (USED = 39)
+        MAX NUMBER OF RECORDS = 3000  (USED = 131)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       1   NUMERIC   0    1     0     0     REPORT
+   2       2       2   NUMERIC   0    1     0     0     SEQ
+   3       4       2   NUMERIC   0    0     0     0     GL
+   4       6       3   ASCII          0     0     0     BR
+   5       9       2   ASCII          0    38     1     DP
+   6      11       1   NUMERIC   0    0     0     0     SC
+   7      12       2   ASCII          0     0     0     CT
+   8      14       1   ASCII          0     0     0     USEALT
+   9      15      25   ASCII          0     0     0     ALTDESC
+  10       4       7   OVERLAP        0    31    50     GLBRDP
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   <2>   
+

@@ -1,0 +1,563 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\tracer.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: tracer.pkg,v $
+//Revision 2.1  1993/08/25  17:49:55  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:10  james
+//Initial revision
+//
+//Revision 1.3  92/05/14  17:09:14  SWM
+//Updated Copyright slug.
+//
+//Revision 1.2  92/03/09  19:05:26  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:23:02  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: Tracer.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: May 23, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Tracer class definition.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+Use UI
+
+
+//
+// This preprocessor command forces the compiler to retain symbols
+//
+#SYM
+
+
+//
+// The following constants are defined for readability.
+//
+#IFDEF Tracer.MsgHdrSize
+#ELSE
+  #REPLACE Tracer.MsgHdrSize |CI10 //number of characters in message header
+  #REPLACE Tracer.Mode_In    |CI0  //trace all sub-messages mode
+  #REPLACE Tracer.Mode_Over  |CI1  //trace only at current depth or less mode
+#ENDIF
+
+
+//
+//Class: Tracer
+//
+//SuperClass: TRACE
+//
+//Description: This class implements an augmented Trace utility which outputs
+//  formatted messages to an edit-object, using indentation and graphics
+//  characters to show the invocation of messages by other messages.
+//  Messages are retained in a queue (the edit-object).  Single-stepping,
+//  panning, and scrolling is supported.
+//
+//Usage: send TRACE_SWITCH TRUE TRUE to begin tracing in single-step mode;
+//  use defined accelerator keys to view trace text and control tracing
+//
+Class Tracer is a TRACE
+  //
+  //Operation: CONSTRUCT_OBJECT
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): define instance with RIGHT_MARGIN = 250, and properties required
+  //  to maintain queue of formatted messages
+  //
+  //Algorithm: Augmented to set RIGHT_MARGIN to 250 and define the properties
+  //           Queue_Size, Trace_Mode, Active_Msg_Count, Wait_Depth, Current_Depth,
+  //           and Single_Step_State.  The default Queue_Size is 50.
+  //
+  //Usage: 
+  //
+  procedure construct_object
+    forward send construct_object
+    set right_margin to 250
+    //
+    //Attribute: Queue_Size
+    //
+    //Description: maximum number of inactive messages to retain in queue
+    //
+    //Representation: integer, default 50
+    //
+    Property integer Queue_Size      PUBLIC 50  //set default Queue_Size value
+    //
+    //Attribute: Trace_Mode
+    //
+    //Description: identifies mode of tracing; 0=in, 1=over
+    //
+    //Representation: integer
+    //
+    Property integer Trace_Mode      PUBLIC  0
+    //
+    //Attribute: Active_Msg_Count
+    //
+    //Description: number of active messages in queue
+    //
+    //Representation: integer
+    //
+    Property integer Active_Msg_Count PUBLIC  0  //default to none
+    //
+    //Attribute: Wait_Depth
+    //
+    //Description: depth of message at which Trace-Over was last executed
+    //
+    //Representation: integer
+    //
+    Property integer Wait_Depth      PUBLIC  0
+    //
+    //Attribute: Current_Depth
+    //
+    //Description: depth of current message
+    //
+    //Representation: integer
+    //
+    Property integer Current_Depth       PUBLIC  0
+    //
+    //Attribute: Single_Step_State
+    //
+    //Description: flag; true if self should wait for keypress after message
+    //
+    //Representation: integer
+    //
+    Property integer Single_Step_State PUBLIC  0
+  end_procedure
+  //
+  //Operation: HEIGHT
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): return height of trace object in lines
+  //
+  //Algorithm: gets SIZE, calculates height, and returns height
+  //
+  //Usage: 
+  //
+  function Height returns integer
+    local integer ht
+    get size to ht
+    move (hi(ht)) to ht
+    function_return ht
+  end_function
+  //
+  //Operation: WIDTH
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): return widht of trace object in columns
+  //
+  //Algorithm: gets SIZE, calculates width, and returns width
+  //
+  //Usage: 
+  //
+  function Width returns integer
+    local integer wdth
+    get size to wdth
+    move (low(wdth)) to wdth
+    function_Return wdth
+  end_function
+  //
+  //Operation: TRACE_SWITCH
+  //
+  //Assumption(s): TraceState and StepMode are booleans
+  //
+  //Goal(s): turns tracing on/off and sets Single_Step_State
+  //
+  //Algorithm: Augmented to set Single_Step_State
+  //
+  //Usage: 
+  //
+  procedure TRACE_SWITCH integer TraceState integer StepMode
+    set Single_Step_State to StepMode
+    Forward send TRACE_SWITCH TraceState FALSE
+  end_procedure
+  //
+  //Operation: CONTINUE_IN
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): set Trace_Mode to Mode_In
+  //
+  //Algorithm: sets Trace_Mode to Mode_In
+  //
+  //Usage: 
+  //
+  procedure Continue_In
+    set Trace_Mode to Tracer.Mode_In
+  end_procedure
+  //
+  //Operation: CONTINUE_OVER
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): set Trace_Mode to Mode_Over and remember current depth
+  //
+  //Algorithm: sets Trace_Mode to Mode_Over, sets Wait_Depth to Current_Depth
+  //
+  //Usage: 
+  //
+  procedure Continue_Over
+    set Trace_Mode to Tracer.Mode_Over
+    set Wait_Depth to (Current_Depth(current_object))
+  end_procedure
+  //
+  //Operation: TOGGLE_STEP
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): if Single_Step_State is True, set it to False, else set it to True
+  //
+  //Algorithm: if Single_Step_State = 0, set Single_Step_State to True
+  //           else set Single_Step_State to False
+  //
+  //Usage: 
+  //
+  procedure Toggle_Step
+    local integer flag
+    get Single_Step_State to flag
+    if flag eq 0 set Single_Step_State to true
+    else set Single_Step_State to false
+  end_procedure
+  //
+  //Operation: NEXT_PAGE
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): display to next page of data in the buffer
+  //
+  //Algorithm: recalculate and reset ORIGIN
+  //
+  //Usage: 
+  //
+  procedure Next_Page
+    local integer origX origY lines
+    move (origin(current_object)) to origY
+    move (low(origY)) to origX
+    move (hi(origY)) to origY
+    calc (origY + (Height(current_object)) - 1) to origY
+    get line_count to lines
+    if origY ge lines calc (lines - (Height(current_object)) + 1) to origY
+    if origY lt 0 move 0 to origY
+    set origin to origY origX
+  end_procedure
+  //
+  //Operation: PREVIOUS_PAGE
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): display prior page of text
+  //
+  //Algorithm: recalculates and resets ORIGIN
+  //
+  //Usage: 
+  //
+  procedure Previous_Page
+    local integer origX origY
+    move (origin(current_object)) to origY
+    move (low(origY)) to origX
+    move (hi(origY)) to origY
+    calc (origY - (Height(current_object)) + 1) to origY
+    if origY lt 0 move 0 to origY
+    set origin to origY origX
+  end_procedure
+  //
+  //Operation: LEFT_PAGE
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): scroll display to right by 1/2 page
+  //
+  //Algorithm: recalculates and resets ORIGIN
+  //
+  //Usage: 
+  //
+  procedure Left_Page
+    local integer origX origY
+    move (origin(current_object)) to origY
+    move (low(origY)) to origX
+    move (hi(origY)) to origY
+    calc (origX - (Width(current_object)) + 1) to origX
+    if origX lt 0 move 0 to origX
+    set origin to origY origX
+  end_procedure
+  //
+  //Operation: RIGHT_PAGE
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): scroll display to left by 1/2 page
+  //
+  //Algorithm: recalculates and resets ORIGIN
+  //
+  //Usage: 
+  //
+  procedure Right_Page
+    local integer origX origY
+    move (origin(current_object)) to origY
+    move (low(origY)) to origX
+    move (hi(origY)) to origY
+    calc (origX + ((Width(current_object)) / 2)) to origX
+    if (origX + (Width(current_object))) gt (Right_Margin(current_object)) ;
+        calc ((Right_Margin(current_object)) - (Width(current_object)) + 1) to origX
+    set origin to origY origX
+  end_procedure
+  //
+  //Operation: UP_LINE
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): scrolls display down one line
+  //
+  //Algorithm: recalculates and resets ORIGIN
+  //
+  //Usage: 
+  //
+  procedure Up_Line
+    local integer origX origY
+    move (origin(current_object)) to origY
+    move (low(origY)) to origX
+    move (hi(origY)) to origY
+    if origY gt 0 calc (origY - 1) to origY
+    set origin to origY origX
+  end_procedure
+  //
+  //Operation: DOWN_LINE
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): scrolls display up one line
+  //
+  //Algorithm: recalculates and resets ORIGIN
+  //
+  //Usage: 
+  //
+  procedure Down_Line
+    local integer origX origY
+    move (origin(current_object)) to origY
+    move (low(origY)) to origX
+    move (hi(origY)) to origY
+    if origY lt (line_count(current_object) - 1) calc (origY + 1) to origY
+    set origin to origY origX
+  end_procedure
+  //
+  //Operation: CONTROL_VIEW
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): allow user to control trace output
+  //
+  //Algorithm: keepon = 1
+  //           loop
+  //             wait for keypress
+  //             if key was accelerator, process key action; some key actions
+  //               set keepon to 0
+  //           until keepon < 1
+  //
+  //Usage: 
+  //
+  procedure control_view
+    local integer d keepon retval
+    local string ch
+    move 1 to keepon
+    move (Single_Step_State(current_object)) to d
+    while d gt 0
+      move 0 to termchar
+      Repeat
+        inkey$ ch
+      until termchar ne 0
+      if termchar eq kSWITCH  send Toggle_Step
+      else if termchar eq kSCROLL_FORWARD send Next_Page
+      else if termchar eq kSCROLL_BACK    send Previous_Page
+      else if termchar eq kSCROLL_LEFT    send Left_Page
+      else if termchar eq kSCROLL_RIGHT   send Right_Page
+      else if termchar eq kUPARROW        send Up_Line
+      else if termchar eq kDOWNARROW      send Down_Line
+      else if termchar eq kCLEAR          send Trace_Switch false false 
+      else if termchar eq kCANCEL         begin
+        send STOP_UI retval
+        move 0 to keepon
+      end
+      else if termchar eq kEXIT_FUNCTION  begin
+        send STOP_UI retval
+        move 0 to keepon
+      end
+      else if termchar eq kFIND_NEXT      begin
+        send Continue_Over
+        move 0 to keepon
+      end
+      else if termchar eq kSPACE          begin
+        send Continue_In
+        move 0 to keepon
+      end
+      move (Single_Step_State(current_object)) to d
+    until keepon lt 1
+  end_procedure
+  //
+  //Operation: OLDEST_DEAD_LEAF
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): returns line# of oldest inactive message which has no
+  //  sub-messages
+  //
+  //Algorithm: term = -1
+  //           loop through lines in buffer from first to last
+  //             if line contains an inactive message
+  //               if message has no sub-messages
+  //                 set term to line#
+  //           until term >= 0
+  //           return term
+  //
+  //Usage: 
+  //
+  Function Oldest_Dead_Leaf RETURNS integer
+    local integer ndx lc d nextD col term
+    local string aStr tStr aStr2
+    move (line_count(current_object)) to lc
+    move -1 to term
+    move 0 to ndx
+    while ndx lt lc
+      move (value(current_object,ndx)) to aStr
+      left aStr to aStr2 1
+      if aStr2 ne "*" begin
+        mid aStr to d 2 2
+        calc ((d * 2) + Tracer.MsgHdrSize) to col //calc column offset
+        mid aStr to aStr2 1 col
+        if ndx lt (lc - 1) begin
+          move (value(current_object,(ndx + 1))) to tStr
+          mid tStr to nextD 2 2
+          if aStr2 eq "À" begin
+            if d gt nextD move ndx to term  //got oldest terminal
+          end
+          else if aStr2 eq "Ã" begin
+            if d eq nextD move ndx to term  //got oldest terminal
+          end
+        end
+      end
+      calc (ndx + 1) to ndx
+    until term ge 0
+    function_Return term
+  end_function
+  //
+  //Operation: SHRINK_QUEUE
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): remove oldest inactive, terminal message from queue
+  //
+  //Algorithm: gets index of oldest inactive terminal message line, goes to
+  //           line and deletes it if line# >= 0
+  //
+  //Usage: 
+  //
+  procedure Shrink_Queue
+    local integer ndx
+    move (Oldest_Dead_Leaf(current_object)) to ndx
+    if ndx ge 0 begin
+      send goto_line ndx
+      send delete_line
+    end
+  end_procedure
+  //
+  //Operation: TRACE_OUTPUT
+  //
+  //Assumption(s): inStr is formatted trace-output string
+  //
+  //Goal(s): process trace-output string and place into queue, allowing
+  //  the user to interact with the queue if Single_Step_State is True
+  //
+  //Algorithm: if Trace_Mode = Mode_Over and message depth > Wait_Depth, exit
+  //           turn off dynamic updating
+  //           reformat trace-output string for queue
+  //           deactivate all messages of higher depth still active in queue
+  //           trim queue if necessary
+  //           add new message to end of queue
+  //           turn dynamic updating on
+  //           send Control_View
+  //
+  //Usage: 
+  //
+  procedure trace_output string inStr
+    local integer finis i d col qsize lc loopCount ActMsgCount
+    local string  ch str
+    mid inStr to d 2 2                          //get depth
+    if (Trace_Mode(current_object)) eq Tracer.Mode_Over ;
+        if d gt (Wait_Depth(current_object)) procedure_Return  //skip
+    set dynamic_update_state to false
+    move 0 to i
+    move "" to str
+    while i lt (d - 1)
+      append str "  "
+      calc (i + 1) to i
+    end
+    move ("*"+mid(inStr,2,2)+" ["+mid(inStr,4,7)+"] "+str+"À") to str
+    append str (right(inStr,(length(inStr) - Tracer.MsgHdrSize - 1)))
+    move str to inStr
+    move (Active_Msg_Count(current_object)) to ActMsgCount
+    move 0 to finis
+    get line_Count to loopCount              //get number of lines
+    while loopCount gt 0
+      get value item (loopCount - 1) to str
+      mid str to i 2 2                            //get depth
+      if d gt i move 1 to finis
+      else begin  //inactivate and edit message in queue, update ActMsgCount
+        if d lt i begin
+          move "³" to ch
+          calc ((d * 2) + Tracer.MsgHdrSize) to col //calc column offset
+        end
+        else begin
+          move "Ã" to ch
+          calc ((i * 2) + Tracer.MsgHdrSize) to col //calc column offset
+        end
+        move (left(str,(col - 1)) + ch + ;
+              right(str,(length(str) - col))) to str
+        left str to ch 1
+        if ch EQ "*" begin
+          replace "*" in str with " "
+          calc (ActMsgCount - 1) to ActMsgCount
+        end
+        set value item (loopCount - 1) to str
+      end
+      calc (loopCount - 1) to loopCount
+    until finis ne 0
+    move (Queue_Size(current_object)) to qsize
+    move (line_Count(current_object)) to lc
+    if (lc - ActMsgCount) gt QSize send Shrink_Queue  //drop a message from queue
+    if lc gt (Height(current_object)) set origin to (lc - (Height(current_object)) + 1) 0
+    else set origin to 0 0
+    send end_of_data
+    if lc gt 0 send key kEnter
+    set dynamic_update_state to true
+    if (length(inStr)) gt (Right_Margin(current_object)) left inStr to inStr (Right_Margin(current_object))
+    send insert inStr
+    set Active_Msg_Count to (ActMsgCount + 1)
+    set Current_Depth to d
+    send control_view
+  end_procedure
+end_class
+

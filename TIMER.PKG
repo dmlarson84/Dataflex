@@ -1,0 +1,160 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\timer.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: timer.pkg,v $
+//Revision 2.1  1993/08/25  17:49:52  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:09  james
+//Initial revision
+//
+//Revision 1.4  92/06/02  11:07:54  james
+//Rename global variables used by time_display command. One
+//was called MIN for minutes which then disabled the MIN 
+//operator.
+//
+//Revision 1.3  92/05/14  17:10:36  SWM
+//Updated Copyright slug.
+//
+//Revision 1.2  92/03/09  19:05:15  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:23:00  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: Timer.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: May 23, 1991
+//     Author(s): Mike Zingman
+//
+// This module contains the symbols and commands used to manipulate object
+// event timers.
+//
+// Each timer is run off of the keyboard input loop.  You may have as many
+// timers as required in your application.  Each timer may have one of
+// several modes of operation.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+Use UI
+
+//
+// define the constants needed for this package. 
+//
+#REPLACE NEW_TIMER    |CI0  // timer id for new timer
+#REPLACE TIMER_OFF    |CI0  // turn timer off
+#REPLACE ONE_SHOT     |CI1  // timer will fire only once
+#REPLACE PERIODIC     |CI2  // timer will fire once each period
+#REPLACE IDLE         |CI3  // timer will fire on inactivity
+#REPLACE TIMER_DELETE |CI4  // delete timer - reuse space
+#REPLACE DELETE_TIMER |CI4  // delete timer - reuse space (for old code)
+
+//
+// Create or modify a timer.  This macro will create or modify the timer
+// specified by the Timer_Id.  If the id has not been defined, it will be
+// created automatically.  The valid mode for the timer is then specified.
+// Each mode will affect the timer in the above fashion.  Each timer must
+// have a object and message to generate.  The object may be any valid object
+// and must be able to handle the message generated on the timer event.  The
+// TIMER_OFF mode does not require the object or message parameters.
+//
+// Syntax:
+//
+//	Set_Timer Timer_Id [TIMER_OFF|ONE_SHOT|PERIODIC|IDLE|DELETE_TIMER] ;
+//		Object Message Period
+//
+
+#COMMAND SET_TIMER RCDLBO# RDLBO#
+  #IFDEF !1
+  #ELSE
+    INTEGER !1
+    MOVE NEW_TIMER TO !1
+  #ENDIF
+  #DATA
+  #DPUSH !2		// TYPE
+  #IF (!0>2)
+    #CHECK !3 RDLOB
+    #CHECK !4 RDLOB
+    #CHECK !5 RDLOB
+    #IFDEF !3
+      #DPUSH !3		// NOTIFY
+    #ELSE
+      #IFDEF !3.OBJ
+        #DPUSH !3.OBJ
+      #ELSE
+        #DPUSH |CI0
+        #FREF !3.OBJ !a,1
+      #ENDIF
+    #ENDIF
+    #IFDEF !4
+      #DPUSH !4		// MESSAGE
+    #ELSE
+      #IFDEF MSG_!4
+        #DPUSH MSG_!4
+      #ELSE
+        #DPUSH |CI0
+        #FREF MSG_!4 !a,2
+      #ENDIF
+    #ENDIF
+    #DPUSH !5		// ALARM TIME
+  #ELSE
+    SEND$HELP 0 0 0
+  #ENDIF
+  !A [] OBJ$TIMER !1 |VL
+#ENDCOMMAND
+
+//
+// This is a nice little macro for displaying the date and time of day on
+// the bottom of the screen.  The macro will automatically create its own
+// timer and global procedure to receive the timer message.  The time data
+// will be formatted by the macro.  The ON/OFF parameter will control whether
+// the timer will display.
+//
+// Syntax:
+//	Time_Display [ON|OFF]
+//
+
+#COMMAND TIME_DISPLAY "ON""OFF" .
+  #IFDEF MSG_SHOW_TIME
+  #ELSE
+    PROCEDURE SHOW_TIME
+      LOCAL DATE TODAY
+      STRING HOURS MINUTES SECONDS
+      SYSDATE TODAY HOURS MINUTES SECONDS
+      GOTOXY (SCREENEND-1) 60
+      SHOW TODAY ' ' (RIGHT('0'+HOURS,2)) ':' (RIGHT('0'+MINUTES,2)) ':' (RIGHT('0'+SECONDS,2))
+    END_PROCEDURE
+  #ENDIF
+  #IFSAME !1 ON
+    SET_TIMER DISPLAY$TIMER$ID PERIODIC DESKTOP SHOW_TIME 100
+  #ELSE
+    SET_TIMER DISPLAY$TIMER$ID TIMER_OFF
+    CLEARXY (SCREENEND-1) 60	// REMOVE THE DISPLAY
+  #ENDIF
+#ENDCOMMAND
+
+
+
+
+
+

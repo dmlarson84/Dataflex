@@ -1,0 +1,39 @@
+        FILE DEFINITION LISTING FOR FILE #4
+*************************************************** 
+        FILE ROOT NAME     = SETUP
+        USER DISPLAY NAME  = HC Setup Table
+        DATAFLEX FILE NAME = SETUP
+*************************************************** 
+        RECORD LENGTH = 384  (USED = 295)
+        MAX NUMBER OF RECORDS = 20  (USED = 2)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1      30   ASCII          0     0     0     PROSNAME
+   2      31      25   ASCII          0     0     0     ADDR
+   3      56      15   ASCII          0     0     0     CITY
+   4      71       3   ASCII          0     0     0     DIST
+   5      74       6   NUMERIC   0    0     0     0     LSTREC
+   6      80       5   NUMERIC   0    0     0     0     LSTID
+   7      85       4   NUMERIC   2    0     0     0     BEGBAL
+   8      89       5   NUMERIC   0    0     0     0     MERCHANT
+   9      94      20   ASCII          0     0     0     COUNTY
+  10     114       4   ASCII          1     0     0     YEAR
+  11     118       3   NUMERIC   0    0     0     0     LAST_CHECK
+  12     121      30   ASCII          0     0     0     SIGNS_DEFLTR
+  13     151      30   ASCII          0     0     0     DL_SIGNERS_TITL
+  14     181      30   ASCII          0     0     0     SIGNS_MERLTR
+  15     211      30   ASCII          0     0     0     ML_SIGNERS_TITL
+  16     241       3   ASCII          0     0     0     JUDGE_INIT
+  17     244       2   NUMERIC   2    0     0     0     MFEE_DEFAULT
+  18     246      30   ASCII          0     0     0     LOC_DEFAULT
+  19     276       4   NUMERIC   2    0     0     0     FBOND
+  20     280       4   NUMERIC   2    0     0     0     MBOND
+  21     284       9   ASCII          0     0     0     FEL_COURT
+  22     293       3   NUMERIC   2    0     0     0     COURT_COST
+ 
+INDEX 1:  FIELD SEGMENTS:  <10>   
+

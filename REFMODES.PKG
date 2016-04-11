@@ -1,0 +1,9 @@
+//
+// constants for REFRESH message parameter values
+//
+define MODE_CLEAR             for 1  //notification from origin of clear
+define MODE_FIND_OR_CLEAR_SET for 2  //notification from find or clear
+define MODE_CLEAR_ALL         for 3  //notification from clear-all
+define MODE_DELETE            for 4  //notification after successful delete
+define MODE_SAVE              for 5  //notification after successful save
+

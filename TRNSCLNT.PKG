@@ -1,0 +1,216 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\trnsclnt.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: trnsclnt.pkg,v $
+//Revision 2.1  1993/08/25  17:49:57  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:10  james
+//Initial revision
+//
+//Revision 1.3  92/05/14  17:08:24  SWM
+//Updated Copyright slug.
+//
+//Revision 1.2  92/03/09  19:05:35  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:23:05  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: TrnsClnt.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: May 23, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Translate-Text pop-up object for the Text_Editor
+// class.
+//
+// This package implements a pop-up object for text searching and replacement
+// within a text-editor object
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+Use UI
+
+
+/transClientImg 
+ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+º                                                           º
+º                ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  º
+º   Find what:   ³ ____________________________________  ³  º
+º                ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ  º
+º                                                           º
+º                ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  º
+º   Change to:   ³ ____________________________________  ³  º
+º                ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ  º
+º                                                           º
+º   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   º
+º   ³ <_________>         <______>         <__________> ³   º
+º   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ   º
+º                                                           º
+º                           <__>                            º
+ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+/*
+Sub_Page transFromImg  FROM transClientImg 1
+Sub_Page transToImg    FROM transClientImg 2
+Sub_Page transBtnsImg  FROM transClientImg 3 4 5
+Sub_Page transOKImg    FROM transClientImg 6
+
+
+//
+//Attribute: Translate_Area
+//
+//Description: search/translate pop-up object
+//
+//Representation: modified CLIENT instance
+//
+object Translate_Area is a CLIENT transClientImg
+  set location to 3 5 absolute
+  set BLOCK_MOUSE_STATE to true
+  set DELEGATION_MODE to DELEGATE_PRIOR_LEVEL
+  set SCOPE_STATE to TRUE
+  set Exit_Msg to cancel_Scope
+  on_key kCancel        SEND cancel_scope
+  on_key kExit_Function SEND cancel_scope
+  procedure cancel_scope
+    send deactivate 3
+  end_procedure
+  //
+  //Attribute: Translate_From_Area
+  //
+  //Description: form for entry of translation target pattern
+  //
+  //Representation: FORM with one item sending NEXT message to self
+  //
+  object Translate_From_Area is a FORM transFromImg
+    item_list 
+      on_item "" SEND next
+    end_item_list 
+  end_object 
+  //
+  //Attribute: Translate_To_Area
+  //
+  //Description: form for entry of translate-to pattern
+  //
+  //Representation: FORM with one item sending NEXT message to self
+  //
+  object Translate_To_Area is a FORM transToImg
+    item_list 
+      on_item "" SEND next
+    end_item_list 
+  end_object 
+  //
+  //Attribute: Button_Area
+  //
+  //Description: panel of three buttons for translation options
+  //
+  //Representation: BUTTON with three items sending messages to self
+  //
+  object Button_Area is a BUTTON transBtnsImg
+    item_list 
+      on_item "Find Next"  SEND Find_Next
+      on_item "Change"     SEND Translate
+      on_item "Change All" SEND Translate_All
+    end_item_list 
+  end_object 
+  //
+  //Attribute: OK_Button_Area
+  //
+  //Description: panel of two buttons for OK and CANCEL
+  //
+  //Representation: BUTTON with two items sending messages to self
+  //
+  object OK_Button_Area is a BUTTON transOKImg
+    item_list 
+      on_item "OK" SEND Cancel_Scope
+    end_item_list 
+  end_object 
+  //
+  //Operation: FIND_NEXT
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): locate next ocurrance of search pattern in last focus object,
+  //  ringing the bell if no match was found
+  //
+  //Algorithm: sends find to last focus object, ringing bell if no match,
+  //           else sends REFRESH_SCREEN
+  //
+  //Usage: invoked by "Find Next" item of Button_Area
+  //
+  procedure Find_Next
+    local integer itemp
+    send find (value(Translate_From_Area(current_object),0)) itemp
+    if itemp eq 0 send bell to desktop
+    else send Refresh_Screen to desktop
+  end_procedure
+  //
+  //Operation: TRANSLATE
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): to replace the next ocurrance of the search pattern with the
+  //  target pattern, or ring the bell if no match found
+  //
+  //Algorithm: sends kLEFTARROW to last focus object, then sends REPLACE to it
+  //           if match found, sends REFRESH_SCREEN, else sends BELL
+  //
+  //Usage: invoked by "Change" item of Button_Area
+  //
+  procedure Translate
+    local integer itemp
+    send key to (prior_level(current_object)) kLeftArrow 
+    send replace (value(Translate_From_Area(current_object),0)) ;
+        (value(Translate_To_Area(current_object),0)) itemp
+    if itemp eq 0 send bell to desktop
+    else send Refresh_Screen to desktop
+  end_procedure
+  //
+  //Operation: TRANSLATE_ALL
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): to replace all ocurrances of search pattern with target pattern
+  //
+  //Algorithm: repeatedly sends REPLACE to last focus object until no match,
+  //           then sends REFRESH_SCREEN
+  //
+  //Usage: invoked by "Change All" item of Button_Area
+  //
+  procedure Translate_All
+    local string  stemp xtemp
+    local integer itemp counter
+    move (value(Translate_From_Area(current_object),0)) to stemp
+    move (value(Translate_To_Area(current_object),0)) to xtemp
+    send key to (prior_level(current_object)) kLeftArrow 
+    move 0 to counter
+    repeat        
+      send replace stemp xtemp itemp
+      if (itemp + counter) eq 0 send bell to desktop
+      else calc (counter + 1) to counter
+    until itemp eq 0
+    send Refresh_Screen to desktop
+  end_procedure
+end_object
+
+

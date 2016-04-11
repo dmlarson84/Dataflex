@@ -1,0 +1,168 @@
+use ui
+use dfmisc
+use clwindow
+use igncslst
+use key_btn
+
+/Database_Server_Selection_Client_Img
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ__________________________________________________________________บ
+บ                                                                  บ
+บ Active Servers For Driver: ____________________________________  บ
+บ                                                                  บ
+บ                                                                  บ
+บ                                                                  บ
+บ                                                                  บ
+บ                                                                  บ
+บ                                                                  บ
+บ                                                                  บ
+บ                                                                  บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/Database_Server_Name_List_Img
+_______________________________________________________________
+_______________________________________________________________
+_______________________________________________________________
+_______________________________________________________________
+_______________________________________________________________
+/Database_Server_Button_Img
+            _______       ____________       _________            
+/*
+
+class Database_Server_Selection_Client is a Client_Window
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        property integer Explicit_Invoking_Object   PUBLIC 0
+        property integer Invoking_Object_ID         PUBLIC 0
+        property integer Invoking_Item              PUBLIC CURRENT
+        property string  Current_Driver_Name        PUBLIC ""
+
+        set Attach_Parent_State to FALSE
+        set Block_Mouse_State to TRUE
+        set Popup_State to TRUE
+        send Locate_In_Center_Of_Screen
+
+        set Value to "Database Servers"
+
+        object Name_List is an Ignore_Case_Item_Matching_List Database_Server_Name_List_Img
+            set Location to 5 2 RELATIVE
+            set Focus_Mode to NONFOCUSABLE
+            set Select_Mode to AUTO_SELECT
+            set Scroll_Bar_Visible_State to FALSE
+        end_object
+
+        object Button is a Button Database_Server_Button_Img
+            set Location to 11 1 RELATIVE
+
+            item_list
+                on_item "<F2=OK>" send Save_Server
+                on_item "<Esc=Cancel>" send Close_Client
+                on_item "<F1=Help>" send Help
+            end_item_list
+        end_object
+
+        set Key_Path to Desktop
+
+        on_key KSAVE_RECORD send Save_Server
+        on_key KHELP        send Help
+    end_procedure
+
+    procedure Initialize
+        send Delete_Data to (Name_List(Current_Object))
+
+        send Add_Servers
+    end_procedure
+
+    function Current_Driver_Index returns integer
+        local integer Idx Tot
+        local string Active_Drv Drv_Name
+
+        get Current_Driver_Name to Drv_Name
+
+        if Drv_Name LE "" ;
+            function_return 0
+
+        move 1 to Idx
+        get_attribute DF_NUMBER_DRIVERS to Tot
+
+        while Idx LE Tot
+            get_attribute DF_DRIVER_NAME of Idx to Active_Drv
+
+            if Active_Drv EQ Drv_Name ;
+                function_return Idx
+
+            increment Idx
+        end
+
+        function_return 0
+    end_function
+
+    procedure Error_Report
+        indicate Err TRUE
+    end_procedure
+
+    procedure Add_Servers
+        local integer Nam_Obj Drvr#
+        local integer Idx Tot
+        local string Name_Val Description_Val
+
+        move (Name_List(Current_Object)) to Nam_Obj
+
+        get Current_Driver_Index to Drvr#
+
+        if Drvr# GT 0 begin
+            //
+            // Add active servers
+            //
+            move 1 to Idx
+            get_attribute DF_DRIVER_NUMBER_SERVERS of Drvr# to Tot
+
+            while Idx LE Tot
+                get_attribute DF_DRIVER_SERVER_NAME of Drvr# Idx to Name_Val
+                send Add_Item to Nam_Obj MSG_Next Name_Val
+                increment Idx
+            end
+        end
+    end_procedure
+
+    procedure Activating
+        local integer Obj Itm
+        local string Val
+
+        set Value item 1 to (Current_Driver_Name(Current_Object))
+
+        send Initialize
+
+        get Invoking_Object_ID to Obj
+        set Explicit_Invoking_Object to Obj
+        
+        if Obj EQ 0 begin
+            get Focus to Obj
+            set Invoking_Object_ID to Obj
+        end
+
+        get Value of Obj item (Invoking_Item(Current_Object)) to Val
+
+        move (Name_List(Current_Object)) to Obj
+
+        move 0 to Itm
+        get Ignore_Case_Item_Matching of Obj Val Itm to Itm
+
+        if Itm NE -1 ;
+            set Current_Item of Obj to Itm
+
+        forward send Activating
+    end_procedure
+
+    procedure Save_Server
+        if (Item_Count(Name_List(Current_Object))) GT 0 ;
+                set Value of (Invoking_Object_ID(Current_Object)) ;
+                    item (Invoking_Item(Current_Object)) ;
+                    to (Value(Name_List(Current_Object), CURRENT))
+
+        if not (Explicit_Invoking_Object(Current_Object)) ;
+            set Invoking_Object_ID to 0
+            
+        send Close_Client
+    end_procedure
+end_class

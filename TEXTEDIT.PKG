@@ -1,0 +1,220 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\textedit.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: textedit.pkg,v $
+//Revision 2.1  1993/08/25  17:49:51  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:09  james
+//Initial revision
+//
+//Revision 1.3  92/05/14  17:14:02  SWM
+//Updated Copyright slug.
+//
+//Revision 1.2  92/03/09  19:05:11  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:22:57  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: TextEdit.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: May 23, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module contains the TextEditor class definition.
+//
+// This package implements an editing object for variable-length text fields
+// or sequential files suitable for use with a Text_Action_Bar instance.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+Use Text_Win
+Use TrnsClnt  //translation pop-up object
+Use ReSzClnt  //window re-sizing pop-up object
+Use ChMrClnt  //margin changing pop-up object
+Use FTxtClnt  //find-text pop-up object
+Use GoLnClnt  //goto-line pop-up object
+
+
+//
+//Class: Text_Editor
+//
+//SuperClass: Text_Window
+//
+//Description: This class implements a text-editing object suitable for
+//  use with Entry_Form and Table objects, which may be bound to a
+//  sequential ASCII file or a database memo-field
+//
+//Usage: set FILE_NAME property to sequential file name or memo-field id
+//
+Class Text_Editor is a Text_Window
+  //
+  //Operation: CONSTRUCT_OBJECT
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): define an instance with appropriate keys and properties
+  //
+  //Algorithm: Augmented to define keys, and properties for action-bar
+  //           Activated_Action_Bar_State, and Component_State.
+  //
+  //Usage: used internally
+  //
+  procedure construct_object
+    forward send construct_object
+    set location to 1 0 relative
+  end_procedure
+  //
+  //Operation: STATUS_LINE_ON
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): turn on status line display
+  //
+  //Algorithm: sets STATUS_LINE_STATE to True
+  //
+  //Usage: 
+  //
+  procedure Status_Line_On
+    set STATUS_LINE_STATE to true
+  end_procedure
+  //
+  //Operation: STATUS_LINE_OFF
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): turn off status line display
+  //
+  //Algorithm: sets STATUS_LINE_STATE to False and sends REFRESH_SCREEN
+  //
+  //Usage: 
+  //
+  procedure Status_Line_Off
+    set STATUS_LINE_STATE to false
+    send refresh_screen to desktop  //make status line go away
+  end_procedure
+  //
+  //Operation: RESIZE
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): get size as default values for ReSize_Area's items, and activate
+  //  ReSize_Area pop-up form
+  //
+  //Algorithm: gets SIZE, splits into height and width,
+  //           and sets values into ReSize_Area's items, then ACTIVATEs
+  //           ReSize_Area
+  //
+  //Usage: invoked externally
+  //
+  procedure ReSize
+    local integer hght
+    local integer wdth
+    get size to hght
+    move (low(hght)) to wdth
+    move (hi(hght)) to hght
+    set Height of ReSize_Area to hght
+    set Width of ReSize_Area  to wdth
+    send activate to ReSize_Area 
+  end_procedure
+  //
+  //Operation: REQUEST_RESIZE
+  //
+  //Assumption(s): hght, wdth valid size parameters
+  //
+  //Goal(s): set size to specified height and width
+  //
+  //Algorithm: sets VISIBLE_STATE to False
+  //           sets SIZE to specified height and width
+  //           sets VISIBLE_STATE to True
+  //
+  //Usage: invoked externally
+  //
+  procedure Request_ReSize integer hght integer wdth
+    set visible_state to false 
+    set size to hght wdth
+    set visible_state to true
+  end_procedure
+  //
+  //Operation: CHANGE_MARGIN
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): activate Change_Margin_Form pop-up form
+  //
+  //Algorithm: sends ACTIVATE to Change_Margin_Form
+  //
+  //Usage: invoked externally
+  //
+  procedure Change_Margin
+    send activate to Change_Margin_Form
+  end_procedure
+  //
+  //Operation: TO_LINE_NUM
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): activate Goto_Line_Area form
+  //
+  //Algorithm: sends ACTIVATE to Goto_Line_Area
+  //
+  //Usage: invoked externally
+  //
+  procedure to_line_num
+    send activate to Goto_Line_Area
+  end_procedure
+
+  //
+  //Operation: SEARCH
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): activate Find_Text_Area form
+  //
+  //Algorithm: sends ACTIVATE to Find_Text_Area
+  //
+  //Usage: invoked externally
+  //
+  procedure search
+    send activate to Find_Text_Area
+  end_procedure
+
+  //
+  //Operation: TRANSLATE
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): activate Translate_Area
+  //
+  //Algorithm: sends ACTIVATE to Translate_Area
+  //
+  //Usage: invoked externally
+  //
+  procedure Translate
+    send activate to Translate_Area
+  end_procedure
+
+end_class
+

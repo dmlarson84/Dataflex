@@ -1,0 +1,104 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\set.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: set.pkg,v $
+//Revision 2.1  1993/08/25  17:49:41  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:09  james
+//Initial revision
+//
+//Revision 1.4  92/05/14  17:15:20  SWM
+//Updated Copyright slug.
+//
+//Revision 1.3  92/03/09  19:04:28  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.2  91/11/26  17:43:48  elsa
+//Only a test
+//
+//Revision 1.1  91/10/23  10:22:35  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: Set.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: May 23, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Set class definition.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+
+class Set is an ARRAY
+
+  Function Find_Element string ElemStr returns integer
+    local integer ndx retVal ArrMax
+    local string ArrVal
+    get item_count to ArrMax
+    move -1 to retVal
+    move 0 to ndx
+    while (ndx < ArrMax AND retVal = -1)
+      get array_value item ndx to ArrVal
+      if ArrVal eq ElemStr move ndx to retVal
+      calc (ndx + 1) to ndx
+    end
+    function_return retVal
+  end_function
+
+  procedure Add_Element string Elem_Str returns integer
+    local integer Ret_Val
+
+    get Find_Element Elem_Str to Ret_Val
+
+    if Ret_Val LT 0 ;
+        get Item_Count to Ret_Val
+
+    set Array_Value item Ret_Val to Elem_Str
+
+    procedure_return Ret_Val
+  end_procedure
+
+  procedure Remove_Element string ElemStr
+    local integer ndx ArrMax counter
+    local string tempVal
+    get Find_Element item ElemStr to ndx
+    if ndx gt -1 send delete_item ndx
+  end_procedure
+
+end_class
+
+//
+// global function to create set instances at random
+//
+function make_set FOR DESKTOP returns integer
+  local integer retval
+  object SetTemplate is a Set 
+    move current_object to retval
+  end_object
+  function_return retval
+end_function
+
+

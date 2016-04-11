@@ -1,0 +1,3 @@
+use text_win
+define Text_Window0 for Text_Window
+define U_Text_Window0 for U_Text_Window

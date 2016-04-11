@@ -1,0 +1,4 @@
+use allen2t0  // We will make the test program compile with debug/trace
+              // code built in. If for some reason you don't want this
+              // you should replace this with allen2e0
+use dftest

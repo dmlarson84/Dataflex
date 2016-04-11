@@ -1,0 +1,21 @@
+        FILE DEFINITION LISTING FOR FILE #29
+*************************************************** 
+        FILE ROOT NAME     = setbank
+        USER DISPLAY NAME  = HC Bank Setup Table
+        DATAFLEX FILE NAME = SETBANK
+*************************************************** 
+        RECORD LENGTH = 512  (USED = 90)
+        MAX NUMBER OF RECORDS = 100  (USED = 4)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1      30   ASCII          1     0     0     NAME
+   2      31      30   ASCII          0     0     0     LOCATION
+   3      61      15   ASCII          0     0     0     CONTACT
+   4      76      15   ASCII          0     0     0     TELE
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   <0>   
+

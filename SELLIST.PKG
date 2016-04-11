@@ -1,0 +1,1050 @@
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\source.30b\pkg\rcs\sellist.pkg $
+//     $Revision: 2 $
+//     $State: Exp $
+//     $Author: lee $
+//     $Locker:  $
+//
+//     $Log:	sellist.pkg $
+//Revision 1.12  92/07/01  01:42:42  lee
+//first_selected_item now returns -1 if no items/records are selected.
+//,
+//
+//Revision 1.11  92/05/29  14:06:02  lee
+//removed end_construct_* messages from mixins; now, classes that use the mixin
+//send the message that used to be sent by the end_construct_* message (for
+//efficiency).
+//
+//Revision 1.10  92/05/14  17:17:26  SWM
+//Updated Copyright slug.
+//
+//Revision 1.9  92/04/01  00:33:40  lee
+//removed navstart and liststart (unused), renamed bind_main_file and bind_index
+//in datalist to bind_list_main_file and bind_list_index to avoid conflict with
+//commands used by data_set, moved bind_static from sellist to datalist as it
+//only sets properties defined in datalist (not sellist).
+//
+//Revision 1.8  92/03/29  18:45:11  lee
+//added MSG_END_CONSTRUCT_OBJECT, moved ENDMAC macro stuff into END_CONSTRUCT-
+//OBJECT procedures (in .pkgs). moved Flag_ITems to list.pkg after generalizing
+//it based on PROTOTYPE_OBJECT instead of Whether or not it is a table-oriented
+//object. Moved define_access_keys mechanism completely into actionbr.pkg.
+//fixed two typos: import_class_protocol used !# instead of !3, and register-
+//procedure used !1 instead of !2.
+//
+//Revision 1.7  92/03/27  16:21:42  steve-l
+//CANCEL altered to properly refind parent-records
+//
+//Revision 1.6  92/03/18  12:39:15  steve-l
+//altered all calls to vfind to perform a relate if successful
+//
+//Revision 1.5  92/03/09  19:04:18  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.4  92/01/15  18:12:41  steve-l
+//DAR# 2440 - FIRST_CHARACTER search mode supported for virtual lists
+//
+//Revision 1.3  92/01/13  17:38:48  steve-l
+//DAR 2241: send entering retval  changed to  get msg_entering to retval.
+//
+//Revision 1.2  91/11/08  09:22:28  steve-l
+//it
+//
+// 09/13/94   - Added symbolic names for TOP, BOTTOM and CENTER of rows
+//************************************************************************/
+
+//************************************************************************
+//     File Name: SelList.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: January 15, 1992
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Selection_List class definition.
+//************************************************************************/
+
+//************************************************************************
+// Version: 1.0
+//  12-01-1992 : Created
+//
+// Author: John J. Tuohy
+//
+// 1. Adds Stop_UI_State Support
+// 2. Creates Move_Value_Out_State property (set when a popup) - Allows lists
+//    in clients.
+// 3. Modifies Move_Value_Out to directly update the invoking object's
+//    data_set (server). Allows stand alone lists
+// 4. Augments Initialize list to make sure that during initialization
+//    non-data_set list displays the first record... 
+// 5. This is no 02:19 pm)Adds Find_Search_State property and all logic to support alternate
+//    Search capability. (07/25/94-The following sentence no longer applies to
+//    DAF1.1) [This directly alters the Selection_List Class with
+//    a FOR SELECTION_LIST modifier. If this package is used the selection_list
+//    class is no longer public.-no longer JJT]
+// 6. Adds Auto_Locate_State Support
+// 7. Adds Seeding the list support (Seed_list_State, Load_Buffer_MSG)
+// 8. Adds automatically finding column to start in (Auto_Column_State)
+// 9. Adds Initial_Column property
+//10. Adds Col_Index Property. Reorder_list now uses this. Good for
+//    overriding and augmenting.
+//11. Sends message in property Display_Buffer_MSG to the invoking object
+//    during move_value_out. Handy for complex updates.
+//12. Adds movable support (ver 1.1)
+//
+// 05-09-1993  Add Auto_Locate_State support
+// 08-06-1993  added items 7-11
+// 03/17/94    Item 9 v.1.1
+// 03/31/94    protect auto_column_state and seed_list_state from doing
+//             anything with a non-popup. Else invoking information is
+//             retrieved causing problems.
+// 04/05/94    Modify seed_list to support export_item seeding
+// 06/02/94    Changed auto_server latch. It was not working with sel-lists
+//             inside of clients (add_focus is needed). However, activate is
+//             still needed for regular activation (yuck).
+// 08/24/94    Load_Buffer_msg and Display_Buffer_msg were sending
+//             Current_Object which is sensitive to delegation. No Longer!
+// 11/30/94    (LS) Removed refs to list_mx0; (merged into list.pkg)
+// 12/5/94     (LS) moved Move_Vlaue_Out and Export_Item procedures
+//             and Export_Column and Display_Buffer_Msg properties
+//             into _Selection_List.
+//************************************************************************/
+
+//************************************************************************/
+// 12/22/94 JJT Merge Changes
+//              Merged the 0 class into entry_form.
+//              Merged slstF_mx direct in the class
+//              A bunch of list stuff is in here directly 
+//
+// 03/08/95    JJT  Changed Move_Value_out to fix two bugs. 
+//                 1) Invoking_object_id was being moved to a local too deep.
+//                    Export and batch could send the display_MSG to obj#.
+//          
+// 03/10/95    JJT Cancel sends refind_records to invoking server. DAF1.1
+//                 already did that. This can create a problem if the 
+//                 invoking object does not understand the server message.
+// 03/10/95    JJT Removed the set auto_fill_state in bind_sellist_popup
+//                 command. List.pkg now handles this in set move_value_
+//                 out_state.
+//
+//03/22/95     JJT Modified Cancel to only send request_cancel if 
+//                 Move_value_out_state is false.
+//
+//03/22/95     JJT Entry_display does not set checkbox values if item
+//                 does not exist
+//
+//03/22/95     JJT Added auto_save_state function to return 0. Other
+//                 objects inquire about this value during wrapping
+//
+//03/22/95     JJT Sometimes Entry_Find finds by the wrong field. This occurs
+//                 during server-less searches. The problem seems to be inside
+//                 of entry_find in entry class. We will create a manual entry
+//                 _find to get around this. I have not seen this problem in
+//                 a reliable example. This appears to happen with auto-
+//                 prompting (suggesting that ENTRY must set something for
+//                 entry_find).
+// 09/07/95   JJT - Code Clean up (removed dead commented code)
+// 04/30/97   JJT   Seed_List first makes sure server (if any) is in_use.
+//                  If it is not the establish_find_direction will clear
+//                  the buffer.
+//************************************************************************/
+
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+use Set
+use DataList
+use List
+Use AutoLcMx   // Auto locate of popup mixin
+
+ 
+register_procedure refind_Records
+register_function current_record returns integer
+
+class Selection_List is a Data_List STARTMAC slStart
+  procedure construct_object integer img
+    forward send construct_object img
+    
+    on_key kBegin_of_Data SEND Beginning_of_Data  PRIVATE
+    on_key kEnd_of_Data   SEND End_of_Data        PRIVATE
+    
+    object Selected_Items is a Set 
+    end_object
+    
+    send define_list  //invoke constructor for list support
+
+    // message id to send during move_value_out
+    Property Integer Display_Buffer_Msg  Public 0
+    
+    // Column to export (if export_item_state) -1=use initial column
+    Property Integer Export_Column public 0
+    
+    Set Initial_row to FILL_FROM_CENTER // center the guess
+    
+    // List mixin sets select_mode to single. No_Select will work better
+    // for normal select an item. If radio (auto_select works better).
+    set select_mode to NO_SELECT
+    // This must also happen after the list mixin, since the list mixin
+    // sets this key to OK.
+    on_key kEnter         SEND Find_or_OK         PRIVATE
+
+    Property Integer Find_Search_State   PUBLIC   TRUE
+    Property Integer Auto_Column_State   Public TRUE
+    Property Integer Seed_List_State     Public TRUE
+    Property Integer Load_Buffer_Msg     Public 0
+    Property Integer Auto_Server_State public False
+    //
+    Send Define_Auto_Locate
+  end_procedure
+  
+  IMPORT_CLASS_PROTOCOL LIST_Mixin   //include list support module
+  IMPORT_CLASS_PROTOCOL Auto_Locate_Mixin
+
+
+  function select_count returns integer
+    local integer retval
+    if (Batch_State(current_object)) forward get select_count to retval
+    else move (item_count(Selected_Items(current_object))) to retval
+    function_return retval
+  end_function
+
+  procedure set select_count integer newval
+    forward set select_count to newval
+    if (Batch_State(current_object) = 0) ;
+        set item_count of (Selected_Items(current_object)) to newval
+  end_procedure
+
+  function first_selected_item returns integer
+    local integer count maxx SelMode
+    
+    // if auto or no select or single w/ no selected item
+    // just return the selected item
+    Get Select_Mode to SelMode
+    If (SelMode=NO_SELECT OR SelMode=AUTO_SELECT or ;
+         (SelMode=SINGLE_SELECT AND Select_Count(Current_Object)=0) ) Begin
+       Function_Return (If(Batch_State(Current_Object), ;
+                             Base_Item(Current_Object),;
+                             Current_Record(Current_Object)))
+    End
+
+    if (Batch_State(current_object)) begin
+      move (item_count(current_object) - 1) to maxx
+      for count from 0 to maxx
+        if (select_state(current_object,count)) function_Return count
+      loop
+    end
+    else begin
+      if (select_count(current_object) > 0) begin
+        get array_Value of (Selected_Items(current_object)) item 0 to count
+        function_Return count
+      end
+    end
+    function_return -1 // no selected items/records
+  end_function
+
+  //
+  //  Move_value_out has been augmented to allow for more independance 
+  //  between the data_set and its invoking object. Here is the new logic:
+  //
+  //  if export_item_state
+  //     Do normal export item behavior (forward send the message)
+  //  else // not export_item_state .. a normal update
+  //     Find selected record as needed
+  //     Find out who prompted us (invoking_object)
+  //     Find the data_set of the invoking object
+  //     If data_set exists (it should) notify data_set about the record
+  //  If a display_buffer_MSG exists send this message to the invoking
+  //  object. (This allows the invoking object to do custom updating).
+  //
+
+  // better export value out support
+  // Invoking_object_id checked sooner.
+  //
+  procedure move_value_out
+    local integer item# srvr# srvrobj# obj# oldDisp mainfile msg# BS Rec# co
+    get first_selected_item to item#
+    Get Batch_State to BS
+    get Invoking_Object_ID to obj#
+    If (Export_Item_State(Current_Object) OR BS) Begin
+       // if not batch
+       //    refind record (so it is in buffer and displayed)
+       //    determine rec number (which was the item#) and the item# col0
+       // if batch
+       //    determine the record number (we've got the item#)
+       If Not BS Begin
+          Move Item# to Rec#    // this is the record number
+          Send Find_Record rec# // find existing record (display)
+          Move (Base_Item(Current_Object)) to Item# // this is item#
+       End
+       Else ;
+          Move (Record_Number(Current_Object,Row(Current_Object,Item#))) to rec#
+       Send Export_Item Item# Rec#
+    End
+    Else Begin
+       //get Invoking_Object_ID to obj# // this got moved up
+       get Server to srvr#
+       get main_file to mainfile
+       // refind the selected record. If data_set (server) do it through the
+       // data_set. If no server, just find the record
+       if srvr# ne 0 begin
+          get line_display_State to oldDisp
+          set line_display_State to true
+          send Find_by_RecNum to srvr# mainfile item#
+          set line_display_State to oldDisp
+       end
+       else if mainfile ne 0 begin
+         move mainfile to filenumber
+         move 0 to fieldindex
+         clear Indirect_File
+         move item# to Indirect_File.RECNUM
+         find eq Indirect_File.RECNUM
+       end
+       [found] if obj# ne 0 begin // if record exists and invoking object exists
+         Get Server of Obj# to Srvrobj#   // find server of invoking object
+         If srvrobj# eq 0 send entry_display to obj# 0 0 // sissy update
+         Else if srvr# ne srvrobj# ; // if server of selection list and invoking
+           Send Find_by_Recnum to Srvrobj# MainFile item# // obj are different
+       end                                                // notify invoking server
+    end
+    
+    // pass optional message to the invoking object. Note that Current object
+    // ID is passes to the procedure
+    get display_buffer_msg to msg#
+    if (msg# AND obj#) Begin
+       Move Current_Object to co
+       send msg# to obj# Co
+    End
+    set changed_state to false  //list not changed after value exported
+  end_procedure
+
+  //  New message pass column 0 item to export. Use export_column property to
+  //  determine what value to export.
+  // 
+  // Note that we pass item# and Rec#. We don't use record number. We pass this
+  // because it might be useful if this message is augmented.
+  //
+  Procedure Export_Item Integer Item# Integer Rec#
+    Local integer obj# Col
+    Local String Val
+    Get invoking_object_id to Obj#
+    Get Export_Column to Col                // The column to export. If -1 we
+    If Col eq -1 Get Initial_Column to Col  // use initial_column value.
+    Get value Item (Item#+Col) to val       // Get value from sel list
+    Set value of obj# item CURRENT to Val   // export item and set changed true
+    Set Item_Changed_State of obj# item CURRENT to True
+  End_Procedure // Export_Item
+  
+  procedure Entering returns integer
+    local integer retval obj#
+    get Server to obj#
+    if (Batch_State(current_object)) begin
+      forward get msg_Entering to retval
+      set Original_Selection to (current_item(current_object))
+    end
+    else begin
+      if obj# ne 0 set Original_Selection to (Current_Record(obj#))
+      else begin
+        get main_file to filenumber
+        if filenumber ne 0 begin
+          move 0 to fieldindex
+          set Original_Selection to Indirect_File.RECNUM
+        end
+        else set Original_Selection to 0
+      end
+      forward get msg_Entering to retval
+    end
+    // don't like this
+    //if (Select_Mode(current_object) = AUTO_SELECT) ;
+    //    set select_state item CURRENT to true
+    procedure_return retval
+  end_procedure
+
+  procedure CANCEL returns integer
+    local integer srvr# rec# file# oldinuse Obj#
+    // if move_value_out_state is false we treat this like any other deo
+    // and simply send cancel.
+    If (Move_Value_out_State(Current_Object)) Begin
+       // added 03/31/94 - else server does not disconnect during deactivate
+       set changed_state to false  //list not changed after value exported
+       if (Batch_State(current_object)) begin
+         set current_item to (Original_Selection(current_object))
+         send request_cancel
+       end
+       else begin
+         send request_cancel
+         get main_file to file#
+         if file# ne 0 begin
+           get Server to srvr#
+           get Original_Selection to rec#
+           if (srvr# <> 0 AND current_record(srvr#) = rec#) begin
+             send refind_records to srvr#
+             if (oldinuse = False) set in_use_state of srvr# to False
+           end
+           else begin  //no server or server's curRec <> OrigSel rec#
+             move file# to FILENUMBER
+             move 0 to FIELDINDEX
+             clear Indirect_File
+             if rec# ne 0 begin
+               move rec# to Indirect_File.RECNUM
+               find eq Indirect_File.RECNUM
+             end
+             relate Indirect_File
+           end
+         end
+       end
+       //JJt 10/18/94 - Let's make sure the invoking object has all the
+       //               right records in place after a cancel.
+       // This can create a problem if we try to use the list with an
+       // invoking object that does not understand the server message. This
+       // problem already exists a bit on the OK side. A solution might be
+       // to add a desktop server property.
+       Get Invoking_Object_id to obj#
+       If obj# gt desktop begin
+          get server of obj# to srvr#
+          If srvr# send refind_records to srvr#
+       end
+    end
+    Else Send request_cancel
+  end_procedure
+
+  Procedure SET SELECT_STATE integer item# integer newState
+    local integer rowID itemID selMode selArr
+    get select_mode to selMode
+    if selMode eq NO_SELECT procedure_return  //do nothing
+
+    // **jjt* undocumented wierdness # 3453
+    //
+    // Upon occasion item# comes thru as 65437 ( which appears to be
+    // (65536 + CURRENT a.k.a. -99). Why this is, is a mystery. It
+    // appears to be the result of a toggle (space or mouse up).
+    // Anyway we must adjust for this.
+    //
+    IF Item# eq 65437 Move CURRENT TO ITEM#
+
+    if item# eq CURRENT get current_item to item#
+
+    // Force the selected item always to be column zero. This works
+    // best for radio and checkboxes and just about anything else. It 
+    // also insures that a selected item is always column 0
+    Move (Row(Current_Object,Item#)*Item_Limit(Current_Object)) to Item#
+    
+    //
+    if newState eq TOGGLE_STATE ;
+      move (not(select_State(current_object,item#))) to newState
+    Forward set select_State item item# to newState
+    // We only update the select array with single or multi-select modes
+    // and only if not batch (batch already knows)
+    if (Batch_State(current_object)=0 AND ;
+        (selMode=SINGLE_SELECT OR selMode=MULTI_SELECT)) begin
+      get row item item# to rowID
+      get record_number item rowID to itemID
+      move (Selected_Items(current_object)) to selArr
+      if (select_State(current_object,item#)) begin
+        if selMode eq SINGLE_SELECT ;
+          set item_count of selArr to 0
+        send Add_Element to selArr itemID
+      end
+      else send Remove_Element to selArr itemID
+    end
+  End_Procedure
+
+  // Added parameter Clear_Fg. If true unset the selected item.
+  // Returns: If batch     - next selected Item (column 0)
+  //          if not batch - next selected record #
+  //          -1 if no more items
+  //
+  function next_selected_Item Integer ClFg returns integer
+    local integer rec# SelArrID selCounter obj# retval maxx
+    get Enumeration_Counter to selCounter
+    if (Batch_State(current_object)) begin
+      calc (item_count(current_object) - 1) to maxx
+      for retval from selCounter to maxx
+          if (select_state(current_object,retval)) begin
+            set Enumeration_Counter to (retval + 1)
+            set current_item to retval
+            If ClFg Set Select_State Item RetVal to False
+            function_return retval
+          end
+      loop
+    end
+    else if selCounter lt (select_count(current_object)) begin
+      move (Selected_Items(current_object)) to SelArrID
+      get array_value of SelArrID item selCounter to rec#
+      if Clfg send Remove_Element to selArrId Rec#
+      Else set Enumeration_Counter to (selCounter + 1)
+      get server to obj#
+      if obj# ne 0 send read_by_recnum to obj# (main_file(current_object)) rec#
+      function_return rec#
+    end
+    function_Return -1 // if here no items
+  end_function
+
+  // use new function (maintained for compatability sake)
+  function next_selection returns integer  //returns -1 if no selections
+    Function_Return (Next_Selected_Item(Current_Object,0))
+  end_function
+
+  //  *** Removed 07/25/94 (Actually DAF has been disabling this all along).
+  //      This never worked and should probably be added to a specialized sub-
+  //      class.
+  // procedure entry_update integer mfile# integer flag
+  //   local integer item# file# selMode
+  //   local string astr
+  //   get target_file to file#
+  //   get select_mode to selMode
+  //   if ((SelMode = SINGLE_SELECT OR SelMode = AUTO_SELECT) AND ;
+  //       Select_Count(current_object) > 0 AND ;
+  //       (mfile# = 0 OR mfile# = file#)) begin
+  //     if (Batch_State(current_object)) begin
+  //       get first_selected_item to item#
+  //       get value item item# to astr
+  //       move file# to filenumber
+  //       if file# gt 0 begin
+  //         get target_field to fieldindex
+  //         move astr to Indirect_File.RECNUM
+  //       end
+  //     end
+  //   end
+  // end_procedure
+
+  procedure display_row integer row#
+    local integer rec# SelMode
+    Get Select_mode to SelMode
+    forward send display_row row#
+    // only if not batch and single or multi-select. This will speed things up.
+    if (Batch_State(current_object)=0 AND ;
+        (selMode=SINGLE_SELECT OR selMode=MULTI_SELECT)) begin
+       get record_number item row# to rec#
+       get find_element of (Selected_Items(current_object)) item rec# to rec#
+       if rec# ne -1 ;
+          set select_state item (row# * item_limit(current_object)) to TRUE
+    End
+  end_procedure
+
+  //
+  // created to empty selected_items array along with list item data
+  //
+  procedure empty_list
+    local integer obj#
+    forward send empty_list
+    move (Selected_Items(current_object)) to obj#
+    if obj# ne 0 send delete_data to obj#
+  end_procedure
+
+  //
+  // created for Bottom_of_Panel support
+  //
+  function last_panel_item returns integer
+    local integer lastitem maxitem topItem
+    get top_item to topItem
+    calc (topItem + Display_Size(current_object) - 1) to lastitem
+    get item_count to maxitem
+    if lastItem gt maxitem move (maxitem - 1) to lastitem
+    while (record_number(current_object,(row(current_object,lastitem))) = 0 ;
+        AND lastitem > topItem)
+      decrement lastitem
+    end
+    function_return lastitem
+  end_function
+
+  //
+  // created to support FIRST_CHARACTER searching
+  //
+  procedure key integer keyval
+    local integer ser# file# retval rec# ordr# oldCol mainfile curi bits
+    local string lookStr
+    //    if (keyval <= 255 AND search_mode(current_object) = FIRST_CHARACTER) begin
+    if (Batch_State(Current_Object)=0 AND keyval <= 255 AND search_mode(current_object) = FIRST_CHARACTER) begin
+
+      //move -1 to retval
+
+      get current_item to curi
+
+      move (character(keyval)) to lookStr
+
+      get item_option of current_object item curi 19 to bits
+      if bits uppercase lookStr    //CAPSLOCK check
+
+      get data_file to file#
+      if file# le 0 begin
+        forward send key keyval
+        procedure_return       //can't find if no valid main file
+      end
+
+      get Server to ser#
+      get main_file to mainfile
+      //move (current_item(current_object) - base_item(current_object)) ;
+      //    to oldCol
+      move file# to filenumber
+      move 0 to fieldindex
+      move Indirect_File.RECNUM to rec#
+      move 0 to Indirect_File.RECNUM      //hold recbuf
+      move rec# to Indirect_File.RECNUM   //replace rec#
+      get data_field to fieldindex
+
+      move lookStr to Indirect_File.RECNUM
+      if mainfile ne file# begin  //find in parent-file
+        if ser# ne 0 begin   //has a server
+          send Request_Superfind to ser# GE file# ;
+              (data_field(current_object,CURRENT))
+          //[found] move (oldCol+top_item(current_object)) to retval  //current item
+        end
+        else begin  //no server
+          send entry_superfind GE mainfile
+          if [found] begin
+            send display
+            //move (oldCol+top_item(current_object)) to retval  //current item
+            indicate found true
+          end
+          else begin
+            move file# to filenumber
+            move 0 to fieldindex
+            clear Indirect_File
+            move rec# to Indirect_File.RECNUM
+            find eq Indirect_File.RECNUM
+          end
+        end
+      end
+      else begin  //find in main-file
+        get Ordering to ordr#
+        if ser# ne 0 begin
+          if (Deferred_State(current_object)) begin
+            send Request_Read to ser# GE file# ordr#
+            if [found] begin
+              send display
+              //move (oldCol+top_item(current_object)) to retval  //current item
+              indicate found true
+            end
+          end
+          else begin
+            send Request_Find to ser# GE file# ordr#
+            //[found] move (oldCol+top_item(current_object)) to retval  //current item
+          end
+        end
+        else begin
+          if ordr# lt 0 move 0 to ordr#
+          vfind file# ordr# GE
+          if [found] begin
+            move file# to filenumber
+            move 0 to fieldindex
+            relate Indirect_File.RECNUM
+            send display
+            //move (oldCol+top_item(current_object)) to retval  //current item
+            indicate found true
+          end
+        end
+        [not found] begin
+          move file# to filenumber
+          move 0 to fieldindex
+          clear Indirect_File
+          move rec# to Indirect_File.RECNUM
+          find eq Indirect_File.RECNUM
+        end
+      end
+    end
+    else forward send key keyval
+  end_procedure
+
+  procedure End_Construct_Object
+    send Flag_Items // mark checkbox items
+    forward send End_Construct_Object
+  end_procedure
+
+  Procedure Toggle_Select
+      Local integer selmode
+      Get Select_mode to selmode
+      // change so that autoselect also returns a space. This allows
+      // the space to work w/ incremental searches
+      if (selmode = NO_SELECT or selmode = AUTO_SELECT) Begin
+          // if first character we don't want the toggle behavior
+          // or the space (jumps to the top of the list)
+          If (Search_Mode(Current_Object)<>FIRST_CHARACTER ) ;
+             send key kSpace
+      End
+      else send select_toggling CURRENT TOGGLE_STATE
+  End_Procedure // Toggle_Select
+
+  procedure Flag_Items
+    local integer count maxx obj# Fss
+    move (Prototype_Object(current_object)) to obj#
+    Get Find_Search_state to FSS
+    calc (Item_Count(obj#) - 1) to maxx
+    // get Radio_State to radState
+    for count from 0 to maxx
+      set Entry_State of obj# item count to FSS
+      // if radState ne 0 set Checkbox_Item_State of obj# item count to true
+    loop
+  end_procedure
+
+  //  New procedure to handle radio items properly
+  //
+  Procedure Entry_Display Integer f1 integer f2
+    Local integer BI RS
+    Get Base_Item to BI
+    Get Radio_State to RS
+    // if radio, only do this if we have an item in base_item
+    If RS Move ( Item_Count(Current_Object) > BI ) to RS
+    If RS Set CheckBox_Item_State Item bi to False
+    Forward Send Entry_Display f1 f2
+    If RS Set CheckBox_Item_State Item bi to True
+  End_Procedure
+
+  //  Augment datalist to make sure that the correct item is selected if
+  //  the select mode is auto_select
+  //
+  Procedure New_entry_Set
+     Forward Send New_entry_Set
+     if (select_mode(current_object) = AUTO_SELECT) ;
+        set select_state item current to TRUE
+   End_procedure
+
+  //  Augment activating to do all kinds of goodies
+  //    1. if Auto_locate_state .... locate the object
+  //    2. if Auto_Column_State .... find best column for this object
+  //    3. if selected column has an MSG_Auto_Reorder_List on its iEntry
+  //       make sure we are using that index
+  //    4. if seed_list_state, seed the lookup list
+  //
+  procedure activating returns integer
+    local integer RVal pScope item#
+    local integer FileNum FieldNum i ItemLimit ele
+    
+    Get Focus to pScope // object that invoked us
+    If pScope le DESKTOP Move 0 to pScope
+
+    // attempt to find column to start list at.
+    // 03/31/94 - only respect auto_column_state if a popup type (i.e.,
+    //            if Move_value_out_state is true
+    If (Move_Value_out_State(Current_Object) AND pscope>0 AND ;
+        Auto_Column_State(Current_Object)) Begin
+       get Data_File  of pscope Item CURRENT to FileNum
+       get Data_field of pscope Item CURRENT to FieldNum
+       Get Select_Best_Column FileNum FieldNum to i
+       if i ge 0 Set Initial_Column to i
+    End  
+
+    forward get MSG_activating to rVal  // normal activating
+    If rVal Procedure_Return rVal       // it failed....end it
+    
+    // set invoking object Id
+    Set Invoking_object_id to pScope
+
+    // If auto_locate_state send message to locate this object
+    If (Auto_Locate_State(Current_Object) ) Send Auto_Locate pScope
+    
+    // seed list if required
+    // 03/31/94 - only respect seed_list_state if a popup type (i.e.,
+    //            if Move_value_out_state is true
+    If (Move_Value_out_State(Current_Object) AND Seed_List_State(Current_Object)) ;
+        Send Seed_List
+  End_procedure
+  
+  // Select_Best_Column
+  //    Pass: the file and field of the invoking object's item.
+  //  Return: The best column for this field or -1 if none are good
+  //
+  Function Select_Best_Column Integer FileNum Integer FieldNum Returns Integer
+    Local Integer ele ItemLimit i
+    Move (Item_Limit(current_object)-1) to ItemLimit
+    // use prototype row in case actual list is empty
+    Move (element(current_object)) to ele
+    For i from 0 to itemlimit // check all items in the list
+     // see if we have a file and field match...if so, that's the item
+     If ( FileNum=Data_File(ele,i) AND FieldNum=Data_Field(ele,i) ) ;
+        Function_return i
+    loop
+    Function_return -1
+  End_Function
+
+  // This seeds a selection_list by performing an entry_update from the
+  // invoking object strucuture and then finding the record we need.
+  //
+  // 04/05/94 - add support for seeding of export_item lists
+  procedure Seed_list
+      // Augment procedure to seed the list.  If the Load_Buffer_Msg
+      // property is non-zero, this message will be sent to the calling object,
+      // which will load the buffer.  Otherwise, the value of the current item
+      // in the calling object is used.
+      local integer srvr# ordr# obj# msg# ObjSrvr# Col PObj# File# CO
+      local String Val
+      get invoking_object_id to obj#
+      get main_file to file#
+      if (Obj#=0 or file#=0) procedure_return   // Main_File is mandatory
+      get server to srvr#
+      // 04/30/97 -JJT DSO must be in use before any seeding
+      If srvr# Set in_use_state of srvr# to TRUE
+      get ordering to ordr#
+      get load_buffer_msg to msg# // optional message we can send to invoking obj
+      Move File# to FileNumber
+      move 0 to fieldindex
+      clear indirect_file  // First clear the main_file buffer
+      // Seed file buffer
+      if msg# eq 0 begin   // next load the buffer with seeded data
+         // Default action is to perform an entry update just like a find
+         // key would do. If we have a server allow the server to control this.
+         // If no server talk directly to the object.
+         If (Export_item_state(Current_Object)=0) Begin
+            Get Server of Obj# to ObjSrvr#
+            If ObjSrvr# Send Request_Entry_Update to ObjSrvr# FileNumber 1
+            Else Send Entry_Update to Obj# FileNumber 1
+         End
+         Else Begin // support seeding with exported items
+            Get Export_Column to Col                // The column to export. If -1 we
+            If Col eq -1 Get Initial_Column to Col  // use initial_column value.
+            Get Prototype_object to PObj#
+            Get Data_File  of PObj# Item Col to FileNumber
+            Get Data_Field of PObj# Item Col to FieldIndex
+            If (FileNumber>0 AND File#=FileNumber) Begin
+               Get value of obj# item CURRENT to Val   // Value of item we come from
+               Move Val to Indirect_File.Recnum
+            End
+         End
+      end
+      else Begin
+         Move Current_Object to CO
+         send msg# to obj# CO  // Sent to calling object. pass obj
+      end
+      // if we have a data_set for the list just tell the server to find the
+      // next record (request_read doesn't update anything...that's good).
+      // replaced by find_current_buffer
+      //if srvr# ne 0 Send request_read to srvr# ge filenumber ordr#
+      //else begin // if no server....find the old fashioned way & relate
+      //   vfind filenumber ordr# ge          // find ge <main_file> by <index>
+      //   if status indirect_file relate indirect_file
+      //end
+      // much better finding procedure looks up and down
+      Send Find_Current_Buffer
+  end_procedure
+
+  // Augmented to support auto_server state
+  // Note that this will only work properly with single object selection
+  // lists. Don't try this if you've got child DEO objects within this.
+  // Also, it is critical that this hook-up occurs when it does (before
+  // the object is active - active_state=F).
+  // 06/02/94 - changed to support both activate and Add_focus. Note that
+  //            both add_focus and Activate must be used since active_state
+  //            is set by Activate when the list has no client and is set by
+  //            add_focus when the list is in a client. We should look for a 
+  //            cleaner way to do this.
+  
+  //  called by Activate and add_focus
+  //
+  procedure Latch_Auto_server
+    Local Integer Srvr Obj 
+    If (Active_state(Current_Object)=0 AND ; // should always be false
+       Auto_Server_State(Current_Object)) Begin
+       Get Focus to Obj
+       If Obj gt DESKTOP Begin
+          Get Server of Obj to Srvr
+          Set private.Server to Srvr
+          Send scan_servers
+       End
+    End
+  End_Procedure // Latch_Auto_server
+
+  procedure add_focus integer toObj# returns integer
+    Local Integer rVal
+    Send Latch_auto_Server // needed when slist is in a client
+    forward get MSG_add_focus toObj# to rVal
+    Procedure_return rVal
+  End_Procedure // Add_focus
+  
+  procedure Activate returns integer
+    Local Integer rVal
+    Send Latch_auto_Server // needed when slist has not client
+    forward get MSG_Activate to rVal
+    Procedure_return rVal
+  End_Procedure // Activate
+
+  //  Augmented to support auto_server state
+  //
+  // if auto_server set the server back to 0. At this point server.pkg
+  // has already removed this deo from the interface. Note there is a bug
+  // in server.pkg. If you change the server w/ set server the old
+  // server is not removed because remove_deo_from_Server is called after
+  // the server id is set to 0. (oops). This isn't impacted because the
+  // server has already been removed here.
+  Procedure Deactivating returns Integer
+      Local Integer rval
+      Forward Get MSG_Deactivating to rVal
+      If (rval=0 And Auto_Server_State(Current_Object)) Set Server to 0
+      Procedure_Return rVal
+  End_Procedure // DeActivating
+
+  // New Augmentation. We don't want select_toggling to set item_changed
+  // _state to TRUE if we are using find_Search_state.
+  Procedure Select_toggling integer Itm Integer State
+    Local Integer CS
+    Get Item_Changed_State Item itm to CS
+    Forward Send Select_toggling Itm State
+    If (Find_Search_state(Current_Object)) ;
+       Set Item_Changed_State item itm to CS
+  End_Procedure  
+
+
+  // If the property Find_Search_state is True (which is the default) the
+  // alternate search method is used. If it is false (you must set this), 
+  // the old style incremental search is used.
+  // 
+  // The new style works as follows:  (user presses <enter> )
+  //   Send message Find_Or_OK
+  //   Find_or_Ok checks to see if the item was changed (if it was
+  //      we are doing a lookup, if not we have made a selection).
+  //        If no Changes Send OK
+  //        Else Send Request_Lookup passing current_item
+  //             Request_Lookup sends Request_Find
+  //             
+  // Note that the kEnter is now inconsistant in that it performs two
+  // behaviors (find or OK). While this is inconsistant it is totally
+  // intruitive (user's never notice the inconsistancy ... it does what
+  // they want it to do. 
+  //
+
+  // Procedure Find_or_Ok  - sent by kEnter key.
+  //   If the item is changed we are doing a search (do request_lookup)
+  //   else (no change) we have selected and are returning a value
+  Procedure Find_or_Ok
+    Local Integer rVal
+    // added entry_state check allows mixed searching
+    If (Find_Search_State(Current_Object) AND ;        // if item is changed
+        item_changed_state(Current_Object,Current) AND ;  // do a lookup
+        Entry_State(Current_Object,CURRENT) ) ;
+          send Request_Lookup (Current_Item(Current_Object))
+    else Begin               // item not changed. Do a normal kEnter key
+       Get MSG_OK to rVal    // process by send OK message. Keep track and
+       Procedure_Return rVal // return the return value from OK in case UI
+    end                      // UI needs stopping
+  End_procedure     
+  
+  // Procedure Request_Lookup     (public)
+  //
+  // lookup and redisplay. Standard behavior is to just do a find. This
+  // is very useful for overriding and doing it yourself. The passed Item#
+  // is useful when doing an override.
+  Procedure Request_Lookup Integer Item#
+    send Request_Find GE TRUE
+  End_Procedure
+  
+  // This is pretty much standard request_Find behavior. This acts pretty
+  // the same as pressing F9 in a table. Load buffer with screen values
+  // and find the record by the main_index for the current field. Pretty
+  // much "lifted" from the table class.
+  //
+  procedure Request_Find integer mode integer entUpdtFlag
+    local integer dataFile ser# Dfrd 
+    //**local integer oldCol
+    //**move (current_item(current_object) - base_item(current_object)) ;
+    //**    to oldCol // keep track of current column..make sure we end up there.
+    get Data_File to dataFile
+    if (DataFile<1 OR DataFile<>Main_file(Current_Object)) Procedure_Return
+    get Server to ser#
+    if ser# ne 0 Begin                        // if this uses a data_set
+       Get Deferred_state to Dfrd             // let the data_set do the
+       send Item_Find to ser# mode dataFile ; // w/ the Item_find message
+          (Data_Field(current_object,CURRENT)) entUpdtFlag FALSE  Dfrd
+       [Not found] Procedure_Return
+       if Dfrd send display // if deferred_state we must manually update list  
+    end      
+    else begin                // if no data_set use the built in
+      send entry_find mode    // entry_find behavior.
+      [Not found] Procedure_Return
+      Send Display
+    end
+    //**Set New_Item to (oldCol+top_item(current_object)) // stay in current column
+    Indicate Found TRUE    
+  end_procedure
+  
+  procedure entry_update integer mfile# integer flag
+    local integer item# file# selMode
+    local string astr
+    If (Find_Search_State(Current_Object)) ;
+        Forward Send Entry_Update mFile# Flag
+    Else Begin    
+        // copied directly from Selection_List Class.. Normal entry_update
+        // behavior
+        get target_file to file#
+        get select_mode to selMode
+        if ((SelMode = SINGLE_SELECT OR SelMode = AUTO_SELECT) AND ;
+            Select_Count(current_object) > 0 AND ;
+            (mfile# = 0 OR mfile# = file#)) begin
+          if (Batch_State(current_object)) begin
+            get first_selected_item to item#
+            get value item item# to astr
+            move file# to filenumber
+            if file# gt 0 begin
+              get target_field to fieldindex
+              move astr to Indirect_File.RECNUM
+            end
+          end
+        end
+    end
+  end_procedure
+
+  // This message is required by other deos. Always respond: NO
+  Function Auto_save_state returns integer  // returns: Nope
+  End_Function // Auto_save_state
+
+  //
+  // Manually code entry-find. This corrects a bug in entry_class. This is
+  // only called by serverless searches (request_find).
+  //
+  procedure entry_find integer mode
+    local integer ndx datafile datafield rec dataType
+    get data_file  to datafile
+    if datafile begin
+       get data_field to datafield
+       FIELD_DEF datafile datafield to dataType Ndx //get main index for field
+       If Ndx ge 0 Begin
+          //  'hold' buffer to prepare for entry_update
+          move dataFile to FILENUMBER
+          move 0 to FIELDINDEX
+          move Indirect_File.RECNUM to rec
+          move 0 to Indirect_File.RECNUM    //make buffer inactive but
+          move rec to Indirect_File.RECNUM  //replace record number
+          //
+          send Entry_Update dataFile 1      //entUpdt all DEOs as required
+          Send vFind_Rec datafile ndx mode  //find the record
+       end
+    end
+  end_procedure
+
+end_class
+
+//
+//
+// Support Commands
+//
+
+//
+// slStart <class> <image> { ACTION_BAR <actionbar#> } { POP_UP } { RING }
+//     { VIRTUAL | BATCH } { USING <ServerID> } { MAIN_FILE <FileName> }
+//     { BY <Index> } { FOR <File.Field> } { STATIC } { RADIO }
+//
+#COMMAND slStart R R 
+  FORWARD_BEGIN_CONSTRUCT !1 !2 !3 !4 !5 !6 !7 !8 !9
+  Bind_SelList_PopUp !3 !4 !5 !6 !7 !8 !9
+  Bind_Target !3 !4 !5 !6 !7 !8 !9
+  Bind_Static !3 !4 !5 !6 !7 !8 !9
+  Bind_Radio !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+#COMMAND Bind_SelList_PopUp  //relies on inherited bind_popup to 
+                             //actually set popup state
+  #IF (!0>0)
+    #IFSAME !1 POP_UP POPUP
+      set Deferred_State to true
+      // 03/10/95 JJT - not needed, Handled by set move_value_out_State
+      //set Auto_Fill_State to false
+    #ELSE
+      Bind_SelList_PopUp !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+

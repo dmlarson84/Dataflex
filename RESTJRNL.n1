@@ -1,0 +1,750 @@
+/HEADER      RESIDENT                                // restjrnl.rpt
+                         Worthless Check Receipts Journal        
+Date: __/__/____                                                      Page: __.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/HEADER2     RESIDENT
+                      Worthless Check Receipts Audit Report
+Date: __/__/____                                                      Page: __.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/SUBHEADER1
+ID - Receipt   Received Restitution                 
+  Number         Date     Amount  Type             Name
+
+/BODY
+____.-______. __/__/____ _____.__  _______________ ____________________________
+/SUBTOTAL1   RESIDENT
+
+Total For ___________________
+ Cash,Credit,Cashier's Chks & Money Orders _______.__
+                           Journal Entries _______.__   No. of Receipts ______.
+-------------------------------------------------------------------------------
+
+/TOTAL       RESIDENT
+
+TOTAL  
+ Cash,Credit,Cashier's Chks & Money Orders _______.__
+                           Journal Entries _______.__   No. of Receipts ______.
+/TOTAL2     RESIDENT
+-------------------------------------------------------------------------------
+ Cash,Credit,Cashier's Chks & Money Orders _______.__   No. of Receipts _____.
+     Total Adding Machine Tape............  ______.__
+                                            ----------
+           Out of Balance by..............{ ______.__ }
+/SELECTION
+
+                        Worthless Check Receipts Journal
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ  Last Deposit Date ..{ __/__/____     Last Receipt Number...{ ______.      บ
+บ              Bank Code...{ __ _____________________________                บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ1/4
+ 
+Will this report be used to check receipts against Deposits (Y/N)..{ _
+
+Select receipts by Received Date greater than or equal to __/__/____
+
+Select receipts by Received Date less than or equal to __/__/____   (Return for
+                                                                     today)
+
+
+Enter H to use handfed paper _
+
+
+<ESC> To Quit
+
+/HOW        RESIDENT
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   Please Enter your adding machine tape total for your receipts you wish    บ
+บ   to deposit.                                                               บ
+บ                                                                             บ
+บ                Total  ...............{ ______.__                            บ
+บ                                                                             บ
+บ           Do You Wish To Print A Deposit Listing of Receipts.(Y/N)..{ _     บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ1/4
+/DEP        RESIDENT
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   Your Deposit balances with receipts entered, Your Options Are:            บ
+บ       D = Move Receipts To Bank Deposit File and Update Receipts to         บ
+บ           deposited status.                                                 บ
+บ       R = Rerun Report From The Beginning                                   บ
+บ       Q = Quit To Main Menus                                                บ
+ฬอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออน
+บ   Please Enter Your Option:  D)eposit,  R)erun,  Q)uit..........{ _         บ
+บ                                                                             บ
+บ   ______________________________  __/__/____                                  บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ1/4
+
+/DEP2       RESIDENT          ran deposit routine without printing receipts
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   Your Deposit of ________.__ does not balance with receipts of ________.__ บ
+บ       The recommended procedure is to rerun report from the beginning and   บ
+บ       select "Y" to print a list of receipts since last deposit.            บ
+บ       R = Rerun Report From The Beginning                                   บ
+บ       Q = Quit To Main Menus                                                บ
+ฬอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออน
+บ   Please Enter Your Option:   R)erun,  Q)uit..........{ _                   บ
+บ                                                                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ1/4
+/DEP3       RESIDENT          ran deposit routine and printed receipts
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   Your Deposit of ________.__ does not balance with receipts of ________.__ บ
+บ       Please check your bank deposit slip against the receipt list and      บ
+บ       make any corrections necessary, Run the Check Deposit routine again.  บ
+บ   Your Options Are:                                                         บ
+บ       R = Rerun Report From The Beginning                                   บ
+บ       Q = Quit To Main Menus                                                บ
+ฬอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออน
+บ   Please Enter Your Option:   R)erun,  Q)uit..........{ _                   บ
+บ                                                                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ1/4
+/RUNN       RESIDENT
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ    Please Standby :                                   บ
+บ                                                       บ
+บ       Now Printing/Updating Receipt : ____.-______.   บ
+บ                                                       บ
+บ                                                       บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออ1/4
+
+/NON        RESIDENT
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ    All receipts have been updated to deposits         บ
+บ                                                       บ
+บ              Press any key to continue                บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออ1/4
+/STANDBY1
+==============================================================================
+
+
+
+
+
+
+               Please Standby - Checking Receipts
+
+
+/info
+
+        change made on 10/11/1999 by Jeff March
+                added direct_output to lpt1:
+
+        Change made on 11/08/1999 by Jeff March
+                Changed SAVERECORD LEDGER to SAVE LEDGER.
+
+Recompiled 01-19-2000 by Jeff March
+        Recognize new backspace command in calcdate.inc
+          
+/*
+
+Use y2k.pkg
+Read_dfini "df23ini.cfg"
+//----------------- Cannot Run Program From Command Line (DOS)
+//IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+
+#include calcdate.inc
+#include macs.frm
+
+
+
+NUMBER JOURNAL NORMAL JOURNAL_TOTAL NORMAL_TOTAL TAPE
+NUMBER DEP_TOTAL
+INTEGER COUNT MONTH_NUM LASTRCPT ADAY AMONTH AYEAR
+STRING MONTH 20 ANSW 1
+DATE TODAY DEP_DATE
+INDICATOR CHECK_DEP NEWDEP DO_DEP INSEL INDEP INHOW INBAL PRT
+INDICATOR FIRST_TIME ADD_DEP NONE UPDAT
+
+DATE_MACRO_INIT
+
+SYSDATE4 TODAY
+
+MOVE 0 TO PAGEFEED
+
+
+PAGE SET HOW AT 16 0
+PAGE SET RUNN AT 8 12
+PAGE SET NON AT 8 12
+PAGE SET DEP AT 6 0 
+PAGE SET DEP2 AT 6 0 
+PAGE SET DEP3 AT 6 0 
+
+
+OPEN DEFENDNT
+OPEN RESTITUT INDEX.3
+OPEN BANK 
+OPEN DEPOSITS
+OPEN CRECPT
+OPEN CRDIST
+OPEN LEDGER
+OPEN RECON2
+OPEN JOURNALS
+OPEN REF
+OPEN JRLIST
+
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.USER_NUMB
+FIND EQ USERX BY INDEX.1 
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+CLEAR BANK
+MOVE 'HC' TO BANK.CODE
+  FIND EQ BANK BY INDEX.1
+
+START:
+INDICATE NEWDEP FALSE
+INDICATE DO_DEP FALSE
+INDICATE CHECK_DEP FALSE
+INDICATE INSEL TRUE
+INDICATE INDEP FALSE
+INDICATE INHOW FALSE
+
+MOVE (0) TO LASTRCPT
+
+Direct_Output "LPT1:" 
+
+  PAGE SELECTION
+  DISPLAY BANK.LAST_DEP_DATE TO SELECTION.1
+  DISPLAY BANK.LAST_RCPT TO SELECTION.2
+  DISPLAY BANK.CODE TO SELECTION.3
+  DISPLAY BANK.NAME TO SELECTION.4
+
+  FORMAT SELECTION.5            {REQUIRED,CAPSLOCK}
+  FORMAT DEP.1                  {CAPSLOCK}
+  FORMAT DEP2.3                 {CAPSLOCK}
+  FORMAT DEP3.3                 {CAPSLOCK}
+
+START2:
+  DISPLAY 'N' TO SELECTION.5
+REPEAT
+  ACCEPT SELECTION.5
+   IF ~ SELECTION.5 IN 'YN' LOOP
+   IF SELECTION.5 EQ 'Y' DISPLAY BANK.LAST_DEP_DATE TO SELECTION.6
+   INDICATE CHECK_DEP AS SELECTION.5 EQ 'Y'
+   INDICATE ADD_DEP AS SELECTION.5 EQ 'Y'
+  ACCEPT SELECTION.6
+  ACCEPT SELECTION.7
+  IF SELECTION.7 EQ '' MOVE TODAY TO SELECTION.7
+  INDICATE INSEL TRUE
+  INDICATE INDEP FALSE
+  INDICATE INHOW FALSE
+ 
+   INDICATE NOT CHECK_DEP AS SELECTION.5 EQ 'N'
+   INDICATE PRT AS SELECTION.5 EQ 'N' 
+   INDICATE CHECK_DEP AS SELECTION.5 EQ 'Y'
+     INDICATE INHOW TRUE
+   [CHECK_DEP] BEGIN
+    ACCEPT HOW.1
+    DISPLAY 'N' TO HOW.2
+    ACCEPT HOW.2
+    UPPERCASE HOW.2
+    INDICATE PRT AS HOW.2 EQ 'Y'
+    IF HOW.1 GT (0) MOVE HOW.1 TO TAPE
+     INDICATE INHOW FALSE
+   END
+  [PRT] ACCEPT SELECTION.8
+  [PRT] IF SELECTION.8 IN 'hH' MOVE -1 TO PAGEFEED
+
+START_MID:
+PAGE STANDBY1
+MOVE SELECTION.6 TO RESTITUT.RECDT
+REPORT RESTITUT BY INDEX.3 BREAK RESTITUT.MONTH
+[~ CHECK_DEP] BEGIN
+             INDICATE SELECT AS RESTITUT.RECDT GE SELECTION.6
+[SELECT]     INDICATE SELECT AS RESTITUT.RECDT LE SELECTION.7
+END
+[CHECK_DEP] BEGIN
+             INDICATE SELECT AS RESTITUT.RECDT GE SELECTION.6
+  [SELECT]   INDICATE SELECT AS RESTITUT.RECDT LE SELECTION.7
+  [SELECT]   INDICATE SELECT AS RESTITUT.UPDATE NE 'X'          
+//             INDICATE NONE AS [~ SELECT]
+END
+
+SECTION HEADER
+        [PRT][~ CHECK_DEP] BEGIN
+        PRINT TODAY
+        PRINT PAGECOUNT
+        OUTPUT HEADER
+        END
+        [PRT][CHECK_DEP] BEGIN
+           PRINT TODAY TO HEADER2.1
+           PRINT PAGECOUNT TO HEADER2.2
+           OUTPUT HEADER2
+        END
+SECTION SUBHEADER1
+        MOVE RESTITUT.MONTH TO MONTH_NUM
+        [PRT] OUTPUT SUBHEADER1
+        MOVE 0 TO COUNT
+SECTION BODY
+        PAGE RUNN
+      
+        MOVE DEFENDNT.IDNO TO RUNN.1
+        MOVE RESTITUT.SEQNO TO RUNN.2
+        BLANKFORM BODY
+        PRINT DEFENDNT.IDNO
+        PRINT RESTITUT.SEQNO 
+        [CHECK_DEP] MOVE RESTITUT.SEQNO TO LASTRCPT
+        PRINT RESTITUT.RECDT 
+        PRINT RESTITUT.RESAMT 
+        IF RESTITUT.TYPE EQ "M" PRINT "Money Order    " TO BODY.5
+        IF RESTITUT.TYPE EQ "R" PRINT "Cashier's Check" TO BODY.5
+        IF RESTITUT.TYPE EQ "C" PRINT "Cash           " TO BODY.5
+        IF RESTITUT.TYPE EQ "X" PRINT "Credit Card    " TO BODY.5
+        IF RESTITUT.TYPE EQ "J" BEGIN
+           PRINT "Journal Entry  " TO BODY.5
+           CALC (RESTITUT.RESAMT + JOURNAL) TO JOURNAL
+        END
+        ELSE CALC (RESTITUT.RESAMT + NORMAL) TO NORMAL
+        PRINT DEFENDNT.NAME TO BODY.6
+        
+        
+        [DO_DEP] GOSUB CREATE_DEPOSIT
+       [DO_DEP] BEGIN
+            reread restitut
+            
+            MOVE DEP_DATE TO RESTITUT.DEP_DATE
+            MOVE 'X' TO RESTITUT.UPDATE
+            SAVERECORD RESTITUT
+            unlock
+         END
+        [PRT] OUTPUT BODY
+        INCREMENT COUNT
+SECTION SUBTOTAL1
+        CALC (JOURNAL + JOURNAL_TOTAL) TO JOURNAL_TOTAL
+        CALC (NORMAL + NORMAL_TOTAL) TO NORMAL_TOTAL
+        GOSUB GET_MONTH
+        PRINT MONTH
+        PRINT NORMAL
+        PRINT JOURNAL
+        PRINT COUNT
+        [PRT][~ CHECK_DEP] OUTPUT SUBTOTAL1
+        MOVE 0 TO JOURNAL
+        MOVE 0 TO NORMAL
+SECTION TOTAL
+        [~ CHECK_DEP] BEGIN
+        PRINT NORMAL_TOTAL
+        PRINT JOURNAL_TOTAL
+        PRINT RECCOUNT 
+        [PRT] OUTPUT TOTAL
+        END
+        [CHECK_DEP] BEGIN
+        PRINT NORMAL_TOTAL TO TOTAL2.1
+        PRINT RECCOUNT TO TOTAL2.2
+        PRINT TAPE TO TOTAL2.3
+        CALC (NORMAL_TOTAL - TAPE ) TO TOTAL2.4
+        [ADD_DEP] MOVE NORMAL_TOTAL TO DEP_TOTAL
+        INDICATE INBAL AS TOTAL2.4 EQ (0)
+        [UPDAT] BEGIN
+            Reread Bank
+            MOVE LASTRCPT TO BANK.LAST_RCPT
+            SAVERECORD BANK
+            Unlock
+         END
+        [PRT] OUTPUT TOTAL2
+        END
+    RETURN
+    RPT.KEYPRESS:
+       [UPDAT] BEGIN
+        SHOWLN
+        SHOWLN 'Update cannot be interrupted'
+        SHOWLN
+        RETURN RPT.LOOP
+       END
+    RETURN
+REPORTEND
+
+//[PRT][MULTIUSER] DESPOOL
+[PRT] FORMFEED
+
+[UPDAT] GOTO END_CLEAR
+
+[NONE] BEGIN
+  PAGE NON
+  INKEY ANSW
+  GOTO END_CLEAR
+END  
+
+NO_RECS:
+INDICATE INSEL FALSE
+INDICATE INDEP TRUE
+  BLANKFORM DEP
+  BLANKFORM DEP2
+  BLANKFORM DEP3
+[CHECK_DEP][INBAL] BEGIN
+  PAGE DEP
+     REPEAT 
+       ACCEPT DEP.1
+     IF ~ DEP.1 IN 'DRQ' LOOP
+     IF DEP.1 EQ 'D' BEGIN
+         DISPLAY 'Please Enter Date of Deposit' to dep.2
+         DISPLAY TODAY TO DEP.3
+         REPEAT
+         ACCEPT DEP.3
+          IF DEP.3 EQ '' LOOP
+          MOVE DEP.3 TO DEP_DATE
+        END
+
+       IF DEP.1 EQ 'R' BEGIN
+          CLEAR RESTITUT
+          CLEAR DEFENDNT
+          CLEARFORM SELECTION
+          CLEARFORM DEP
+          CLEARFORM HOW
+          CLEARFORM RUNN
+          GOSUB RESET_NUMBERS
+          MOVE 1 TO PAGECOUNT
+          INDICATE CHECK_DEP FALSE
+          INDICATE DO_DEP FALSE
+          GOTO START
+       END
+       IF DEP.1 EQ 'D' BEGIN
+            INDICATE UPDAT TRUE
+            GOSUB UPDATE_DEPOSIT
+       END
+   END
+
+[CHECK_DEP][~ INBAL][PRT] BEGIN
+     PAGE DEP3
+     MOVE TAPE TO DEP3.1
+     MOVE NORMAL_TOTAL TO DEP3.2
+       REPEAT
+         ACCEPT DEP3.3
+          IF ~ DEP3.3 IN 'RQ' LOOP
+
+       IF DEP3.3 EQ 'R' BEGIN
+          CLEAR RESTITUT
+          CLEAR DEFENDNT
+          CLEARFORM SELECTION
+          CLEARFORM DEP
+          CLEARFORM HOW
+          CLEARFORM RUNN
+          GOSUB RESET_NUMBERS
+          MOVE 1 TO PAGECOUNT
+          INDICATE CHECK_DEP FALSE
+          INDICATE DO_DEP FALSE
+          GOTO START
+       END
+    END
+
+[CHECK_DEP][~ INBAL][~ PRT] BEGIN
+     PAGE DEP2
+     MOVE TAPE TO DEP2.1
+     MOVE NORMAL_TOTAL TO DEP2.2
+       REPEAT
+         ACCEPT DEP2.3
+          IF ~ DEP2.3 IN 'RQ' LOOP
+
+       IF DEP2.3 EQ 'R' BEGIN
+          CLEAR RESTITUT
+          CLEAR DEFENDNT
+          CLEARFORM SELECTION
+          CLEARFORM DEP
+          CLEARFORM HOW
+          CLEARFORM RUNN
+          GOSUB RESET_NUMBERS
+          MOVE 1 TO PAGECOUNT
+          INDICATE CHECK_DEP FALSE
+          INDICATE DO_DEP FALSE
+          GOTO START
+       END
+    END      
+
+END_CLEAR:
+
+CLEAR RESTITUT
+CLEAR DEFENDNT
+CLEAR BANK
+CLEAR DEPOSITS
+CLEAR CRECPT
+CLEAR CRDIST
+CLEARFORM SELECTION
+CLEARFORM DEP
+CLEARFORM DEP2
+CLEARFORM DEP3
+CLEARFORM HOW
+CLEARFORM RUNN
+
+
+ABORT
+
+GET_MONTH:
+       IF MONTH_NUM EQ 1 MOVE 'January' TO MONTH
+       ELSE IF MONTH_NUM EQ 2 MOVE 'February' TO MONTH
+       ELSE IF MONTH_NUM EQ 3 MOVE 'March' TO MONTH
+       ELSE IF MONTH_NUM EQ 4 MOVE 'April' TO MONTH
+       ELSE IF MONTH_NUM EQ 5 MOVE 'May' TO MONTH
+       ELSE IF MONTH_NUM EQ 6 MOVE 'June' TO MONTH
+       ELSE IF MONTH_NUM EQ 7 MOVE 'July' TO MONTH
+       ELSE IF MONTH_NUM EQ 8 MOVE 'August' TO MONTH
+       ELSE IF MONTH_NUM EQ 9 MOVE 'September' TO MONTH
+       ELSE IF MONTH_NUM EQ 10 MOVE 'October' TO MONTH
+       ELSE IF MONTH_NUM EQ 11 MOVE 'November' TO MONTH
+       ELSE IF MONTH_NUM EQ 12 MOVE 'December' TO MONTH
+       RETURN            
+
+
+UPDATE_DEPOSIT:
+          CLEARXY 24 0
+          GOTOXY 24 0
+          SHOW 'UPDATE DEPOSIT'
+          INKEY ANSW
+
+     INDICATE INDEP FALSE
+     CLEAR DEPOSITS
+     MOVE BANK.CODE TO DEPOSITS.BANK_CODE
+     MOVE DEP_DATE TO DEPOSITS.DATE
+       FIND EQ DEPOSITS BY INDEX.1
+       [FOUND] BEGIN
+          CLEARXY 24 0
+          GOTOXY 24 0
+          SHOW 'Already have a deposit on  'DEP_DATE
+          INKEY ANSW
+          RETURN NO_RECS
+        END
+       [FINDERR] INDICATE NEWDEP TRUE
+       [NEWDEP] BEGIN
+         MOVE BANK.CODE TO DEPOSITS.BANK_CODE
+         MOVE DEP_DATE TO DEPOSITS.DATE
+         MOVE (0) TO DEPOSITS.LAST_SEQ   
+         MOVE 'X' TO DEPOSITS.UPDATE
+         MOVE 'HD' TO DEPOSITS.JR
+          GOSUB CREATE_RECON2
+         SAVE DEPOSITS
+       END
+      INDICATE DO_DEP TRUE
+      GOSUB RESET_NUMBERS
+      CLEAR RESTITUT
+      MOVE 0 TO PAGECOUNT
+      RETURN START_MID
+RETURN
+
+CREATE_DEPOSIT:
+          CLEARXY 24 0
+          GOTOXY 24 0
+          SHOW 'CREATE DEPOSIT'
+          INKEY ANSW
+    IF STATUS BANK IF STATUS DEPOSITS BEGIN
+	CLEAR CRECPT
+       CLEAR CRDIST
+       MOVE BANK.CODE TO CRECPT.BANK_CODE
+       MOVE 'HD' TO CRECPT.JR
+       MOVE RESTITUT.RECDT TO CRECPT.DATE
+       MOVE (DEPOSITS.LAST_SEQ + 1) TO CRECPT.SEQ_NUMBER
+       MOVE DEFENDNT.IDNO TO CRECPT.CUST_ID
+       MOVE DEFENDNT.NAME TO CRECPT.CUST_NAME
+       IF RESTITUT.TYPE EQ 'M' MOVE 'M' TO CRECPT.TYPE
+       IF RESTITUT.TYPE EQ 'R' MOVE 'R' TO CRECPT.TYPE
+       IF RESTITUT.TYPE EQ 'C' MOVE 'C' TO CRECPT.TYPE
+       IF RESTITUT.TYPE EQ 'X' MOVE 'X' TO CRECPT.TYPE
+       MOVE RESTITUT.SEQNO TO CRECPT.CHECK_NUM
+       MOVE RESTITUT.RESAMT TO CRECPT.AMOUNT
+       MOVE (0) TO CRECPT.LAST_SEQ
+       MOVE 'X' TO CRECPT.UPDATE
+          CLEARXY 24 0
+          GOTOXY 24 0
+          SHOW 'Save CRECPT'
+          INKEY ANSW       
+       SAVE CRECPT
+          CLEARXY 24 0
+          GOTOXY 24 0
+          SHOW 'Saved CRECPT'
+          INKEY ANSW   
+       MOVE BANK.CODE TO CRDIST.BANK_CODE
+          CLEARXY 24 0
+          GOTOXY 24 0
+          SHOW 'Saved CRECPT 1'
+          INKEY ANSW       
+       MOVE 'HD' TO CRDIST.JR
+       MOVE RESTITUT.RECDT TO CRDIST.DATE
+       MOVE CRECPT.SEQ_NUMBER TO CRDIST.SEQ_NUMBER
+       
+       MOVE (1) TO CRDIST.CONTROL
+       MOVE REF.DEPOSITS TO CRDIST.GL_ACCOUNT
+       MOVE REF.DISTRICT TO CRDIST.GL_DIST
+       MOVE '20' TO CRDIST.GL_DIV
+       MOVE RESTITUT.RESAMT TO CRDIST.GL_AMOUNT
+
+       
+       MOVE 'X' TO CRDIST.UPDATE
+          CLEARXY 24 0
+          GOTOXY 24 0
+          SHOW 'SAVE CRDIST'
+          INKEY ANSW
+		  SAVE CRDIST
+       reread deposits
+           CLEARXY 24 0
+          GOTOXY 24 0
+          SHOW 'SAVEd CRDIST'
+          INKEY ANSW
+
+       MOVE ( DEPOSITS.AMOUNT + RESTITUT.RESAMT ) TO DEPOSITS.AMOUNT
+       MOVE ( DEPOSITS.LAST_SEQ + 1 ) TO DEPOSITS.LAST_SEQ
+          CLEARXY 24 0
+          GOTOXY 24 0
+          SHOW 'SAVE Deposits'
+          INKEY ANSW
+
+       SAVERECORD DEPOSITS
+          CLEARXY 24 0
+          GOTOXY 24 0
+          SHOW 'SAVEd Deposits'
+          INKEY ANSW
+       unlock
+     UNLOCK
+    END
+
+
+          IF RESTITUT.TYPE NE 'J' BEGIN
+               MOVE CRDIST.GL_ACCOUNT TO LEDGER.NUMBER
+               MOVE CRDIST.GL_DIST TO LEDGER.DISTRICT
+               MOVE CRDIST.GL_DIV TO LEDGER.DIVISION
+                 FIND EQ LEDGER BY INDEX.1
+                  [FOUND] BEGIN
+                    MOVE 'HD' TO JOURNALS.JR
+                    MOVE AYEAR TO JOURNALS.YR
+                    MOVE AMONTH TO JOURNALS.MN
+                    MOVE ADAY TO JOURNALS.DY
+                    MOVE LEDGER.NUMBER TO JOURNALS.GL
+                    MOVE LEDGER.DISTRICT TO JOURNALS.BR
+                    MOVE LEDGER.DIVISION TO JOURNALS.DP
+                    MOVE CRECPT.CUST_NAME TO JOURNALS.DESC
+                    
+
+                    MOVE (RESTITUT.RESAMT * (-1)) TO JOURNALS.AMOUNT
+                      MOVE (REF.REF_NUM + 1 ) TO JOURNALS.CHK
+                      reread ref
+                      MOVE JOURNALS.CHK TO REF.REF_NUM
+                      SAVERECORD REF
+                      Unlock
+                    MOVE RESTITUT.IDNO TO JOURNALS.EMPLY
+                    MOVE RESTITUT.SEQNO TO JOURNALS.JOB
+                    MOVE USERX.USER_NUMB TO JOURNALS.OPERATOR
+                    MOVE (JOURNALS.MN - 1 ) TO FIELDINDEX
+                    Reread Ledger
+                    MOVE (LEDGER.TYJAN& + JOURNALS.AMOUNT ) TO LEDGER.TYJAN&
+                    MOVE (LEDGER.TYTOTAL + JOURNALS.AMOUNT ) TO LEDGER.TYTOTAL
+                    SAVE LEDGER
+                    SAVERECORD JOURNALS        
+                    UNLOCK
+                    CLEAR LEDGER JOURNALS CRDIST
+                 END
+            END
+
+RETURN
+
+CREATE_RECON2:
+
+     CLEAR RECON2
+     CLEAR JOURNALS
+     CLEAR LEDGER
+     CLEAR JRLIST
+        MOVE BANK.GL_ACCOUNT TO LEDGER.NUMBER
+
+        MOVE BANK.GL_DIST TO LEDGER.DISTRICT
+        MOVE BANK.GL_DIV TO LEDGER.DIVISION
+          FIND EQ LEDGER BY INDEX.1
+        MOVE DEPOSITS.BANK_CODE TO RECON2.BANK_CODE
+        MOVE DEPOSITS.DATE TO RECON2.TRANS_DATE
+        MOVE 0 TO RECON2.SEQ_NUMBER
+        MOVE DEP_TOTAL TO RECON2.AMOUNT
+        MOVE 'N' TO RECON2.STATUS
+        MOVE 'D' TO RECON2.POSTING_TYPE
+          MOVE DEPOSITS.JR TO JRLIST.CODE
+          FIND EQ JRLIST BY INDEX.1
+        MOVE JRLIST.DESC TO RECON2.REFERENCE
+          CLEAR JRLIST
+        MOVE 'Bank Deposit' TO RECON2.COMMENT
+        Save recon2
+        reread bank
+        MOVE (BANK.CURRENT_BAL + DEP_TOTAL) TO BANK.CURRENT_BAL
+
+
+
+        MOVE DEPOSITS.DATE TO BANK.LAST_DEP_DATE
+
+        Saverecord bank
+        unlock
+
+        DECOMPOSE_DATE DEPOSITS.DATE TO ADAY AMONTH AYEAR
+
+        MOVE 'HD' TO JOURNALS.JR
+        MOVE AYEAR TO JOURNALS.YR
+        MOVE AMONTH TO JOURNALS.MN
+        MOVE ADAY TO JOURNALS.DY
+        MOVE LEDGER.NUMBER TO JOURNALS.GL
+        MOVE LEDGER.DISTRICT TO JOURNALS.BR
+        MOVE LEDGER.DIVISION TO JOURNALS.DP
+        
+        
+         MOVE 'Restitution Deposit' TO JOURNALS.DESC
+         MOVE DEP_TOTAL TO JOURNALS.AMOUNT
+           MOVE (REF.REF_NUM + 1 ) TO JOURNALS.CHK
+           reread ref
+           MOVE JOURNALS.CHK TO REF.REF_NUM
+           SAVERECORD REF
+        reread Ledger
+        MOVE USERX.USER_NUMB TO JOURNALS.OPERATOR
+        MOVE (JOURNALS.MN - 1) TO FIELDINDEX
+        MOVE (LEDGER.TYJAN& + JOURNALS.AMOUNT) TO LEDGER.TYJAN&
+        MOVE (LEDGER.TYTOTAL + JOURNALS.AMOUNT) TO LEDGER.TYTOTAL
+        SAVE LEDGER
+        SAVERECORD JOURNALS
+        unlock
+   CLEAR LEDGER
+   CLEAR CRDIST
+   CLEAR JOURNALS
+   INDICATE ADD_DEP FALSE
+   INDICATE FIRST_TIME FALSE
+RETURN
+
+RESET_NUMBERS:
+    MOVE (0.00) TO JOURNAL
+    MOVE (0.00) TO NORMAL
+    MOVE (0.00) TO NORMAL_TOTAL
+RETURN
+
+
+
+KEYPROC KEY.ESCAPE
+     [INSEL][~ INHOW] BEGIN
+       CLEARXY 24 0
+       GOTOXY 24 0
+       SHOW 'Are You Sure You Want To Quit??'
+       GOTOXY 24 32
+     REPEAT
+       INKEY ANSW
+       UPPERCASE ANSW
+       IF ~ ANSW IN 'YN' LOOP
+       CLEARXY 24 0
+       IF ANSW EQ 'Y' RETURN NO_RECS
+       IF ANSW EQ 'N' RETURN START
+   END
+
+//   [INSEL][INHOW] RETURN START2
+
+
+ENTAGAIN
+RETURN
+     
+KEYPROC KEY.FIELD
+    BACKFIELD
+RETURN
+
+KEYPROC KEY.DELETE
+    ENTAGAIN
+RETURN
+
+KEYPROC KEY.CLEAR
+    [INSEL][~ INHOW] BEGIN
+        CLEARFORM SELECTION.5 THRU SELECTION.8
+        RETURN START2
+    END
+ENTAGAIN
+RETURN

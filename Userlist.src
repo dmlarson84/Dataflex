@@ -1,0 +1,70 @@
+/HEADER
+              ________________________________________   
+              User Names, Passwords, and Access Rights
+ 
+USER NUMBER USER NAME            USER PASS   ACCESS LEVEL   
+ 
+/BODY
+        __. ____________________ __________       _.              
+/FORM1
+User List                              ________________________________________
+===============================================================================
+/*
+
+INTEGER USER_NUMB 
+INTEGER FROM_MENU
+
+OPEN SYSTEM
+
+STRING REGI_TEMP$  
+STRING REGI_NAME$  
+STRING RJ$1  
+STRING RJ$2  
+STRING REGI$TER
+NUMBER S$ERL_NUMB  
+INTEGER REGI_LNTH
+INTEGER ACCS_LVL
+
+REGISTRATION REGI_NAME$ S$ERL_NUMB
+TRIM REGI_NAME$ TO REGI_NAME$
+MOVE '' TO REGI_TEMP$
+MOVE '                              ' TO REGI_TEMP$
+APPEND REGI_TEMP$ REGI_NAME$
+RIGHT REGI_TEMP$ TO FORM1.1 40
+
+PAGE FORM1
+
+OPEN USER
+
+CLEAR USER
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USER BY RECNUM
+MOVE USERX.ACCS_LEVL TO ACCS_LVL 
+CLEAR USER
+
+REPORT USER BY RECNUM
+
+   INDICATE SELECT AS USERX.ACCS_LEVL GT 0
+[SELECT] INDICATE SELECT AS USERX.ACCS_LEVL LT ACCS_LVL
+[NOT SELECT] INDICATE SELECT AS ACCS_LVL EQ 99
+[NOT SELECT] INDICATE SELECT AS USERX.RECNUM EQ USER_NUMB
+
+SECTION HEADER
+
+   LENGTH REGI_NAME$ TO REGI_LNTH
+   RIGHT REGI_TEMP$ TO HEADER.1 (REGI_LNTH + (20 - (REGI_LNTH / 2)))
+   OUTPUT HEADER
+
+SECTION BODY
+
+   PRINT USERX.RECNUM
+   PRINT USERX.USER_NAME
+   PRINT USERX.PASSWORD
+   PRINT USERX.ACCS_LEVL
+   OUTPUT BODY
+
+REPORTEND
+FORMFEED
+DESPOOL
+ABORT
+

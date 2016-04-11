@@ -1,0 +1,35 @@
+-----------------------------------------------------------------------------
+  DATE: 01/28/111      TIME: 15:43                                  PAGE:  1
+  FILE DEFINITION FOR FILE: RECON2PG (# 24)
+-----------------------------------------------------------------------------
+  DRIVER NAME               : DATAFLEX
+  FILE ROOT NAME            : RECON2PG
+  USER DISPLAY NAME         : RECON2PG
+  DATAFLEX FILE NAME        : RECON2PG
+-----------------------------------------------------------------------------
+  RECORD LENGTH             : 102       ( USED: 100 )
+  MAX NUMBER OF RECORDS     : 1000000   ( USED: 4 )
+  FILE COMPRESSION          : NONE
+  RE-USE DELETED SPACE      : NO 
+  LOCKING TYPE              : FILE
+  HEADER INTEGRITY CHECKING : YES
+  TRANSACTION TYPE          : CLIENT ATOMIC
+  RECORD IDENTITY INDEX     : 0 ( 0 , 0 )
+  FILE LOGIN PARAMETER      : 
+  SYSTEM FILE               : NO 
+-----------------------------------------------------------------------------
+
+NUM  FIELD NAME       TYPE SIZE  OFFST IX   RELATES TO FILE.FIELD
+---  ---------------  ---- ----- ----- --   ---------------------------------
+  1  BANK_CODE        ASC      2     1      
+  2  TRANS_DATE       DAT      3     3      
+  3  SEQ_NUMBER       NUM    6.0     6      
+  4  AMOUNT           NUM    6.2     9      
+  5  STATUS           ASC      1    13      
+  6  POSTING_TYPE     ASC      1    14      
+  7  REFERENCE        ASC     15    15      
+  8  COMMENT          ASC     30    30      
+  9  BNK_TRN_SEQ      ASC      8    60      
+ 10  TYPE             ASC      1    68      
+ 11  PG_TIMESTAMP     TEX     32    69      
+

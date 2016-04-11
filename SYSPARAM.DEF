@@ -1,0 +1,21 @@
+        FILE DEFINITION LISTING FOR FILE #22
+*************************************************** 
+        FILE ROOT NAME     = SYSPARAM
+        USER DISPLAY NAME  = VRS System Maintenance
+        DATAFLEX FILE NAME = SYSPARAM
+*************************************************** 
+        RECORD LENGTH = 32  (USED = 32)
+        MAX NUMBER OF RECORDS = 1  (USED = 1)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1      20   ASCII          0     0     0     PROSECUTOR_ID
+   2      21       3   NUMERIC   0    0     0     0     NEXT_RECEIPT
+   3      24       3   NUMERIC   0    0     0     0     NEXT_CHECK
+   4      27       3   NUMERIC   0    0     0     0     NEXT_DEFENDANT
+   5      30       3   NUMERIC   0    0     0     0     NEXT_VICTIM
+ 
+

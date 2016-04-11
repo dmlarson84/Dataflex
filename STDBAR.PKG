@@ -1,0 +1,20 @@
+// STDBAR.PKG
+// January 31, 1991
+// LS
+//
+// package for creating global entry_action_bar object for entry object actions
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use UI
+
+/Standard_Action_Bar
+   ______  ________  ____                                                       
+/*
+
+use Entactbr
+
+object Standard_Action_Bar is an ENTRY_ACTION_BAR
+    set Location to 1 0 Relative
+end_object
+
