@@ -1,0 +1,26 @@
+----------------------------------------------------------------------------- 
+  DATE: 01/20/92      TIME: 01:30                                  PAGE:  1
+  FILE DEFINITION FOR FILE: SBJ (# 252)
+-----------------------------------------------------------------------------
+  FILE ROOT NAME          : HELPSBJ
+  USER DISPLAY NAME       : SUBJECT
+  DATAFLEX FILE NAME      : SBJ
+-----------------------------------------------------------------------------
+  RECORD LENGTH           : 4096      ( USED: 4081 )
+  MAX NUMBER OF RECORDS   : 10000     ( USED: 0 )
+  FILE COMPRESSION        : Custom
+  RE-USE DELETED SPACE    : Yes
+  MULTI-USER REREAD       : Yes
+-----------------------------------------------------------------------------
+
+NUM  FIELD NAME       TYPE SIZE  OFFST IX   RELATES TO FILE.FIELD
+---  ---------------  ---- ----- ----- --   ---------------------------------
+  1  SBJ_NAME         ASC     33     1  1   
+  2  SBJ_TEXT         TEX   4048    34      
+
+
+INDEX# FIELDS          DES U/C    LENGTH LEVELS SEGMENTS MODE
+------ --------------- --- ---    ------ ------ -------- -------
+  1    SBJ_NAME        No  No       36     4       2     Online
+       RECNUM          No  No 
+

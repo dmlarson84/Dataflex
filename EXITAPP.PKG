@@ -1,0 +1,80 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Exitapp.Pkg
+// Version: 1.0
+//  04-01-1993 : Created
+//
+// Author: John J. Tuohy
+//
+// 10-11-1993 : make confirmation message confirm
+// ver 1.1
+//04/02/94      Make data set classes not check should_save
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+//************************************************************************
+
+//
+//  Replacement exit_application
+//
+// We want to be warned if changes exists as we try to exit an application.
+// To use this, just place a 'Use ExitApp' at the top of your program.
+// 
+// This replaces Exit_Application for All classes:
+//   Exit_application sends this message Exit_Application_Check to the
+//   desktop. It is Exit_application_Checks job to figure out if it is ok
+//   to exit. If it returns non-zero, the program will not end.
+//   Exit_application_check broadcasts the message exit_application_check
+//   to all of its children (which in turn broadcasts this message to all
+//   of its children). This way every object in the system has a chance to say
+//   "No, don't exit".
+//
+//
+//
+
+use ui
+//Use EnClient // (LS) Shouldn't be needed.
+use Confirm
+
+// Function Should_save for DESKTOP  (public)
+//
+// Should_save is now understood by all objects. The default value is 0.
+// Note that the DEOs replace this procedure a should_save that actually
+// looks for changes in the DEOs.
+//
+Function Should_Save for DESKTOP Returns Integer
+End_Function
+
+// Function Exit_Application_Check for DESKTOP  (public)
+//
+// Return non-zero to stop exit_application
+//
+// If Should_Save is False, braodcast this function to all children.
+// If should_save is non-zero or the broadcast returns a non-zero, return
+// a non-zero
+//
+Function Exit_Application_Check for DESKTOP Returns Integer
+  Local Integer rVal
+  Get Should_Save to Rval // changes in this object???
+  If rVal eq 0 BroadCast Get Exit_Application_Check to Rval // check w/ kids
+  Function_return rVal
+End_Function
+
+//
+// Before exiting the appliction send the message Exit_Application_Check
+// to the desktop. If it returns a non-zero warn the changes exists and 
+// confirm the exit.
+//
+Procedure Exit_Application for DESKTOP
+  local integer tmp
+  Get Exit_Application_Check of DESKTOP to tmp
+  if (tmp=0 OR (confirm(Current_Object,"Changes Exist. Exit this Application?")=0) ) ;
+       Abort
+End_Procedure
+

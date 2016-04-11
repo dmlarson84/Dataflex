@@ -1,0 +1,24 @@
+use ui
+
+class Ignore_Case_Item_Matching_List is a List
+    function Ignore_Case_Item_Matching string Val integer Start_Item returns integer
+        local integer Tot Idx Val_Len
+        local string UC_Val
+
+        uppercase (trim(Val)) to UC_Val
+        length UC_Val to Val_Len
+
+        get Item_Count to Tot
+        move Start_Item to Idx
+
+        while Idx LT Tot
+            if UC_Val EQ (uppercase(left(Value(Current_Object, Idx), Val_Len))) ;
+                function_return Idx
+
+            increment Idx
+        end
+
+        function_return -1
+    end_function
+end_class
+

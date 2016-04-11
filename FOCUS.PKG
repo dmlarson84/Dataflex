@@ -1,0 +1,83 @@
+//** Program: Focus.pkg
+//** Written: 08/01/90
+//**      By: Alex Paransky
+//** Purpose: To show the structure of the current focus tree
+
+use ui
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+class Focus_View_Type is an edit
+   procedure Construct_Object
+     forward send Construct_Object
+     set location            to  9 0
+     set size                to 15 78
+     set right_margin        to 128
+     set scope_state         to true
+     set block_mouse_state   to true
+     on_key KCANCEL          send Exit_Object
+     on_key KExit_Function   send Exit_Object
+     on_key KNext_Item       send none
+     on_key KPrevious_Item   send none
+   end_procedure
+   
+   procedure Exit_Object
+     send delete_data
+     set current_scope to (prior_scope(current_object))
+     send deactivate
+   end_procedure
+     
+   procedure mouse_drag
+     local integer complex
+     local integer y
+     local integer x
+     get absolute_mouse_location to complex
+     move (hi(complex)) to y
+     move (low(complex)) to x
+     set location to y x 
+   end_procedure
+   
+   procedure Show_Structure integer Object_Number integer Current_Show_Level
+     send Insert (pad("",Current_Show_Level * 3))
+     send Insert (Name(Object_Number)) 
+     send Insert "  Id: "
+     send Insert Object_Number
+     send Key    KENTER
+   end_procedure   
+   
+   procedure Scan_Focus integer Object_Number integer Current_Show_Level
+     local integer Next_Node
+      
+     //** Show Current Object information
+     //**
+     send Show_Structure Object_Number Current_Show_Level
+      
+     //** Process Children Objects, if any
+     //**
+     get Next_Level of Object_Number to Next_Node
+     if (Next_Node ne 0) send Scan_Focus Next_Node (Current_Show_Level + 1)
+         
+     //** Process Sibling Objects, if any
+     //**
+     get Next_Focus of Object_Number to Next_Node
+     if (Next_Node <> 0 AND Next_Node <> (Next_Level(Prior_Level(Object_Number))) ) begin
+        send Scan_Focus Next_Node Current_Show_Level
+     end                
+   end_procedure
+   
+   procedure View_Focus_Structure
+     send Delete_Data
+     send Activate
+     send Scan_Focus Desktop 0
+     send beginning_of_data
+   end_procedure
+      
+end_class
+
+object Focus_View is a Focus_View_Type
+end_object
+
+#REPLACE KView_Focus KEY_CTRL+KEY_V  
+on_key KView_Focus send View_Focus_Structure to Focus_View
+
+

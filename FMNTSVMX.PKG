@@ -1,0 +1,47 @@
+use ui
+
+class File_Maintenance_Server_Mixin is a Message
+    procedure Define_File_Maintenance_Server
+        property integer Fmaint_Server PUBLIC 0
+        property integer Display_Object_State PUBLIC 0
+    end_procedure
+
+    procedure set File_Maintenance_Server integer Svr
+        local integer Obj
+
+        set Fmaint_Server to Svr
+        if ((Svr = 0) or not(Display_Object_State(Current_Object))) ;
+            procedure_return
+
+        move Current_Object to Obj
+        send Register_Display_Object to Svr Obj
+    end_procedure
+
+    function File_Maintenance_Server returns integer
+        local integer Svr
+
+        get Fmaint_Server to Svr
+
+        if Svr EQ 0 begin
+            delegate get File_Maintenance_Server to Svr
+            set File_Maintenance_Server to Svr
+        end
+
+        function_return Svr
+    end_function
+
+    procedure Disconnect_File_Maintenance_Server
+        local integer Svr Obj
+
+        get Fmaint_Server to Svr
+        if ((Svr = 0) or not(Display_Object_State(Current_Object))) ;
+            procedure_return
+
+        move Current_Object to Obj
+        send Deregister_Display_Object to Svr Obj
+    end_procedure
+
+    procedure File_Maintenance_Server_Destroyed
+        set File_Maintenance_Server to 0
+    end_procedure
+end_class

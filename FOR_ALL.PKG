@@ -1,0 +1,221 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\for_all.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: for_all.pkg,v $
+//Revision 2.1  1993/08/25  17:48:09  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:05  james
+//Initial revision
+//
+//Revision 1.4  92/05/14  16:49:32  SWM
+//Updated Copyright slug.
+//
+//Revision 1.3  92/03/09  19:02:09  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.2  92/02/18  20:04:39  steve-l
+//altered main command to permit use of file.field instead of index.#
+//
+//Revision 1.1  91/10/23  10:20:51  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: For_All.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: May 23, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module contains the command definitions for the FOR_ALL construct.
+//
+// FOR_ALL is used to select and process a set of records in a database file;
+// FOR_ALL constructs may be nested. FOR_ALL is intended to work in
+// conjunction with constraint-clauses.
+//
+// SYNTAX:
+//
+//  For_All <File> BY|DOWN <Index> {AS QUE|QUEUE} {DO}
+//    <Constraints...>
+//    {DO}
+//      <loop body>
+//  End_For_All
+//
+// This set of macros implements a constraint-oriented file enumeration
+// syntax.  For example, to list all Customers by name in reverse order:
+// 
+//   For_All Customer DOWN Customer.Customer_Name DO
+//     showln "Customer: " Customer.RecNum "  " Customer.Customer_Name
+//   End_For_All
+//
+// To list only Customers with a Balance greater than their credit limit:
+//
+//   For_All Customer BY Index.1
+//     CONSTRAIN Customer.Balance GT Customer.Credit_Limit
+//     DO
+//       showln "Customer: " Customer.RecNum "  " Customer.Customer_Name
+//   End_For_All
+//
+// Constraint clauses are:
+//
+//   CONSTRAIN <File> RELATES TO <File> ...
+//   CONSTRAIN <File> AS <Expression>
+//   CONSTRAIN <File.Field> AS <Expression>
+//   CONSTRAIN <File.Field> BETWEEN <lowBound> AND <highBound>
+//
+// For example, to list all customers with a bad status whose names start
+// with "A" and which have not made a payment in thirty days:
+//
+//    For_All Customer BY Index.2       //Index.2 = <Status>+<Name>
+//      CONSTRAIN Customer.Status EQ BAD
+//      CONSTRAIN Customer.Customer_Name GE "A"
+//      CONSTRAIN Customer.Customer_Name LT "B"
+//      CONSTRAIN Customer.Last_Pymt_Date LE (Today - 30)
+//      DO
+//        showln "Customer: " Customer.RecNum "  " Customer.Customer_Name
+//    End_For_All
+//
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+#COMMAND For_All TR "BY""DOWN" R """DO""AS" """AS""QUE""QUEUE" """DO""QUE""QUEUE" .
+  #CHECK !1.RECNUM   //must be a file
+  #PUSH !u
+  #SET U$ !a
+  #IFCLASS !3 "F"
+    integer FldNdx!uForAll       //make integer to hold index for field
+    #SET Q$ !1.RECNUM
+    !A [] $82 |CI!q FILENUMBER
+    #SET Q$ %!3                  //get field number
+
+    // REPLACED THIS WITH THE LINE BELOW IT
+    // DENNIS - 12/17/1996
+    // 
+    //!A [] $82 !3 FIELDNUMBER
+    !A [] $82 |CI!q FIELDNUMBER
+    // 
+    // END OF FIX
+
+    !A [] $345 FILENUMBER FldNdx!uForAll //FIELD_DEF command to set index int
+  #ENDIF
+  goto EP#!uINVOKE   //start loop
+  #IFSAME !4 DO
+  #ELSE
+    #IFSAME !6 DO
+    #ELSE
+      MAKEDEF$ FAC!u.X
+    #ENDIF
+  #ENDIF
+  #IFSAME !4 AS
+    MAKEDEF$ FAQ!u.X
+  #ELSE
+    #IFSAME !5 AS
+      MAKEDEF$ FAQ!u.X
+    #ENDIF
+  #ENDIF
+  #IFDEF FAQ!u.X
+  #ELSE
+EP#!uNEXT:
+    Constraint_Set (|CI!u * -1)
+    #IFSAME !2 BY
+      #IFCLASS !3 "F"
+        Constrained_Find GT !1 by FldNdx!uForAll
+      #ELSE
+        Constrained_Find GT !1 by !3
+      #ENDIF
+    #ELSE
+      #IFCLASS !3 "F"
+        Constrained_Find LT !1 by FldNdx!uForAll
+      #ELSE
+        Constrained_Find LT !1 by !3
+      #ENDIF
+    #ENDIF
+return
+  #ENDIF
+EP#!uFIRST:
+  Constraint_Set (|CI!u * -1)
+  #IFSAME !2 BY
+    #IFCLASS !3 "F"
+      Constrained_Find FIRST !1 by FldNdx!uForAll
+    #ELSE
+      Constrained_Find FIRST !1 by !3
+    #ENDIF
+  #ELSE
+    #IFCLASS !3 "F"
+      Constrained_Find LAST !1 by FldNdx!uForAll
+    #ELSE
+      Constrained_Find LAST !1 by !3
+    #ENDIF
+  #ENDIF
+return
+EP#!uINVOKE:
+  Constraint_Set (|CI!u * -1) CLEAR
+  #IFDEF FAC!u.X
+    gosub EP#!uCONSTRAIN           //initialize constraint set
+  #ENDIF
+  gosub EP#!uFIRST
+EP#!uNVKL:
+  indicate CONTINUE TRUE
+  [FOUND CONTINUE] begin
+    gosub EP#!uPROCESS
+    #IFDEF  FAQ!u.X                //if AS QUEUE|QUE,
+      [CONTINUE] gosub EP#!uFIRST  //find next queue element
+    #ELSE                          //else
+      [CONTINUE] gosub EP#!uNEXT   //find next set element
+    #ENDIF
+    [CONTINUE] goto EP#!uNVKL      //loop
+  end
+  goto EFA!u                       //exit past loop body
+  #IFDEF FAC!u.X
+EP#!uCONSTRAIN:
+  #ELSE
+EP#!uPROCESS:
+  #ENDIF
+#ENDCOMMAND
+
+//
+//DO
+//
+//This command starts the loop process body when constraints are used;
+//If no constraints are required, DO should be specified on the FOR_ALL
+//command line, and not on a line by itself
+//
+#COMMAND Do 
+  #IFDEF EP#!uCONSTRAIN
+return
+  #ENDIF
+EP#!uPROCESS:
+  #IF (!0>0)
+    !1 !2 !3 !4 !5 !6 !7 !8 !9
+  #ENDIF
+#ENDCOMMAND
+
+//
+//END_FOR_ALL
+//
+//Ends a For_All loop 
+//
+#COMMAND End_For_All .
+return
+EFA!u:
+  #POP U$
+#ENDCOMMAND
+

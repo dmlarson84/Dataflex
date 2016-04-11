@@ -1,0 +1,510 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+//      
+// Module: 
+//      filedef.pkg
+//      
+// Purpose:
+//      Defines the File_Definition and File_Definition_Server classes.
+//      The File_Definition class performs maintenance on database file
+//      definitions (providing a layer between the DataFlex API and the
+//      UIMS. The File_Definition_Server class adds the ability to track
+//      selections of files and indexes, and supports automatic
+//      updating of display objects.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      8/17/94
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+use flist
+
+enum_list
+    define FILEDEF_INDEX_TYPE_FILE_NOT_FOUND for -2
+    define FILEDEF_INDEX_TYPE_NO_INDEXES
+    define FILEDEF_INDEX_TYPE_CLOSED
+    define FILEDEF_INDEX_TYPE_NONE
+    define FILEDEF_INDEX_TYPE_ALL
+    define FILEDEF_INDEX_TYPE_ONLINE
+    define FILEDEF_INDEX_TYPE_BATCH
+    define FILEDEF_INDEX_TYPE_SELECTED
+end_enum_list
+
+define FILEDEF_LAST_INDEX_ALLOWED for 256
+
+class File_Definition_Mixin is an Array
+    procedure Define_File_Definition_Protocol
+    end_procedure
+
+    // distinguish Filename as Filelist_Name
+    procedure set Filelist_Name string Val
+        set Filename to Val
+    end_procedure
+
+    function Filelist_Name returns string
+        function_return (Filename(Current_Object))
+    end_function
+
+    // distinguish New as New_Filelist
+    procedure New_Filelist
+        send New
+    end_procedure
+
+    // distinguish Open as Open_Filelist
+    procedure Open_Filelist string Fname
+        send Open Fname
+    end_procedure
+
+    // distinguish Close as Close_Filelist
+    procedure Close_Filelist
+        send Close
+    end_procedure
+
+    // distinguish Save as Save_Filelist
+    procedure Save_Filelist
+        send Save
+    end_procedure
+
+    // distinguish Changed_Count as File_Changed_Count
+    function File_Changed_Count returns integer
+        function_return (Changed_Count(Current_Object))
+    end_function
+
+    // distinguish Print as Print_Filelist
+    procedure Print_Filelist string Device
+        send Print Device
+    end_procedure
+
+    function Last_Index_Number integer File# returns integer
+        local integer Val
+
+        get_attribute DF_FILE_LAST_INDEX_NUMBER of File# to Val
+        function_return Val
+    end_function
+
+    function Index_Segment_Count integer File# integer Index# returns integer
+        local integer Val
+
+        get_attribute DF_INDEX_NUMBER_SEGMENTS of File# Index# to Val
+        function_return Val
+    end_function
+
+    function Index_Type integer File# integer Index# returns integer
+        local integer Val
+
+        get_attribute DF_INDEX_TYPE of File# Index# to Val
+        function_return Val
+    end_function
+
+    function Print_DEF integer File# string Device returns integer
+        local integer Ret_Val
+
+        get Open_Database_No_Error File# to Ret_Val
+
+        if Ret_Val ;
+            function_return (TRUE)
+
+        if Device GT "" ;
+            output_def_file File# to Device
+        else ;
+            output_def_file File#
+
+        send Close_Database File#
+
+        function_return (FALSE)
+    end_function
+
+    function Print_FD integer File# string Device returns integer
+        local integer Ret_Val
+
+        get Open_Database_No_Error File# to Ret_Val
+
+        if Ret_Val ;
+            function_return (TRUE)
+
+        if Device GT "" ;
+            output_fd_file File# to Device
+        else ;
+            output_fd_file File#
+
+        send Close_Database File#
+
+        function_return (FALSE)
+    end_function
+end_class
+
+class File_Definition is a Filelist
+    procedure Construct_Object
+        forward send Construct_Object
+
+        send Define_File_Definition_Protocol
+    end_procedure
+
+    import_class_protocol File_Definition_Mixin
+end_class
+
+class _File_Definition_Server is a Filelist_Server
+    procedure Construct_Object
+        forward send Construct_Object
+
+        send Define_File_Definition_Protocol
+    end_procedure
+
+    import_class_protocol File_Definition_Mixin
+end_class
+
+register_procedure File_Definition_Server_Destroyed
+
+class File_Definition_Server is a _File_Definition_Server
+    register_function Index_Select_State integer File# integer Index# returns integer
+
+    procedure Construct_Object
+        forward send Construct_Object
+
+        property integer Tot_Idx_Sel_Cnt PUBLIC 0
+
+        object Index_Select_Count_List is an Array
+            // array of integers, one for each file, that tracks the total
+            // number of indexes selected for each file.
+        end_object
+
+        object Index_Selection_List is an Array
+            // array of strings, one for each file
+            // each string is composed of binary data where each character in the
+            // string represents 6 indexes.
+        end_object
+    end_procedure
+
+    // distinguish Select_State as File_Select_State
+    procedure set File_Select_State integer File# integer State
+        set Select_State item File# to State
+    end_procedure
+
+    function File_Select_State integer File# returns integer
+        function_return (Select_State(Current_Object, File#))
+    end_function
+
+    // distinguish Select_Count as File_Select_Count
+    function File_Select_Count returns integer
+        function_return (Select_Count(Current_Object))
+    end_function
+
+    // distinguish Next_Selected as Next_Selected_File
+    function Next_Selected_File integer File# returns integer
+        function_return (Next_Selected(Current_Object, File#))
+    end_function
+
+    // distinguish First_Selected as First_Selected_File
+    function First_Selected_File returns integer
+        function_return (Next_Selected_File(Current_Object, 0))
+    end_function
+
+    function Total_Index_Select_Count returns integer
+        function_return (Tot_Idx_Sel_Cnt(Current_Object))
+    end_function
+
+    procedure set Index_Select_Count integer File# integer Val
+        local integer Cnt Diff
+
+        get Index_Select_Count File# to Cnt
+        move (Val - Cnt) to Diff
+        set Tot_Idx_Sel_Cnt to ;
+            (Total_Index_Select_Count(Current_Object) + Diff)
+
+        set Array_Value of (Index_Select_Count_List(Current_Object)) ;
+            item File# to Val
+    end_procedure
+
+    function Index_Select_Count integer File# returns integer
+        function_return ;
+            (Integer_Value(Index_Select_Count_List(Current_Object), File#))
+    end_function
+
+    procedure Select_All_Indexes integer File# integer State
+        local integer Index# Segments Last#
+
+        get Last_Index_Number File# to Last#
+        move 1 to Index#
+
+        while Index# LE Last#
+            if (Index_Segment_Count(Current_Object, File#, Index#)) LE 0 ;
+                set Index_Select_State File# Index# to FALSE
+            else ;
+                set Index_Select_State File# Index# to State
+
+            increment Index#
+        end
+    end_procedure
+
+    procedure Select_Indexes_Of_Type integer File# integer Type
+        local integer Index# Segments Last#
+
+        get Last_Index_Number File# to Last#
+        move 1 to Index#
+
+        while Index# LE Last#
+            if (Index_Segment_Count(Current_Object, File#, Index#)) LE 0 ;
+                set Index_Select_State File# Index# to FALSE
+            else if (Index_Type(Current_Object, File#, Index#)) EQ Type ;
+                set Index_Select_State File# Index# to TRUE
+
+            increment Index#
+        end
+    end_procedure
+
+    procedure Select_Selected_Indexes integer File#
+        // does nothing right now, maybe it shouldn't do anything anyway.
+    end_procedure
+
+    function Select_Index_Type integer File# integer Type returns integer
+        local integer At_Least_One_Index Bad
+
+        if Type EQ FILEDEF_INDEX_TYPE_CLOSED begin
+            if (Database_Opened(Current_Object, File#)) begin
+                send Select_All_Indexes File# FALSE
+                set File_Select_State File# to FALSE
+                send Close_Database File#
+            end
+        end
+        else begin
+            get Open_Database_No_Error File# to Bad
+
+            if not Bad ;
+                set File_Select_State File# to TRUE
+            else begin
+                set File_Select_State File# to FALSE
+                function_return FILEDEF_INDEX_TYPE_FILE_NOT_FOUND
+            end
+
+            move (Last_Index_Number(Current_Object, File#) > 0) to At_Least_One_Index
+
+            if not At_Least_One_Index ;
+                    function_return FILEDEF_INDEX_TYPE_NO_INDEXES
+    
+            if Type EQ FILEDEF_INDEX_TYPE_ALL ;
+                send Select_All_Indexes File# TRUE
+            else if Type EQ FILEDEF_INDEX_TYPE_BATCH ;
+                send Select_Indexes_Of_Type File# DF_INDEX_TYPE_BATCH
+            else if Type EQ FILEDEF_INDEX_TYPE_NONE ;
+                send Select_All_Indexes File# FALSE
+            else if Type EQ FILEDEF_INDEX_TYPE_ONLINE ;
+                send Select_Indexes_Of_Type File# DF_INDEX_TYPE_ONLINE
+            else if Type EQ FILEDEF_INDEX_TYPE_SELECTED ;
+                send Select_Selected_Indexes File#
+        end
+
+        function_return Type
+    end_function
+
+    procedure set Index_Select_State integer File# integer Index# integer State
+        local integer Idx# Pos# Len# Was_State
+        local string Val Char
+
+        get Index_Select_State File# Index# to Was_State
+
+        if State EQ TOGGLE_SELECT_STATE ;
+            move (not(Was_State)) to State
+
+        if State EQ Was_State ;
+            procedure_return
+
+        // get string for file.
+        get String_Value of (Index_Selection_List(Current_Object)) item File# to Val
+
+        Length Val to Len#
+
+        move Index# to Idx#
+        decrement Idx#
+
+        // find char position to edit.
+        move ((Idx# / 8) + 1) to Pos#
+
+        // get char at position in string.
+        if Pos# LE Len# ;
+            mid Val to Char 1 Pos#
+        else ;
+            character 0 to Char
+
+        // get new value for char based on state
+        if State ;
+            character (ascii(Char) ior (2 ^ (Idx# - ((Idx# / 8) * 8)))) to Char
+        else ;
+            character (ascii(Char) iand (255 - (2 ^ (Idx# - ((Idx# / 8) * 8))))) to Char
+        
+        // string too short, pad with chr(0).
+        while Pos# LE Len#
+            append Val (character(0))
+            decrement Len# // so we can retain value of Pos# for next statement.
+        end
+
+        // make new string with new value for char in appropriate position.
+        move (overstrike(Char, Val, Pos#)) to Val
+
+        // reset the string for file.
+        set Array_Value of (Index_Selection_List(Current_Object)) item File# to Val
+
+        // increment/decrement the index_select_count
+        if State ;
+            set Index_Select_Count File# to ;
+                (Index_Select_Count(Current_Object, File#) + 1)
+        else ;
+            set Index_Select_Count File# to ;
+                (Index_Select_Count(Current_Object, File#) - 1)
+    end_procedure
+
+    function Index_Select_State integer File# integer Index# returns integer
+        local string Val Char
+        local integer Idx#
+
+        // get string for file.
+        get String_Value of (Index_Selection_List(Current_Object)) item File# to Val
+
+        move Index# to Idx#
+        decrement Idx#
+
+        // get char at appropriate position in string.
+        mid Val to Char 1 ((Idx# / 8) + 1)
+
+        function_return ((ascii(Char) iand (2 ^ (Idx# - ((Idx# / 8) * 8)))) <> 0)
+    end_function
+
+    procedure Clear_Index_Selections integer File#
+        set Array_Value of (Index_Selection_List(Current_Object)) item File# to ""
+        set Index_Select_Count File# to 0
+    end_procedure
+
+    procedure Print_Index_Selection_List
+        local integer File# Cnt Obj Char_Pos Len
+        local string Val
+
+        move (Index_Selection_List(Current_Object)) to Obj
+
+        move 0 to File#
+        get Item_Count of Obj to Cnt
+
+        direct_output "indexsel.lst"
+
+        while File# LT Cnt
+            get String_Value of (Index_Selection_List(Current_Object)) item File# to Val
+
+            Length Val to Len
+
+            write File# ":" (Index_Select_Count(Current_Object, File#)) ": "
+
+            for Char_Pos from 1 to Len
+                write (ascii(mid(Val, 1, Char_Pos))) " "
+            loop
+
+            writeln
+
+            increment File#
+        end
+
+        close_output
+    end_procedure
+
+    procedure Print_DEF_Selected_Databases string Device
+        local integer Fnum Was CBO Quit Ret_Val
+
+        get Callback_Object to CBO
+
+        get First_Selected to Fnum
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        move (FALSE) to Quit
+
+        if CBO NE 0 ;
+            get Callback of CBO "Printing .DEF files for databases:" CALLBACK_TYPE_BEGIN to Quit
+
+        while (not(Quit) and (Fnum > 0))
+            if CBO NE 0 ;
+                get Callback of CBO ("Printing .DEF for " + ;
+                    (Logical_Name(Current_Object, Fnum))) ;
+                    CALLBACK_TYPE_TEXT to Quit
+
+            if not Quit begin
+                if Num_Arguments GT 0 ;
+                    get Print_DEF Fnum Device to Ret_Val
+                else ;
+                    get Print_DEF Fnum "" to Ret_Val
+
+                get Last_Operation_Aborted_State of CBO to Quit
+
+                if (Ret_Val and not(Quit)) ;
+                    get Callback of CBO ("Database " + ;
+                        Logical_Name(Current_Object, Fnum) + " could not be found/opened.") ;
+                        CALLBACK_TYPE_TEXT to Quit
+            end
+
+            get Next_Selected Fnum to Fnum
+        end
+
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects FILELIST_UPDATE_ALL_FILES
+
+        if (not(Quit) and (CBO <> 0)) ;
+            get Callback of CBO "" CALLBACK_TYPE_COMPLETE to Quit
+    end_procedure
+
+    procedure Print_FD_Selected_Databases string Device
+        local integer Fnum Was CBO Quit Ret_Val
+
+        get Callback_Object to CBO
+
+        get First_Selected to Fnum
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        move (FALSE) to Quit
+
+        if CBO NE 0 ;
+            get Callback of CBO "Printing .FD files for databases:" CALLBACK_TYPE_BEGIN to Quit
+
+        while (not(Quit) and (Fnum > 0))
+            if CBO NE 0 ;
+                get Callback of CBO ("Printing .FD for " + ;
+                    (Logical_Name(Current_Object, Fnum))) ;
+                    CALLBACK_TYPE_TEXT to Quit
+
+            if not Quit begin
+                if Num_Arguments GT 0 ;
+                    get Print_FD Fnum Device to Ret_Val
+                else ;
+                    get Print_FD Fnum "" to Ret_Val
+
+                get Last_Operation_Aborted_State of CBO to Quit
+
+                if (Ret_Val and not(Quit)) ;
+                    get Callback of CBO ("Database " + ;
+                        Logical_Name(Current_Object, Fnum) + " could not be found/opened.") ;
+                        CALLBACK_TYPE_TEXT to Quit
+            end
+
+            get Next_Selected Fnum to Fnum
+        end
+
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects FILELIST_UPDATE_ALL_FILES
+
+        if CBO NE 0 begin
+            if not Quit ;
+                get Callback of CBO "" CALLBACK_TYPE_COMPLETE to Quit
+            else begin
+                get CallBack of CBO "Interrupted by user." ;
+                    CALLBACK_TYPE_TEXT to Quit
+                send Halt to CBO
+            end
+        end
+    end_procedure
+
+    procedure Notify_Server_Destroyed
+        send File_Definition_Server_Destroyed to (Display_Objects(Current_Object))
+    end_procedure
+end_class

@@ -1,0 +1,38 @@
+        FILE DEFINITION LISTING FOR FILE #32
+*************************************************** 
+        FILE ROOT NAME     = JOURNALS
+        USER DISPLAY NAME  = GL Journals
+        DATAFLEX FILE NAME = JOURNALS
+*************************************************** 
+        RECORD LENGTH = 64  (USED = 59)
+        MAX NUMBER OF RECORDS = 500000  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       2   ASCII          3     0     0     JR
+   2       3       1   NUMERIC   0    2     0     0     YR
+   3       4       1   NUMERIC   0    3     0     0     MN
+   4       5       1   NUMERIC   0    3     0     0     DY
+   5       6       2   NUMERIC   0    0     0     0     GL
+   6       8       3   ASCII          0     0     0     BR
+   7      11       2   ASCII          3     0     0     DP
+   8      13      25   ASCII          0     0     0     DESC
+   9      38       5   NUMERIC   2    0     0     0     AMOUNT
+  10      43       5   NUMERIC   0    1     0     0     CHK
+  11      48       5   NUMERIC   0    0     0     0     EMPLY
+  12      53       5   NUMERIC   0    0     0     0     JOB
+  13       3       3   OVERLAP        2     0     0     DATE
+  14       6       7   OVERLAP        0    31    50     DIST_DIV
+  15       1       5   OVERLAP        1     0     0     JRYRMN
+  16       3       2   OVERLAP        2     0     0     YRMN
+  17      58       1   NUMERIC   0    0     0     0     STATUS
+  18      59       1   NUMERIC   0    0     0     0     OPERATOR
+  19       8       5   OVERLAP        0     0     0     DIS_DIV
+ 
+INDEX 1:  FIELD SEGMENTS:  <15>   <10>   <4>   <0>   
+INDEX 2:  FIELD SEGMENTS:  <14>   <16>   <1>   <0>   
+INDEX 3:  FIELD SEGMENTS:  <7>   <1>   <3>   <4>   <0>   
+

@@ -1,0 +1,364 @@
+//			Error Class and object
+//
+// This package describes the Error_Type class and an instance 
+// Error_Info_Object.  The error class allows for a interactive interface
+// for all errors generated in a program.  The object displays important
+// information about the error, and allows the user to get help about the
+// error condition.
+//
+// The programmer may define the error numbers that will be trapped by
+// the error object through the use of the Trap_Error, Ignore_Error,
+// Trap_All and Ignore_All messages.
+//
+// The Help buttons has been defined to generate a special help name which
+// will allow the user to get help on the specific error condition.  The
+// help name is made up of the constant ERROR: and the error number.  The
+// help data files should contain help subjects for any system errors or
+// program defined conditions.
+//
+
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+
+// Include or define all useful symbols.
+#INCLUDE ERRORNUM.INC
+#REPLACE MAX_ERROR_NUMBER 32766
+
+
+class Error_button is a Button
+
+	// This function provides a specific help name that will be searched
+	// for by the help system.  Note that the APPLICATION_NAME and the
+	// MODULE_NAME are not set, which allows for module specific help
+	// messages.  If there is not a help record found, the parent of the
+	// button will be asked.  The parent supplies a more general help name.
+
+   function Help_Name returns string
+      function_return ( append("ERROR:",Lasterr))
+   end_function
+
+End_class
+
+
+// This array stores the set of trapped errors as toggled ranges starting
+// with the errors that are trapped. The array should always contain 0 and 
+// MAX_ERROR_NUMBER + 1, which are the limits. If an array contained the 
+// following items...
+//
+// { 0, 5, 10, MAX_ERROR_NUMBER + 1 }.
+//
+// This would mean that errors 1 - 4 are trapped, 5 - 9 are ignored, and
+// 10 through the rest are trapped.
+//
+class Trapped_Errors_Array is an array
+
+    // Find largest error LE targetError. Assumes array is sorted.
+    function findErrorLE integer targetError returns integer
+
+        integer lowIndex hiIndex midIndex currError 
+
+        // If error is outside of boudary conditions, use 
+        // value of closest valid error# instead.
+        if ( targetError le 0 );
+            move 1 to targetError
+        else if ( targetError ge MAX_ERROR_NUMBER ) ;
+            move ( MAX_ERROR_NUMBER - 1 ) to targetError    
+
+        move 0                                    to lowIndex
+        move ( item_count( current_object ) - 1 ) to hiIndex
+
+        // midIndex will contain the closest error LE to target upon exit.
+        repeat
+
+            move ( ( lowIndex + hiIndex ) / 2 )                 to midIndex
+            move ( integer_value( current_object, midIndex ) )  to currError
+
+            // midIndex is targetIndex if a match occurs
+            if currError eq targetError ;
+                goto ERROR_FOUND
+
+            // We are either on it or just below it.
+            if ( lowIndex eq midIndex ) begin
+
+                if ( integer_value( current_object, hiIndex ) le targetError ) ;
+                    move hiIndex to midIndex
+
+                goto ERROR_FOUND
+            
+            end
+
+            // No match, so move the boundaries.
+            if currError gt targetError ;
+                move ( midIndex - 1 ) to hiIndex
+            else ;
+                move midIndex to lowIndex
+
+        until lowIndex gt hiIndex
+
+ERROR_FOUND:
+
+        function_return midIndex
+
+    end_function
+
+
+    // Boundaries of the table are assumed to hold error limits.
+    procedure initArray
+        send delete_data
+        set array_value item 0 to 0
+        set array_value item 1 to ( MAX_ERROR_NUMBER + 1 )
+    end_procedure
+
+
+    // Return 1 if Error is trapped, 0 otherwise.
+    function isTrapped integer Error# returns integer
+        function_return ( NOT ( mod( findErrorLE( current_object, Error# ), 2 ) ) )
+    end_function
+
+
+    // Add the error as long as it doesn't violate boundary conditions.
+    // This routine leaves the array unsorted.
+    procedure addError integer Error#
+        if ( ( Error# lt MAX_ERROR_NUMBER ) AND ( Error# gt 0 ) ) ;
+            set array_value item ( item_count( current_object ) ) to ( INTEGER( Error# ) )
+    end_procedure
+
+
+    // Set error to flagged state.
+    procedure handleError integer Error# integer trapFlag
+        local integer prevErrIndex prevErrFlag prevErrValue nextErrValue
+        
+        if ( ( Error# gt MAX_ERROR_NUMBER ) OR ( Error# lt 0 ) ) begin
+            error DFERR_ERROR_NUMBER_OUT_OF_RANGE 
+            procedure_return
+        end
+
+        get findErrorLE to Error# prevErrIndex
+        get isTrapped   to Error# prevErrFlag
+
+        // Error already handled in some range.
+        if ( prevErrFlag eq trapFlag ) ;
+            goto EXIT_HANDLE_ERROR
+
+        // This is kind of complicated. If we are adding an error,
+        // we have to account for the error already being in the 
+        // array as well as rejoining ranges that have been previously
+        // split and splitting ranges when adding a new flag.
+
+        get integer_value item ( prevErrIndex + 1 ) to nextErrValue
+        get integer_value item prevErrIndex         to prevErrValue
+
+        // Do this first so prevErrIndex stays valid.
+        if nextErrValue eq ( Error# + 1 ) ;
+            send delete_item ( prevErrIndex + 1 )
+        else ;
+            send addError ( Error# + 1 )
+
+        if ( prevErrValue lt Error# ) ;
+            send addError Error#
+        else ;
+            send delete_item prevErrIndex
+
+EXIT_HANDLE_ERROR:
+        
+        send sort_items UPWARD_DIRECTION
+                                    
+    end_procedure
+
+
+	    //*** Flag error as trappable
+        procedure Trap_Error integer Error#
+            send handleError Error# 1
+        end_procedure
+
+        //*** Flag error as non-trappable
+        procedure Ignore_Error integer Error#
+            send handleError Error# 0
+        end_procedure
+
+	    //*** Flag all errors as trappable
+        procedure Trap_All
+            send initArray
+        end_procedure
+
+	    //*** Flag all errors as non-trappable
+        procedure Ignore_All
+            send delete_data
+            set array_value item 0 to 0
+            set array_value item 1 to 1
+            set array_value item 2 to ( MAX_ERROR_NUMBER + 1 )
+        end_procedure
+
+end_class
+
+
+class Error_Type_c is an Error
+
+    procedure construct_object integer Client_Img# integer Button_Img#
+        forward send construct_object Client_Img#
+
+        property integer Verbose_State  public  1
+
+        set client_area_state to TRUE
+        set ring_state to TRUE
+        set block_mouse_state to TRUE
+        set scope_state to TRUE
+
+        object trappedErrors is a Trapped_Errors_Array
+            send initArray
+        end_object
+
+        set value item 0 to "Error Message"
+        set center_state item 1 to TRUE
+
+        send Trap_All
+        move current_object to Error_Object_Id
+
+        object Error_Display is an edit
+            set object_color to ;
+		    (hi(object_color(parent(current_object)))) ;
+		    (low(object_color(parent(current_object))))
+            set focus_mode to pointer_only
+            set location to 5 3 relative
+            set size to 3 53
+        end_object
+
+        object Action_Buttons is a Error_button Button_Img#
+            set object_color to 0 0
+	        on_key KEY_F1 send Help
+	        item_list
+                on_item "<OK>"    send Request_Cancel	
+                on_item "<HELP>"  send Help
+            end_item_list
+        end_object
+
+   end_procedure
+
+	//*** Catch and display error Error#.
+    procedure Trap_Error integer Error#
+        send Trap_Error to ( trappedErrors( current_object ) ) Error#
+    end_procedure
+
+    //*** Pass error Error# on to the regular DataFlex error handler.
+    procedure Ignore_Error integer Error#
+        send Ignore_Error to ( trappedErrors( current_object ) ) Error#
+    end_procedure
+
+	//*** Catch and display all errors.
+    procedure Trap_All
+        send Trap_All to ( trappedErrors( current_object ) ) 
+    end_procedure
+
+	//*** Forward all error to regular DataFlex error handler.
+    procedure Ignore_All
+        send Ignore_All to ( trappedErrors( current_object ) ) 
+    end_procedure
+
+	//*** Kill 1 UI level, deactivate error object, and return to prior scope.
+   procedure Request_Cancel
+      set client_area_state to false
+      send deactivate
+      set client_area_state to true
+      send stop_ui
+      indicate err true
+   end_procedure
+
+   //*** Build complete error description from Flexerrs and user error message.
+   function Error_Description integer Error# string ErrMsg returns string
+      local string Full_Error_Text 
+
+      trim ErrMsg to ErrMsg
+      move (trim(error_text(DESKTOP,Error#))) to Full_Error_Text
+
+      if ErrMsg ne "" begin
+
+        if ( ( Full_Error_Text ne "" ) AND ;
+                error_text_available( DESKTOP, Error# ) ) ;
+            append Full_Error_Text " " ErrMsg
+	    else ;
+            move ErrMsg to Full_Error_Text
+
+	  end
+
+      function_return Full_Error_Text
+   end_function
+
+	//*** Handle error event, displaying error info to user.
+   procedure Error_Report integer Error_Info string ErrMsg
+      local integer Text_Obj# Error# Line# 
+      local string Temp
+
+      move (hi(Error_Info))  to Error#
+      if NOT ( isTrapped( TrappedErrors( current_object ), Error# ) ) begin
+         forward send Error_Report Error_Info ErrMsg
+         procedure_return
+      end
+
+      move (low(Error_Info)) to Line#
+      move (Error_Display(current_object)) to Text_Obj# 
+      if (Verbose_State(current_object)) ;
+      	append Temp "Status << "  Error#   " >> on line #" Line#
+      else move '' to temp
+
+      send delete_data to Text_Obj#
+      send beginning_of_data to Text_Obj#
+
+      set value item 1 to Temp
+      send insert to Text_Obj# ; 
+                          (Error_Description(current_object, Error#, ErrMsg))
+
+      if (active_state(current_object)) ne 1 start_ui current_object
+
+      // abort on critical errors
+      if (Is_Critical(current_object,Error#)) abort
+
+   end_procedure
+
+	// The functions below are used to construct a general help
+	// name for errors that are generated by the system.  If processing
+	// comes here, then there was no module specific help found.  These
+	// functions will provide a more general help name that appears in
+	// the form of SYSTEM..ERROR:#.  All global errors should be
+	// places in the help file under this application and module name.
+
+	//*** Returns "ERROR:errornum" to supply error help.
+   function Help_Name returns string
+      function_return (append("ERROR:",lastErr))
+   end_function
+
+   function Application_Name returns string
+      function_return 'SYSTEM'
+   end_function
+
+   function Module_Name returns string
+      function_return ''
+   end_function
+
+end_class
+
+
+
+/Error_Info_Img
+ÉÍ[ _____________ ]ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+º                                                          º
+º ________________________________________________________ º
+º                                                          º
+º ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿ º
+º ³                                                      ³ º
+º ³                                                      ³ º
+º ³                                                      ³ º
+º ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ º
+º                  ____             ______                 º
+ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+/*
+
+sub_page Error_Info_Buttons from Error_Info_Img 3 4
+
+object Error_Info_Object is a Error_Type_c Error_Info_Img Error_Info_Buttons
+       set location to 6 10 absolute
+end_object
+
+

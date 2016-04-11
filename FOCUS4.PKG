@@ -1,0 +1,164 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Focus4.Pkg
+// Version: 1.0
+//  01-04-1993 : Created
+//
+// Author: John J. Tuohy
+//
+// Modification of FOCUS2.PKG (from DAC)
+//
+// This modifies the DAC focus2 package. It adds additional symbols      
+// to the tree so you can indentify Client_states (C) and Ring_states (R).
+// It also uses object construction/destruction (the object has been 
+// classed).                                                             
+//                                                                       
+// Place this package in your program with a USE FOCUS4 command.
+// To invoke press ALT+F10. Pressing ALT+F10 inside of display prints the
+// tree or list to a disk file named Foctree. Pressing escape exits
+// display. You may access the list by sending the message:
+//     Send Process_Focus_Scanner to DESKTOP
+//
+// Sun  01-24-1993: JJT Added scope_State (S) to focus tree
+// Fri  04-09-1993: JJT Added logical key to popup focus tree
+//************************************************************************
+
+use ui
+
+Define KEY_FOCUS_TREE for KEY_ALT+KEY_F10  
+
+Class Focus_Scanner is an edit
+
+  Procedure Construct_Object
+    Forward Send Construct_Object
+    
+    Set location to  6 2 absolute
+    Set size     to 19 74
+    Set scope_state to true
+    Set block_mouse_state to true
+    Set read_only_state to TRUE
+    Set right_margin to 255
+  
+    On_key kswitch send msg_none // Doesn't fix everything.
+    On_Key kcancel send Cancel_Scope
+    On_key key_alt+key_F10 Send Output_Tree
+  
+    Object Active_Levels is an array
+    End_object
+    
+    Object TitleLine is a vConsole     // Header display line
+       Set location to -1 0 Relative
+       Set Size to 1 75
+    End_Object
+    
+  End_Procedure  // Construct_Object
+
+  Procedure Output_Tree
+    Send write "FocTree.Trc"
+  End_procedure
+
+  Procedure Cancel_Scope
+    Local integer Prior_Scope#
+    Get prior_scope to Prior_Scope#
+    Set Current_scope to Prior_Scope#
+    //
+    Send Deactivate to (TitleLine(Current_Object))
+    Send Deactivate
+    Procedure_Return 1 // exit current UI
+  End_procedure
+
+  Procedure Process_Foc_Tree
+    Send Page_Object to (TitleLine(Current_Object)) TRUE
+    Set Value of (TitleLine(Current_Object)) Item 0 to ;
+      'อออออออFocus TreeอออออออออออออออออออออออออออออAlt+F10=Write Foctree.trcออออ'
+    Set Read_only_state to FALSE
+    Send Delete_data
+    Send Process_Next_Focus DESKTOP DESKTOP 0
+    Send Beginning_of_data
+    Set Read_only_state to TRUE
+    Send activate
+  End_procedure
+
+  Procedure Process_Next_Focus Integer Start# Integer Object# Integer Current_Level
+    Local Integer Next_Level# Next_Focus#
+
+    Get Next_level of Object# to Next_Level#
+    Get Next_focus of Object# to Next_Focus#
+	 
+    Send Add_Leaf Object# Current_Level Next_Level# Next_Focus# Start#
+
+    If Next_Level# ne 0;
+       Send Process_Next_Focus Next_Level# Next_Level# (Current_Level+1)
+
+    If ((Next_Focus# ne 0) and (Next_Focus# ne Start#));
+       Send Process_Next_Focus Start# Next_Focus# Current_Level
+  End_procedure
+  
+  Procedure Draw_Levels Integer Level
+    Local integer Counter Active_State
+    If Level ge 0 Send Insert " "
+    For Counter from 1 to Level
+      Get array_value of (Active_Levels(Current_object)) item Counter to Active_State
+      if Active_State eq 1 Send insert "    ณ "
+      Else send insert "      "
+    loop
+  End_procedure
+
+  Procedure Add_Leaf Integer Object# Integer Current_Level;
+                     Integer Next_Level# Integer Next_Focus# Integer Start#
+    Local String Object_Name Temp
+
+    Send Draw_Levels (Current_Level-1)
+
+    If ((Next_Focus# ne 0) and (Next_Focus# ne Start#)) Begin
+      Send insert "    ร"
+      Set array_value of (Active_Levels(Current_object)) item Current_Level to 1
+    End
+    Else If Object# ne Desktop Begin
+      Send Insert "    ภ"
+      Set Array_value of (Active_Levels(Current_object)) item Current_Level to 0
+    End
+    If (Ring_State(Object#)) Send Insert "R"
+    Else Send Insert "ฤ"
+    If (Client_Area_State(Object#)) Send Insert "C"
+    Else Send Insert "ฤ"
+    If (Scope_State(Object#)) Send Insert "S"
+    Else Send Insert "ฤ"
+    Send Insert "ฤ"
+
+    Get Name of Object# to Object_Name
+
+    Move "" to Temp
+    Append Temp "(" Current_Level "):" Object_Name "  [id=" Object# "]"
+    Send insert Temp
+    Send key kenter
+
+  End_procedure
+  
+End_Class
+
+//
+//  Desktop Procedure to process object.
+//  it creates and enters the object.
+//
+Procedure Process_Focus_Tree
+  Local Integer Obj
+  Object Focus_Scanner is a Focus_Scanner
+    Move Current_Object to Obj
+  End_Object
+  Send Process_Foc_Tree to Obj
+  Start_UI // start a new UI..in case we don't have one already
+  // destroy entire object structure
+  Broadcast Recursive_Up Send Destroy_Object to Obj
+  Send Destroy_Object to Obj
+End_Procedure  // Process_Focus_Tree
+
+On_key KEY_FOCUS_TREE Send Process_Focus_Tree to Desktop

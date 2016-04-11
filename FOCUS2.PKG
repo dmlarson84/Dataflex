@@ -1,0 +1,93 @@
+USE UI
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+OBJECT Focus_Scanner IS AN EDIT
+
+  SET LOCATION TO 5 5 ABSOLUTE
+  SET SIZE     TO 20 60
+  SET SCOPE_STATE TO TRUE
+  SET BLOCK_MOUSE_STATE TO TRUE
+  SET READ_ONLY_STATE TO TRUE
+  SET RIGHT_MARGIN TO 128
+
+  ON_KEY KSWITCH SEND MSG_NONE // Doesn't fix everything.
+  ON_KEY KCANCEL SEND Cancel_Scope
+  ON_KEY KEY_ALT+KEY_F10 SEND Output_Tree
+
+  OBJECT Active_Levels IS AN ARRAY
+  END_OBJECT
+
+  PROCEDURE Output_Tree
+    SEND WRITE "Tree.Trc"
+  END_PROCEDURE
+
+  PROCEDURE Cancel_Scope
+    LOCAL INTEGER Prior_Scope#
+	 GET PRIOR_SCOPE TO Prior_Scope#
+	 SET CURRENT_SCOPE TO Prior_Scope#
+	 SEND DEACTIVATE
+  END_PROCEDURE
+
+  PROCEDURE Process_Focus_Tree
+    SET READ_ONLY_STATE TO FALSE
+	 SEND DELETE_DATA
+    SEND Process_Next_Focus DESKTOP DESKTOP	0
+	 SEND BEGINNING_OF_DATA
+    SET READ_ONLY_STATE TO TRUE
+	 SEND ACTIVATE
+  END_PROCEDURE
+
+  PROCEDURE Process_Next_Focus INTEGER Start# INTEGER Object# INTEGER Current_Level
+	 LOCAL INTEGER Next_Level# Next_Focus#
+
+	 GET NEXT_LEVEL OF Object# TO Next_Level#
+	 GET NEXT_FOCUS OF Object# TO Next_Focus#
+	 
+    SEND Add_Leaf Object# Current_Level Next_Level# Next_Focus# Start#
+
+    IF Next_Level# NE 0;
+	   SEND Process_Next_Focus Next_Level# Next_Level# (Current_Level+1)
+
+	 IF ((Next_Focus# NE 0) AND (Next_Focus# NE Start#));
+	   SEND Process_Next_Focus Start# Next_Focus# Current_Level
+  END_PROCEDURE
+
+  PROCEDURE Draw_Levels INTEGER Level
+    LOCAL INTEGER Counter Active_State
+    FOR Counter FROM 1 TO Level
+      GET ARRAY_VALUE OF (Active_Levels(CURRENT_OBJECT)) ITEM Counter TO Active_State
+      IF Active_State EQ 1 SEND INSERT "   ³  "
+      ELSE SEND INSERT "      "
+    LOOP
+  END_PROCEDURE
+
+  PROCEDURE Add_Leaf INTEGER Object# INTEGER Current_Level;
+                     INTEGER Next_Level# INTEGER Next_Focus# INTEGER Start#
+	 LOCAL INTEGER Cell#	
+	 LOCAL STRING Object_Name Temp
+
+    SEND Draw_Levels (Current_Level-1)
+
+    IF ((Next_Focus# NE 0) AND (Next_Focus# NE Start#)) BEGIN
+      SEND INSERT "   ÃÄÄ"
+      SET ARRAY_VALUE OF (Active_Levels(CURRENT_OBJECT)) ITEM Current_Level TO 1
+    END
+    ELSE IF Object# NE DESKTOP BEGIN
+      SEND INSERT "   ÀÄÄ"
+      SET ARRAY_VALUE OF (Active_Levels(CURRENT_OBJECT)) ITEM Current_Level TO 0
+    END
+
+	 GET NAME OF Object# TO Object_Name
+
+    MOVE "" TO Temp
+    APPEND Temp "(" Current_Level "):" Object_Name "  ID=[" Object# "]"
+    SEND INSERT Temp
+    SEND KEY KENTER
+
+  END_PROCEDURE
+
+END_OBJECT
+
+ON_KEY KEY_ALT+KEY_F10 SEND Process_Focus_Tree TO Focus_Scanner.OBJ
+

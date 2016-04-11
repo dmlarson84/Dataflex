@@ -1,0 +1,305 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Eval.Pkg
+// Version: 1.0
+//  04-27-1993 : Created
+//
+// Author: John J. Tuohy
+//
+//------------------3.1 changes ---------------
+// 08/29/95 JJT - Fixed Parse_Get. It was losing params. Fix from Paul
+//		  Rubin.
+//************************************************************************
+
+//
+// This creates an EVALUATOR class, object and global function that uses the
+// EVAL function to evaluate just about anything that can be evaluated.
+//
+// The standard method of evaluating an expression will be to use the global
+// function SMART_EVAL. This is passed an expresssion and returns the evaluated
+// expression or an error. A global indicator EVAL_ERR is set TRUE when an eval
+// error has occurred. If an error occurs the returned string contains the 
+// text "Bad Expression". This global function uses the object Eval_Unit.obj to
+// evaluate the expression. This object is based on the EVALUATOR class. For
+// most purposes all evaluation can be performed by the smart_eval function and
+// the objects and classes it uses may be considered private.
+//
+// Class: Evaluator
+//        Public Access: Function S_Eval String Exp Returns String
+//                         This evaluates the passed Expression and returns
+//                         the value as a string. The Global indicator
+//                         EVAL_ERR is also returned TRUE if an eval error
+//                         occurred.
+//
+// Object: Eval_Unit     The object Eval_Unit.obj is created on the desktop
+//                       and is an instance of the Evaluator class.
+//
+// Global Function:  Function Smart_Eval GLOBAL String Exp returns String
+//                         This evaluates the passed Expression and returns
+//                         the value as a string. The Global indicator
+//                         Eval_Err is also returned TRUE if an eval error
+//                         occurred. In addition, the eval string returned
+//                         will contains the text "Bad Expression" when
+//                         EVAL_ERR is true     
+//
+//
+//                         
+
+Use Ui
+//
+//  We use the global indicator to return the status of an error. This
+//  way the eval doesn't mess up existing variables
+//
+Indicator Eval_Err
+
+
+//==========================================================================
+// Class: Evaluator - Smart Eval class
+//==========================================================================
+//
+//  Public Access Method:
+//
+//  Function: Get S_Eval Eval_String to Answer (also sets EVAL_ERR)
+//              
+//
+Class Evaluator is an Array
+
+   //
+   // Basic Eval With Error Trap
+   //
+   // Returns: Eval String and ERR indicator
+   //
+   Function B_Eval String S Returns String
+      Local Integer Err_Addr
+      Local String S1
+      Move |VI31 To Err_Addr
+      Indicate Err False
+      On Error Gosub !$.Eval_Error
+      Move (Eval(S)) To S1
+      Move Err_Addr To |VI31
+      Function_Return S1
+
+      !$.Eval_error:
+        Move '' To s1
+      return
+      
+   End_Function
+
+   // Find the Last GET_ in the string.
+   // Return position or 0 if none
+   Function Last_Get String Source Returns Integer
+      Local Integer Retval
+      Move 0 to retval  // always keep track of previous position
+      uppercase source
+      repeat
+         Replace "GET_" in Source with "get_" // set Found & StrMark.
+         [~Found] Function_Return Retval      // returns last successful Replace or 0
+         Move StrMark to RetVal               // position of _Get
+      Loop
+   End_Function
+  
+   //
+   //  Parse forward in String S starting at i1 until a , or a ) is
+   //  found. Keep track to open "(" so we find the correct one.
+   //  Returns ending position, or, ERR if an error
+   //
+   Function Parse String S Integer i1 Returns Integer
+      Local Integer i2 L i3
+      Local String ch
+      Length s to L
+      Repeat
+         Increment i1
+         If i1 gt L Begin
+            Indicate Err True
+            Function_return // end of string error
+         End   
+         Mid S to ch 1 i1
+         If Ch eq '"' Begin
+            Move (Pos('"',Mid(S,255,I1+1))) To I3
+            If I3 eq 0 Begin
+               Indicate Err True
+               Function_Return 
+            End
+            Else Move (I3+I1) To I1
+         End
+         Else If Ch eq "'" Begin
+            Move (Pos("'",Mid(S,255,I1+1))) To I3
+            If I3 eq 0 Begin
+               Indicate Err True
+               Function_Return 
+            End
+            Else Move (I3+I1) To I1
+         End
+         Else If Ch Eq '(' Increment I2  // Incr () Count
+         Else If Ch Eq ')' Begin
+            If i2 eq 0 function_return i1 // if 0 we are done
+            Decrement i2                  // else decr () count
+         End  
+         Else If (Ch=',' and i2=0) function_return i1
+      Loop
+   End_Function
+
+   //
+   //   Parse a GET_xxxx string. And return its value
+   //    Pass: string as S
+   //    Ret:  Evaluated function & ERR set true if there was an error
+   //
+   Function Parse_Get String S Returns String
+      local Integer I i2 Msg Obj Count
+      Local String S1 s2 s3
+    
+      Pos "(" in S to I
+      [~Found] Indicate Err TRUE
+      [~Found] Function_Return
+      Move 0 To Count
+      Move 0 to Obj
+      //
+      Left S to S1 (i-1)          // this is the message
+      Move (B_Eval(Current_Object,S1)) To s2      // Get The Message Id  
+      [Err] Function_Return ""
+      Move S2 To Msg
+      Send Delete_Data            // we will keep params in the array
+      // now parse all params and place them in the array
+      Repeat
+         Get Parse S i to i2
+         [Err] Function_Return
+         Move (mid(S,i2-i-1,i+1)) to s1 // this is the parameter
+         // if first parameter..it can either be the object identifier or
+         // a parameter. If the param is DESKTOP or contains .OBJ or
+         // #<object number> it is an object ID, else we assume
+         // this is a global function
+         If count eq 0 Begin
+            Uppercase S1 To S3
+            If ( Pos("DESKTOP",s3) or pos(".OBJ",S3) ) begin
+               Move (B_Eval(Current_Object,S3)) To Obj  // It Was An Object Id
+               [Err] Function_Return "Bad Expression"
+            End
+            Else If (Pos("#", S3)=1) Begin // (#<Object Number>)
+               Right S3 To Obj (Length(S3)-1)
+            End
+            Else Begin
+               if obj eq 0 Move (eval("DESKTOP")) to Obj      // no object..use desktop
+               Increment Count                    // and place param
+               Set Array_Value Item Count To (B_Eval(Current_Object,S1)) // In Array
+               [Err] Function_Return "Bad Expression"
+            End   
+         End
+         else Begin
+            Increment Count
+            Set Array_Value Item Count To (B_Eval(Current_Object,S1))
+            [Err] Function_Return "Bad Expression"
+         End  
+         [Err] Function_Return // quit if any error occurred during an eval     
+         Move i2 to i
+      Until (mid(s,1,i)=")")  // parse until we hit the last ")"
+
+      move "" to s1
+      If Msg lt 0 Begin
+         Get Msg of Obj (Value(Current_Object,1)) (Value(Current_Object,2)) ;
+                     (Value(Current_Object,3)) (Value(Current_Object,4)) ;
+                     (Value(Current_Object,5)) (Value(Current_Object,6)) ;
+         To S1           
+      End
+      Else If Count eq 2 Begin
+         Get Msg of Obj (Value(Current_Object,1)) (Value(Current_Object,2)) To S1           
+      End
+      Else If (Count = 1 and (Value(Current_Object,1)) <> "") ;
+         Get Msg of Obj (Value(Current_Object,1)) To S1           
+      Else If Count le 1 ;
+         Get Msg of Obj To S1           
+      Function_Return S1
+   End_function  
+
+   function s1_eval string s Returns String
+      Local Integer Last_pos Close_pos Open_count
+      local string ch s1 l
+      // Parse All GET_ functions and replace them with their
+      // value
+      Move (B_Eval(Current_Object,S)) To S1
+      [~Err] Function_Return S1 
+      //
+      Indicate Err False
+      Repeat
+         Get Last_Get S to Last_Pos // find the last GET_
+         // if no GET_ left we just eval the function
+         If Last_Pos Eq 0 Function_Return (B_Eval(Current_Object,S))
+         //
+         // isolate the Get_function(....)
+         Move (Last_Pos + 3) to Close_pos
+         Indicate Err True
+         length s to l
+         Repeat
+            Increment Close_pos
+            If close_pos gt l Function_return ''
+            Mid S to ch 1 Close_pos
+            If ch eq '(' Increment Open_count
+            else If ch eq ')' Begin
+               Decrement Open_Count
+               If Open_Count lt 0 Function_return ''
+               If Open_Count eq 0 Indicate Err False
+            End
+         [Err] Loop
+         // now parse and perform the GET operation on the substring
+         Get Parse_Get (mid(s,Close_pos-Last_pos+1,Last_pos)) to s1
+         [Err] Function_return ''
+         // replace the parsed function back in the eval string.
+         // the quotes appear to be needed. They may have odd side effects.
+         Move ( Left(s,Last_pos-1) + '"' + S1 + '"' + Mid(s,1000,Close_pos+1) ) to s
+      Loop
+      //
+   End_function
+   
+   // Public Function: S_Eval 
+   //
+   // This is the main Smart_eval function.
+   //
+   //  Because this gets used as part of placing watch variables during a
+   //  trace we try not to effect any global indicators or integers (with
+   //  the exception of EVAL_ERR). So far we have identified and restored
+   //  the following globals: Err, Found, StrMark, StrLen
+   //
+   function s_eval string Exp Returns String
+      Local integer tErr tFound tStrMark tStrLen
+      Local String Eval_Str
+      Move (err)   to tErr        // remember current values of these 
+      Move (Found) to tFound      // globals. These get clobbered.
+      Move StrMark to tStrMark
+      Move StrLen  to tStrLen
+      Get S1_Eval Exp to Eval_Str // Do the eval
+      Indicate Eval_Err as [Err]  // return eval error status to Eval_Err
+      Indicate Err   as tErr      // Restore globals.
+      Indicate Found as tFound
+      Move tStrMark to StrMark
+      Move tStrLen  to StrLen
+      Function_Return Eval_Str    // Return Evaluated String w/ Eval_Err Set
+   End_Function
+   
+End_Class // End of Eval_Unit
+
+Object Eval_Unit is an Evaluator
+End_Object
+
+//==========================================================================
+// Global Function Smart_Eval
+//    To process internal function like eval should
+//
+// Format: Get Smart_eval(<string to eval>) to Eval_Str
+//         Returns evaluated String and Eval_Err indicator    
+//--------------------------------------------------------------------------
+
+Function Smart_Eval GLOBAL String Text Returns String
+  Local String Eval_Str
+  Get S_Eval of Eval_Unit.Obj Text to Eval_Str
+  [Eval_Err] Move 'Bad Expression' to Eval_Str
+  Function_Return Eval_Str
+End_Function
+
+

@@ -1,0 +1,32 @@
+// ENTACTBR.PKG
+// November 30, 1990
+// LS
+//
+// Entry_Action_Bar class definition
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+use Action
+use Pulldown
+use HelpMsgs
+
+class Entry_Action_Bar is an ACTION_BAR_MENU
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        set Action_Bar_Keys_Msg to Entry_Action_Bar_Keys
+
+        item_list
+            #INCLUDE RECDE_PD.INC
+            #INCLUDE NAVI_PD.INC
+            #INCLUDE HELP_PD.INC
+        end_item_list
+    end_procedure
+end_class
+
+procedure Entry_Action_Bar_Keys for Desktop integer Obj
+    on_key key_Alt+key_R send Activate to (Record_Pull_Down( Obj ))   Private
+    on_key key_Alt+key_N send Activate to (Navigate_Pull_Down( Obj )) Private
+    on_key key_Alt+key_H send Activate to (Help_Pull_Down( Obj ))     Private
+end_procedure

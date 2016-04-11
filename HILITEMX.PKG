@@ -1,0 +1,355 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// HiLitemx.Pkg
+// Version: 1.0
+//  Created - long ago
+//
+// Author: John J. Tuohy
+//
+// mixin package to support character highlighting and search for pulldown
+// and action bar. You could also create a Menu class to support this as
+// follows:
+//
+//     Class Menu_H is a Menu
+//        procedure Construct_Object integer Img
+//           forward send Construct_Object Img
+//           object highlight_array is an array
+//           end_object                        
+//           Send Define_HighLight_Mixin       
+//        end_procedure
+//        IMPORT_CLASS_PROTOCOL Highlight_Mixin
+//     End_Class
+//          
+// This uses the following rules.
+//
+// If highlight_ch_state is false it acts exactly like a normal menu.
+// 
+// When highlight_ch_state is true a highlight character will get
+// displayed in its own color. This character is either the first character
+// or the character following a "&" (which gets stripped). Item matching will
+// be altered so that highlight character is matched. Two colors are supported:
+// unpointed (property highlight_color) and pointed (property
+// Highlight_color_select). Since these colors do not have a palette we
+// We assign them with a trick.
+//
+// The color trick:
+//
+//    If Highlight_Color is -1 it will be altered as follows
+//       Use color 7 (undefined) of current_palette. If undefined set color
+//       to 0.
+//
+//    If HighLight_Color_Select is -1 it will be altered as follows
+//       Use color 5 (undefined) of current_palette. If undefined use 0.
+//
+//    When the highlight color is 0 (when the procedure Assign_highlight-
+//    _colors is called) the highlight feature is shut off. What is nice
+//    about this is that this can be determined at runtime
+//
+//    When the color is 0 no change is made. So if you are clever you
+//    can add the missing 5 and 7 Colors in your config .cfg file. Or
+//    your program can set them (Set Palette_Color ? 7 to ??) to whatever.
+//    Alternately, you can directly set these properties.
+//
+//    For example, if you used this with action bar and pulldown menus
+//    you'd need to adjust palette 3. Let's say you create 2 environment
+//    variables named DFCH and DFCHS that contained the colors you wanted
+//    you could add the color setup with the following:
+//
+//             Get_Environment "DFCH" to var
+//             If var ne "" Set Palette_Color 3 7 to var // unpointed
+//             Get_Environment "DFCHS" to var
+//             If var ne "" Set Palette_Color 3 5 to var // pointed
+//
+//   You can build your highlight colors right into your .cfg file if
+//   you wish. You need to set colors for 5 and 7 for your palette. The
+//   palette you are most likely to change is palette 3. Config does not let
+//   you set these directly but you can accomplish this by changing the
+//   config file with an editor. For example, the colors for could be set
+//   by adding the following:
+//                    ; set palette 3 (2) for 5 (09) and 7 (112) 
+//                    2309=2 112
+//                    2311=2 9
+//            
+//
+// 07/20/92  Doug G. had basic code in Pulldown and Action.pkg
+// 12/10/93  Revisted and brought up to date for DAF packages. 
+// 12/16/93  Worked it over some more. 
+// 02/28/94  Suggested changes from Lee. Restore search mode if needed.
+//           Change Highlight character to be & which is what windows
+//           does.
+// 03/17/94  Don't assign values to blank fields. If -1 we have no position
+// 04/08/94  Augment Set Value to strip and set &. Also create message
+//           to set a single item (instead of all). 
+// 07/18/94  1) Change so that a "\&" keeps the & in place (Windows standard)
+//           2) Change so that an undefined Highlight color sets it to 116
+//              which is a good default color (Used in Doug G's hilight
+//              packages).
+// 07/20/94  (LS) Added Last_Highlight_Key for Auto_Execute_State support.
+// 07/20/94  (JJT) Removed change from 4/8/94 (really dumb idea - the highlight
+//           message sets value - recursion city). If you need to assign
+//           colors dynamically send the message Assign_Item_highlight.
+// 08/10/94  (JJT) changed \& to && for create & 
+// 09/26/94  (LS) changed over to use define command.
+// 08/29/95 (JJT) Set shadow_state must set color if active
+//           
+//************************************************************************
+
+use ui
+
+// Internal global keeps track of screen mode and color
+define ScreenMode_Stat for |VI34
+
+// If you define something else first you'll get the first one. You might
+// want to to maintain '~' compatablity with old public domain product.
+//
+//
+define HIGHLIGHT$SYMBOL   for '&'
+define HIGHLIGHT$OVERRIDE for '&&'
+
+// default highlight color
+define DEFAULT$HIGHLIGHT$COLOR for 116
+
+Register_Object Highlight_Array
+
+Class HighLight_Mixin is a Message
+    Procedure Define_HighLight_Mixin
+       // Do we support character highlighting. If we do two colors
+       // are required: the color of the highlight character pointed and
+       // unpointed. If -1 is used the object will assign a color automatically.
+       // It will use two unassigned colors in the palette defintion (5 and 7)
+       // and, if defined, assign them to color (7) and color_select (5). 
+       Property Integer Highlight_Ch_State     public TRUE
+       Property Integer Highlight_Color        public -1
+       Property Integer Highlight_Color_Select public -1 
+       // private property to remember what the search mode used to be
+       Property Integer Old_Search_Mode public -1
+       Property Integer Last_Highlight_Key     public 0
+    End_Procedure // Define_HiLite_Mixin
+
+    //
+    // Set highlight info. Look for "&" remove and note its location in
+    // a highlight array. If no "&" we will default highlight position to
+    // the first character. This must be called once the list is built.
+    // End_Construct object does this for us.
+    //
+    Procedure assign_highlight_information
+        local integer itm Items
+        Send Delete_Data to (highlight_Array(Current_Object)) // just in case
+        Move (Item_Count(Current_Object)-1) to Items
+        For itm from 0 to Items
+            Send Assign_Item_highLight Itm
+        Loop
+    End_procedure
+
+    // Find & in the item, remove it and note the location
+    // in an highlight array. If there is no & we will set this first
+    // character as the highlight character. Even if we don't use high-
+    // lighting we will track this info and clear the &. This way we can
+    // flip the state.
+    // 07/18/94 - Modified so that && is not a highlight but treated as a &
+    Procedure Assign_Item_Highlight Integer Itm
+      Local Integer Posit OverPosit Ps
+      Local String Val
+      get value item itm to Val
+      If Val eq '' Move -1 to posit // Don't assign values to blank fields
+      Else Begin
+         pos HIGHLIGHT$OVERRIDE in Val to OverPosit // any "&&"s ?
+         If OverPosit ; // if so, replace with unprintable character
+            Move (replaces(HIGHLIGHT$OVERRIDE,Val,character(255))) To Val
+         pos HIGHLIGHT$SYMBOL in Val to ps
+         Move ps to Posit
+         If posit Begin
+            replace HIGHLIGHT$SYMBOL in Val with ""
+            Decrement Posit
+         End
+         If OverPosit ; // restore the & characters as needed
+            Move (replaces(character(255),Val,HIGHLIGHT$SYMBOL)) To Val
+         If (Ps OR OverPosit) Set Value Item Itm to Val
+      End
+      Set array_value of (highlight_Array(Current_Object)) item itm to posit
+    End_Procedure // Assign_Highlight_Item
+
+    // Take care of highlight related display stuff
+    // If highlight is false shut off external paint state
+    // if highlight is True
+    //       set search_mode to incrmental (so item_matching gets called)
+    //       set external_paint_state to true
+    //       find some good colors for highlight colors (pointed, unpointed)
+    //
+    Procedure assign_highlight_colors
+        local integer Clr Pal Obj# OldSM
+        //    
+        If (HighLight_Ch_State(Current_Object)) Begin
+           // Now set highlight color if needed
+           Move Current_Object to Obj#
+           Repeat
+              Get Class_Palette (Class(Obj#)) to Pal
+              If Pal eq 0 get Object_Id of (Parent(Obj#)) to obj#
+           Until Pal ne 0
+
+           // Set the Highlight_Color_Select if needed (if it is -1
+           // we will find the color)
+           If (Highlight_Color_Select(Current_Object)=-1) Begin
+              // first try 5 (impossible), if undefined use 0
+              Get Palette_Color Pal 5 to Clr
+              If Clr eq 1 Move 0 to Clr
+              Set Highlight_Color_Select to Clr
+           End
+
+           // Set the Highlight_Color if needed (if it is -1 we
+           // will find the color)
+           Move (Highlight_Color(Current_Object)) to Clr
+           If Clr eq -1 Begin
+              // first try 7 (impossible), if undefined use 0 which will
+              // shut this feature off.
+              Get Palette_Color Pal 7 to Clr
+              // new Color for default 07/18/94
+              If Clr eq 1 Move DEFAULT$HIGHLIGHT$COLOR to Clr
+              Set Highlight_Color to Clr
+           End
+           // if we don't have a highlight color the highlight mode will
+           // get shut off. This allows machines which are not happy with
+           // highlight colors (mono) to not use this feature *and* to be
+           // able to shut this feature off at runtime.
+           If Clr le 0 Set HighLight_Ch_State to False
+        End
+
+        Get Old_Search_Mode to OldSM
+        If (HighLight_Ch_State(Current_Object)) Begin
+           // We set search mode to incremental so that it will use
+           // item_matching (which we have overridden to make it find
+           // the highlighted chararcter).
+           // if OldSM is unitialized we will set it to what it was (this
+           // is being quite paranoid). This way if it get changed back the
+           // correct search mode will be restored
+           If OldSM eq -1 ; // -1 means not already set to something
+              Set Old_Search_mode to (Search_Mode(Current_Object))
+           Set Search_mode to INCREMENTAL
+
+           // this will force scroll_paint to get called
+           Set external_paint_state to TRUE
+        End
+        Else Begin
+           Set external_paint_state to FALSE
+           // Just to be paranoid. If the highlight_ch_state is
+           // changed we will set search_mode back to what it was
+           // before it got changed.
+           If OldSM ne -1 Begin // if -1 then we have nothing to change
+              Set Search_Mode to OldSM  // restore search mode
+              Set Old_Search_Mode to -1 // once again...nothing to say.
+           End
+        End
+    End_procedure
+
+    // if external_paint_state is TRUE this gets called during an image
+    // paint/scroll. Augment to make the first character highlight colors
+    // correct.
+    procedure scroll_paint
+        local integer counter Items
+        forward send scroll_paint       
+        If (HighLight_Ch_State(Current_Object)) Begin
+            Move (Item_Count(Current_Object)-1) to Items
+            for counter from 0 to Items
+                Send Color_Char Counter 0 // 0 means not pointed
+            loop
+        End
+    end_procedure
+   
+    //  Augment to paint highlight color if required
+    //
+    procedure set highlight_state integer flag
+        forward set highlight_State flag
+        If (HighLight_Ch_State(Current_Object)) Begin
+           Send Color_Char (Current_item(Current_Object)) Flag
+           set search_mode to (search_mode(current_object))  //reset incr srch index
+        end
+    end_procedure
+
+    // Set the color of the highlight character. Use pointed or unpointed
+    // color based on flag. Only do this:
+    //     if shadow_state is false and color is not 0
+    //
+    Procedure Color_Char Integer Itm Integer Flag
+        Local Integer Old_ScreenMode Arry WL W Clr
+        if (shadow_state(current_object,Itm)=0) Begin // only if not shadowed
+          // get color based of pointed state
+          Move ( if(Flag, Highlight_Color_Select(Current_Object), ;
+                        Highlight_Color(Current_Object)) ) to Clr
+          If Clr gt 0 Begin // only if we have a color
+             Get Integer_value of (highlight_array(current_object)) item Itm to W
+             // if -1 we want no color change at all
+             If W ge 0 Begin
+                Get window_location item (Itm+1) to WL
+                Move ScreenMode_Stat to Old_ScreenMode
+                Screenmode Clr ON
+                Send color_block (WL+W) 65537
+                ScreenMode Old_ScreenMode
+             End
+          End
+       End
+    End_Procedure // Color_Char
+
+    // We augment Item_Matching to handle highlight character search
+    // support. This alternate support gets used if HighLight_Ch_State is
+    // set to TRUE. When set to true, select_mode is set to INCREMENTAL If
+    // it were not, this function would not get called.
+    // 
+    Function Item_Matching String s Integer Itm Returns Integer
+       Local integer I cnt Obj mtch_itm Posit
+       Local String Ch Ch1
+
+       // If highlight character is supported perform a different
+       // search method.
+       //
+       If (Highlight_ch_State(Current_Object)) begin
+           Move (Highlight_Array(Current_Object)) to Obj
+           Move (item_Count(Current_Object)-1) to Cnt
+           Move (Uppercase(left(s,1))) to ch // the typed character
+           Get Current_Item to Itm
+           Move Itm to i
+           Repeat
+             Increment I             // check next item.
+             If I gt Cnt Move 0 to I // if at end of list, wrap to top
+             Move (integer_value(obj,i)+1) to posit
+             If posit ge 0 Begin// skip items with no hlight set
+                Move (Uppercase(Mid(Value(Current_Object,I),1,Posit))) to ch1
+                // I think we want to ignore shadows
+                If (ch=ch1 AND shadow_State(Current_Object,i)=0 ) begin
+                   set Last_Highlight_Key to (ascii(ch))
+                   Function_Return i // success...we found one!
+                End
+             End
+           Until Itm eq I
+           Function_Return -1 // failure...we did not find an item
+       End    
+       // else do normal item matching
+       Move Itm to Mtch_Itm
+       Forward get Item_Matching s to Mtch_Itm
+       Function_Return Mtch_itm
+    End_Function
+
+    // augment to assign highlight positions (look for &)
+    // and to set the highlight colors and properties as needed
+    Procedure End_Construct_Object
+       Forward Send End_Construct_Object
+       Send assign_highlight_information
+       Send assign_highlight_colors
+    End_Procedure // End_Construct_Object
+
+    //  Added to set color if active. Otherwise the color is wiped out.
+    //
+    procedure set shadow_state integer item# integer st
+       Forward Set shadow_state Item item# to st
+       if (active_state(Current_Object)) Send Color_Char item# 0 
+    end_procedure
+
+
+End_Class

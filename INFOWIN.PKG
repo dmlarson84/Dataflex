@@ -1,0 +1,82 @@
+use UI
+
+enum_list
+    define MARK_MODE_NONE for 0
+    define MARK_MODE_BLOCK
+    define MARK_MODE_LINE
+end_enum_list
+
+class Information_Window is an Edit
+    procedure Construct_Object
+        forward send Construct_Object
+
+        property integer Add_State PUBLIC FALSE
+
+        set Column_Mode to MARK_MODE_LINE
+
+        on_key KENTER send Enter_Key_Pressed
+    end_procedure
+
+    procedure Enter_Key_Pressed
+        if (Add_State(Current_Object)) ;
+            send Key KENTER
+        else ;
+            send Next
+    end_procedure
+
+    procedure Add_Line string Val
+        set Add_State to TRUE
+        set Read_Only_State to FALSE
+        set Max_Lines to 2000 // we never expect more than 2000 lines here.
+
+        send End_Of_Data
+
+        if (Line_Count(Current_Object)) GT 0 ;
+            send Process_Key KENTER
+
+        send Insert Val
+
+        set Max_Lines to (Line_Count(Current_Object))
+        set Read_Only_State to TRUE
+        set Add_State to FALSE
+    end_procedure
+
+    procedure Add_Text string Val
+        set Add_State to TRUE
+        set Read_Only_State to FALSE
+        set Max_Lines to 2000 // we never expect more than 2000 lines here.
+
+        send End_Of_Data
+        send Insert Val
+
+        set Max_Lines to (Line_Count(Current_Object))
+        set Read_Only_State to TRUE
+        set Add_State to FALSE
+    end_procedure
+
+    procedure Delete_Data
+        set Read_Only_State to FALSE
+        forward send Delete_Data
+        set Read_Only_State to TRUE
+    end_procedure
+
+    procedure Entering
+        forward send Entering
+        send Mark_On
+    end_procedure
+
+    procedure Exiting
+        send Mark_Off
+        forward send Exiting
+    end_procedure
+
+    procedure Deactivating
+        forward send Deactivating
+        send Mark_Off
+    end_procedure
+        
+    procedure Mouse_Down integer Row integer Col
+        forward send Mouse_Down Row Col
+        send Mark_On
+    end_procedure
+end_class

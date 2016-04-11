@@ -1,0 +1,147 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// EnRadLd.pkg   - Radio_entry_Form_Load
+// Version: 1.1
+//  03/18/94 - created
+//  04/04/94 - modifed.
+//
+// Author: John J. Tuohy
+//
+//
+// This is a radio_entry_Form sub-class that loads it values from the
+// a data-file. You can choose to load all of a data-file or constrain the
+// file to a particular value. A desktop data-set object is automatically
+// created to support this (to handle all loading of data.)
+// 
+// By default it expects the loading to be provided by an object named
+// Code_loader. The ID of this object is stored in a property named
+// Code_load_Object. You could change this property to point to another
+// object.
+//
+// You can use this to load data from as many files as you wish. However,
+// it is advised that you use the CODEENRD package instead. It uses the
+// standard CODEMAST files which allows you to place all code types in a single
+// file. This package is provided to support those who already have a number
+// of support data-files in place.
+//
+// Interface for Loading data:
+//
+//    Property Integer Code_File         - datafile number to load from
+//    Property Integer Code_Index        - Index to find by (dflt=1)
+//    Property String  Type_Value        - If not '' records will be
+//                                         constrained to this value (if
+//                                         type field is not 0)
+//    Property Integer Type_Field        - The field number of the TYPE
+//                                         value used for constraints
+//    Property Integer Code_Field        - Field of the code (dflt=1)
+//    Property Integer Description_Field - Field of the code desc (dflt=2)
+//
+//    Property Integer Code_load_Object  - Name of DS object to use for
+//                                         finding records. You should
+//                                         not have to change this.
+//
+//
+// Sample Usage:
+//
+// 1) To create a object that loads its data from a file named SHIPPING
+//    where field 1 is the code to savem and field 2 is the description,
+//    we load by index 1 (almost all defaults used here):
+//
+//        Object e1 is a Radio_entry_Form_Load E1_Img FOR Order.Shipping
+//          Set Code_File  to SHIPPING.File_Number
+//        End_Object
+//
+// 2) To create a object that loads its data from a file named SHIPPING
+//    where field 1 is the description and field 2 is the code to be saved
+//    to the data-base. In addition we will load by index 2 AND we will open
+//    and close the file as needed.
+//
+//        Object e1 is a Radio_entry_Form_Load E1_Img FOR Order.Shipping
+//          Procedure Fill_list
+//             Open Shipping
+//             Forward Send Fill_list 
+//             Close Shipping
+//          End_Procedure 
+//          Set Code_File  to SHIPPING.File_Number
+//          Set Code_Index to 2
+//          Set Code_Field to 2
+//          Set Description_field to 1
+//        End_Object
+//
+// 3)   To create a object that loads its data from a file named CODEMAST
+//      where field 2 is the code and 3 is the description and we only want
+//      types that are SHIPPING (type is field 1):
+//
+//        Object e1 is a Radio_entry_Form_Load E1_Img FOR Order.Shipping
+//          Set Code_File  to CodeMast.File_Number
+//          Set_Type_Field to 1 
+//          Set Code_Field to 2
+//          Set Description_file to 3
+//          Set Type_Value to "SHIPPING"
+//        End_Object
+//
+//      It would make more sense to use CODEENRD.PKG to handle the last
+//      case.
+// 09/13/94    Changed Types to CodeMast
+//************************************************************************
+
+Use CodeLoad // class support for Case_loader_Data_Set
+use enradio
+
+//
+//  If you are using this package we are assumming that you will create a
+//  radio-entry-form object. We will create this below
+//
+Register_Object Code_Loader
+
+Class Radio_entry_Form_Load is a Radio_Entry_Form
+
+   Procedure Construct_Object Integer Img#
+      Forward Send Construct_Object Img#
+      Property Integer Code_File         public 0   // Must be SET.
+      Property Integer Code_Index        public 1   // Indx1 is a good guess.
+      Property String  Type_Value        public ''  // default these two to
+      Property Integer Type_Field        public 0   // Undefined (none).
+      Property Integer Code_Field        public 1   // Fld 1=code, 2=descr
+      Property Integer Description_Field public 2   // are good guesses.
+      Property Integer Code_load_Object  public (Code_Loader(Current_Object))
+   End_Procedure // Construct_Object
+
+   //  Fill the radio list from a file.
+   //
+   Procedure Fill_List
+      Local Integer Obj# Code#
+      Local String Code Desc Type
+      Get Code_Load_Object to Obj# // object to do the finding for us
+      If Obj# Begin                        // only if obj exists
+        Get Code_Field to Code#     
+        Send Initialize_File to Obj# ;
+             (Code_File(Current_Object)) (Code_Index(Current_Object)) ;
+             Code# (Description_Field(Current_Object)) ;
+             (Type_Field(Current_Object)) (Type_Value(Current_Object))
+        //
+        While (Next_Code_record(Obj#))  // rets TRUE if rec exists
+          Get Current_Description of Obj# to Desc 
+          If Code# gt 0 Get Current_Code of Obj# to Code
+          Else Move Desc to Code
+          Send Add_Radio_Item Desc Code
+        Loop
+      End
+   End_Procedure // Fill_list
+
+End_Class   
+
+//  This is the object we need for loading files.
+//
+Object Code_loader is a Code_loader_Data_Set no_Image
+End_Object
+
+

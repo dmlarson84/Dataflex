@@ -1,0 +1,47 @@
+use ui
+
+class File_Definition_Server_Mixin is a Message
+    procedure Define_File_Definition_Server
+        property integer Fdef_Server PUBLIC 0
+        property integer Display_Object_State PUBLIC 0
+    end_procedure
+
+    procedure set File_Definition_Server integer Svr
+        local integer Obj
+
+        set Fdef_Server to Svr
+        if ((Svr = 0) or not(Display_Object_State(Current_Object))) ;
+            procedure_return
+
+        move Current_Object to Obj
+        send Register_Display_Object to Svr Obj
+    end_procedure
+
+    function File_Definition_Server returns integer
+        local integer Svr
+
+        get Fdef_Server to Svr
+
+        if Svr EQ 0 begin
+            delegate get File_Definition_Server to Svr
+            set File_Definition_Server to Svr
+        end
+
+        function_return Svr
+    end_function
+
+    procedure Disconnect_File_Definition_Server
+        local integer Svr Obj
+
+        get Fdef_Server to Svr
+        if ((Svr = 0) or not(Display_Object_State(Current_Object))) ;
+            procedure_return
+
+        move Current_Object to Obj
+        send Deregister_Display_Object to Svr Obj
+    end_procedure
+
+    procedure File_Definition_Server_Destroyed
+        set File_Definition_Server to 0
+    end_procedure
+end_class

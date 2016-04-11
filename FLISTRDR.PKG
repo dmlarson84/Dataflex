@@ -1,0 +1,365 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+//      
+// Module: 
+//      flistrdr.pkg
+//      
+// Purpose:
+//      Defines Filelist_Reader class. Filelist_Reader is a class for reading
+//      entries from a filelist.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      8/12/94
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+use seq_chnl
+
+// filelist entry array structure:
+//  item number offset      field
+//          0               entry_active
+//          1               root_name
+//          2               display_name
+//          3               logical_name
+
+enum_list
+    define FILELIST_ENTRY_ACTIVE for 0
+    define FILELIST_ROOT_NAME
+    define FILELIST_DISPLAY_NAME
+    define FILELIST_LOGICAL_NAME
+end_enum_list
+
+define FILELIST_FILE_NUMBER for 0
+
+define FILELIST_READER_ENTRY_STRUCTURE_SIZE for 4
+
+define FILELIST_MAX_FILE_NUMBER for 250
+define FILELIST_ENTRY_DISK_SIZE for 128
+
+define FILELIST_DEFAULT_FILENAME for "filelist.cfg"
+
+//global string to hold initial (default) filelist_name; assumes filelist_name is
+// set to default during inclusion/execution of filelist_reader class.
+string Filelist_Reader.Default_Filelist_Name 255
+get_attribute DF_FILELIST_NAME to Filelist_Reader.Default_Filelist_Name
+
+class Filelist_Reader is an Array
+    register_function Entry_Active integer File# returns integer
+    register_function Filename returns string
+    register_function Root_Name integer Fnum returns string
+    register_function Display_Name integer Fnum returns string
+    register_function Logical_Name integer Fnum returns string
+
+    procedure Construct_Object
+        forward send Construct_Object
+
+        property string F_Name PUBLIC Filelist_Reader.Default_Filelist_Name
+        property integer Active PUBLIC TRUE
+    end_procedure
+
+    procedure Initialize
+        send Delete_Data
+        send Fill_List
+    end_procedure
+
+    function Size_Of_Entry_Structure returns integer
+        function_return FILELIST_READER_ENTRY_STRUCTURE_SIZE
+    end_function
+
+    procedure set Filename string Val
+        if Val GT "" ;
+            set_attribute DF_FILELIST_NAME to Val
+
+        set F_Name to Val
+    end_procedure
+
+    function Filename returns string
+        local string Val
+
+        get F_Name to Val
+
+        if Val GT "" ;
+            get_attribute DF_FILELIST_NAME to Val
+
+        function_return Val
+    end_function
+
+    function Original_Root_Name integer Fnum returns String
+        local string Val
+
+        if (F_Name(Current_Object)) LE "" ;
+            function_return ""
+
+        get_attribute DF_FILE_ROOT_NAME of Fnum to Val
+        function_return Val
+    end_function
+
+    function Original_Display_Name integer Fnum returns string
+        local string Val
+
+        if (F_Name(Current_Object)) LE "" ;
+            function_return ""
+
+        get_attribute DF_FILE_DISPLAY_NAME of Fnum to Val
+        function_return Val
+    end_function
+
+    function Original_Logical_Name integer Fnum returns String
+        local string Val
+
+        if (F_Name(Current_Object)) LE "" ;
+            function_return ""
+
+        get_attribute DF_FILE_LOGICAL_NAME of Fnum to Val
+        function_return Val
+    end_function
+
+    function Original_Entry_Active integer Fnum returns integer
+        local integer File#
+
+        if (F_Name(Current_Object)) LE "" ;
+            function_return (FALSE)
+
+        move Fnum to File#
+        decrement File#
+        get Original_Next_Used File# to File#
+
+        function_return (File# = Fnum)
+    end_function
+
+    procedure Fill_List
+        local integer Fnum
+
+        send Delete_Data
+        get Original_First_Used to Fnum
+
+        while Fnum GT 0
+            set Filelist_Struct Fnum FILELIST_ENTRY_ACTIVE to (string(TRUE))
+            set Filelist_Struct Fnum FILELIST_ROOT_NAME to (Original_Root_Name(Current_Object, Fnum))
+            set Filelist_Struct Fnum FILELIST_DISPLAY_NAME to (Original_Display_name(Current_Object, Fnum))
+            set Filelist_Struct Fnum FILELIST_LOGICAL_NAME to (Original_Logical_name(Current_Object, Fnum))
+
+            get Original_Next_Used Fnum to Fnum
+        end
+    end_procedure
+
+    procedure Open string Fname
+        if Fname NE (Filename(Current_Object)) begin
+            indicate Err FALSE
+            set Filename to Fname
+            [not Err] send Fill_List
+        end
+
+        set Active to TRUE
+    end_procedure
+
+    procedure Close
+        set Filename to ""
+        send Delete_Data
+        set Active to FALSE
+    end_procedure
+
+    procedure New
+        set Filename to ""
+        send Delete_Data
+        set Active to TRUE
+    end_procedure
+
+/Filelist_Header_Img
+Filelist: ________________________________________________ __/__/__ Page: __.
+
+Number DataFlex Name                         User Display Name
+       Root Name
+=============================================================================
+/Filelist_Body_Img
+_____. ________                              ________________________________
+       ________________________________________
+/*
+    function Report_Select integer File# returns integer
+      function_return (Entry_Active(Current_Object, File#))
+    end_function
+
+    function Report_Pagecheck_Body returns integer
+        pagecheck Filelist_Body_Img.Lines
+        function_return (Pagebreak)
+    end_function
+
+    procedure Report_Print_Body integer File#
+        autopage Filelist_Body_Img
+        print File#
+        print (Logical_Name(Current_Object, File#))
+        print (Display_Name(Current_Object, File#))
+        print (Root_Name(Current_Object, File#))
+
+        output Filelist_Body_Img
+    end_procedure
+
+    procedure Print string Device
+        local integer Itm# // note: Itm# = File# in this case
+        local integer Cnt Tot Break_State Chnl
+
+        get Item_Count to Cnt
+        move 1 to Itm#
+
+        get Seq_Open_Output_Channel Device to Chnl
+
+        [Err] procedure_return
+
+        move 0 to Pagecount
+        move 20000 to Linecount // special weird value for pagecheck that
+                                // increments pagecount w/o formfeed
+        print (Filename(Current_Object)) to Filelist_Header_Img.1
+        sysdate Filelist_Header_Img.2
+        
+        while Itm# LT Cnt
+            if (Report_Select(Current_Object, Itm#)) begin
+                get Report_Pagecheck_Body to Break_State
+
+                if Break_State begin
+                    print Pagecount to Filelist_Header_Img.3
+                    output Filelist_Header_Img
+                end
+
+                send Report_Print_Body Itm#
+            end
+
+            increment itm#
+        end
+
+        formfeed
+        send Seq_Close_Channel Chnl
+    end_procedure
+
+    function Original_Next_Empty integer Last# returns integer
+        local integer Next#
+
+        if (F_Name(Current_Object)) LE "" begin
+            move (Last# + 1) to Next#
+
+            if Next# GT FILELIST_MAX_FILE_NUMBER
+                move FILELIST_MAX_FILE_NUMBER to Next#
+        end
+        else ;
+            get_attribute DF_FILE_NEXT_EMPTY of Last# to Next#
+
+        function_return Next#
+    end_function
+
+    function Original_First_Empty returns integer
+        local integer Next#
+
+        if (F_Name(Current_Object)) LE "" ;
+            function_return 1
+
+        get_attribute DF_FILE_NEXT_EMPTY of 0 to Next#
+        function_return Next#
+    end_function
+
+    function Original_Next_Used integer Last# returns integer
+        local integer Next#
+
+        if (F_Name(Current_Object)) LE "" ;
+            function_return 0
+
+        get_attribute DF_FILE_NEXT_USED of Last# to Next#
+        function_return Next#
+    end_function
+
+    function Original_First_Used returns integer
+        local integer Next#
+
+        if (F_Name(Current_Object)) LE "" ;
+            function_return 0
+
+        get_attribute DF_FILE_NEXT_USED of 0 to Next#
+        function_return Next#
+    end_function
+
+    function Next_Empty integer Last# returns integer
+        local integer Cnt Itm#
+
+        get Item_Count to Cnt
+        move Last# to Itm#
+        increment Itm#
+
+        if Itm# GT FILELIST_MAX_FILE_NUMBER ;
+            function_return 0
+
+        while ((Itm# < Cnt) and (Itm# <= FILELIST_MAX_FILE_NUMBER))
+            if not (Entry_Active(Current_Object, Itm#)) ;
+                function_return itm#
+            increment Itm#
+        end
+
+        if Itm# GT FILELIST_MAX_FILE_NUMBER ;
+            function_return 0
+
+        function_return Itm#
+    end_function
+
+    function First_Empty returns integer
+        function_return (Next_Empty(Current_Object, 0))
+    end_function
+
+    function Next_Used integer Last# returns integer
+        local integer Cnt Itm#
+
+        get Item_Count to Cnt
+        move Last# to Itm#
+        increment Itm#
+
+        if Itm# GE Cnt ;
+            function_return 0
+
+        while Itm# LT Cnt
+            if (Entry_Active(Current_Object, Itm#)) ;
+                function_return Itm#
+            increment Itm#
+        end
+
+        function_return 0
+    end_function
+
+    function First_Used returns integer
+        function_return (Next_Used(Current_Object, 0))
+    end_function
+
+    procedure set Filelist_Struct integer File# integer Ofst string Val
+        local integer Entry_Ofst
+
+        move (File# * Size_Of_Entry_Structure(Current_Object)) ;
+            to Entry_Ofst
+
+        if Ofst NE FILELIST_ENTRY_ACTIVE ;
+            set Array_Value item (Entry_Ofst + ;
+                FILELIST_ENTRY_ACTIVE) to (string(TRUE))
+            
+        set Array_Value item (Entry_Ofst + Ofst) to Val
+    end_procedure
+
+    function Entry_Active integer File# returns integer
+        function_return (String_Value(Current_Object,(File# * ;
+                Size_Of_Entry_Structure(Current_Object)) + ;
+                FILELIST_ENTRY_ACTIVE) = string(TRUE))
+    end_function
+
+    function Root_Name integer File# returns string
+        function_return (String_Value(Current_object, (File# * ;
+            Size_Of_Entry_Structure(Current_Object)) + ;
+            FILELIST_ROOT_NAME))
+    end_function
+
+    function Display_Name integer File# returns String
+        function_return (String_Value(Current_object, (File# * ;
+            Size_Of_Entry_Structure(Current_Object)) + ;
+            FILELIST_DISPLAY_NAME))
+    end_function
+
+    function Logical_Name integer File# returns string
+        function_return (String_Value(Current_Object, (File# * ;
+            Size_Of_Entry_Structure(Current_Object)) + ;
+            FILELIST_LOGICAL_NAME))
+    end_function
+end_class

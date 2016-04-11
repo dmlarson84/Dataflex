@@ -1,0 +1,3 @@
+use enradld
+define Radio_Entry_Form_Load0 for Radio_Entry_Form_Load
+define U_Radio_Entry_Form_Load0 for U_Radio_Entry_Form_Load

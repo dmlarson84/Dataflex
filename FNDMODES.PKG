@@ -1,0 +1,6 @@
+//
+// special find modes
+//
+define NEXT_RECORD  for 5 //* find-next   *//
+define FIRST_RECORD for 6 //* find-first  *//
+define LAST_RECORD  for 7 //* find-last   *//

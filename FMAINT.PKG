@@ -1,0 +1,638 @@
+// Doesn't fully support Reindex_Detect_Bad_Mode properly; just has a
+// property that clients of Fmaint_server must set to known values.
+
+use fdef
+
+define FILELIST_DEFAULT_DRIVER_NAME for "DATAFLEX"
+
+class File_Maintenance_Mixin is an Array
+    procedure Define_File_Maintenance_Protocol
+        property integer Reindex_Detect_Bad_Mode PUBLIC 0
+    end_procedure
+
+    function Strip_DEF_Ext string Val returns string
+        local string Ext_Val
+
+        right Val to Ext_Val (length(DF_DEF_FILE_EXTENSION))
+        if (lowercase(Ext_Val)) EQ DF_DEF_FILE_EXTENSION ;
+                function_return (Left(Val, length(Val) - ;
+                (length(DF_DEF_FILE_EXTENSION))))
+        function_return Val
+    end_function
+
+    function Value_From_DEF string DEF_Name string Pre_String returns string
+        local string Val
+        local integer Chnl Spos
+
+        get Seq_Open_Input_Channel DEF_Name to Chnl
+
+        while [not Seqeof]
+            readln channel Chnl Val
+
+            pos Pre_String in Val to Spos
+
+            if Spos LE 0 ;
+                move "" to Val
+            else begin
+                pos ":" in Val to Spos
+    
+                if Spos LE 0 ;
+                    move "" to Val
+                else begin
+                    trim (right(Val, (length(Val) - Spos))) to Val
+                    indicate Seqeof TRUE
+                end
+            end
+        end
+
+        send Seq_Close_Channel Chnl
+
+        function_return Val
+    end_function
+
+    function File_Number_From_DEF string DEF_Name returns string
+        local string Val
+        local integer Spos file#
+
+        move 0 to File#
+
+        get Value_From_DEF DEF_Name "FILE DEFINITION FOR FILE" to Val
+
+        if Val GT "" begin
+            pos "#" in Val to Spos
+
+            if Spos GT 0 begin
+                trim (right(Val,(length(Val) - Spos))) to Val
+                pos ")" in Val to Spos
+
+                if Spos GT 0 ;
+                    trim (left(Val,(Spos - 1))) to File#
+            end
+        end
+
+        function_return File#
+    end_function
+
+    function Driver_Name_From_DEF string DEF_Name returns string
+        function_return (Value_From_DEF(Current_Object, DEF_Name, "DRIVER NAME"))
+    end_function
+
+    function Root_Name_From_DEF string DEF_Name returns string
+        function_return (Value_From_DEF(Current_Object, DEF_Name, "FILE ROOT NAME"))
+    end_function
+
+    function Display_Name_From_DEF string DEF_Name returns string
+        function_return (Value_From_DEF(Current_Object, DEF_Name, "USER DISPLAY NAME"))
+    end_function
+
+    function Logical_Name_From_DEF string DEF_Name returns string
+        function_return (Value_From_DEF(Current_Object, DEF_Name, "DATAFLEX FILE NAME"))
+    end_function
+
+    procedure Create_Database_From_DEF integer Fnum string Rt_Name string Driver string DEF_Name
+        local string Val Rt_Val Disp_Val Log_Val
+        local integer Handle# File# Was_Ch
+
+        indicate Err FALSE
+
+        move Fnum to File#
+
+        if File# LE 0 ;
+            get File_Number_From_DEF DEF_Name to File#
+
+        move Rt_Name to Rt_Val
+
+        if Rt_Val LE "" ;
+            get Root_Name_From_DEF Def_Name to Rt_Val
+
+        get Display_Name_From_DEF Def_Name to Disp_Val
+        get Logical_Name_From_DEF Def_Name to Log_Val
+
+        if ((File# <= 0) or (Rt_Val <= "") or (Disp_Val <= "") or ;
+                (Log_Val <= "")) begin
+            error DFERR_BAD_OR_MISSING_DEF Def_Name
+            procedure_return
+        end
+
+        move 0 to Handle#
+//
+// force use of driver name in .DEF to ensure record identity is correctly set by load_def
+// (otherwise we'd have to ask for the record identity from the user.)
+//
+//        if Driver LE "" ;
+//            get Driver_Name_From_DEF Def_Name to Val
+
+        get Driver_Name_From_DEF Def_Name to Val
+
+        if Val GT "" ;
+            structure_start Handle# Val
+        else ;
+            structure_start Handle# "DATAFLEX"
+
+        load_def DEF_Name onto Handle#
+
+        // load_def doesn't set the physical name from the .DEF!
+        [not Err] set_attribute DF_FILE_PHYSICAL_NAME of Handle# to Rt_Val
+
+        if [not Err] ;
+            structure_end Handle#
+        else begin
+            structure_abort Handle#
+            procedure_return
+        end
+
+        get Changed_State to Was_Ch
+
+        set Root_Name File# to Rt_Val
+        set Display_Name File# to Disp_Val
+        set Logical_Name File# to Log_Val
+
+        send Save_Original_Entry File#
+
+        set Changed_State to Was_Ch
+
+        get Print_FD File# "" to Was_Ch
+    end_procedure
+
+    procedure Delete_Database integer Fnum integer Del_Entry
+// This should perform a "callback" if the entry must be saved, or...
+// assume this is called only after querying the user, and the answer was to
+// go ahead and save.
+
+        if (Entry_Changed(Current_Object, Fnum)) begin
+            if (Save_Entry(Current_Object, Fnum)) begin
+                error 200 "Filelist Entry Invalid"
+                procedure_return
+            end
+
+            send Save_Original_Entry Fnum
+        end
+
+        delete_db Fnum IGNORE_ERRORS
+
+        if Del_Entry begin
+            send Delete_Entry Fnum
+            send Delete_Original_Entry Fnum
+        end
+    end_procedure
+
+    function Erase_Data_Database integer Fnum returns integer
+        local integer OState Ret_Val
+
+        get Database_Opened Fnum to OState
+
+        if not OState ;
+            get Open_Database_No_Error Fnum to Ret_Val
+
+        if Ret_Val ;
+            function_return (TRUE)
+
+        zerofile Fnum
+
+        if not OState ;
+            send Close_Database Fnum
+
+        function_return (FALSE)
+    end_function
+
+    procedure Reindex integer File# string Index_Str
+        local integer CBO Abrt Files_Done
+
+        if ((Num_Arguments <= 0) or (File# <= 0)) ;
+            procedure_return
+
+        get CallBack_Object to CBO
+
+//        if Index_Str LE "" ;
+//            move "0" to Index_Str // just check data; maybe this
+                                    // will be implemented in the API
+        if Index_Str GT "" begin
+            if CBO NE 0 begin
+                move 0 to Abrt
+                set Value of CBO to "Rebuild Indexes"
+                send Popup to CBO
+            end
+
+            if CBO NE 0 ;
+                get Callback of CBO ;
+                    ("Rebuilding indexes for " + ;
+                    Logical_Name(Current_Object, File#) + ":") ;
+                    CALLBACK_TYPE_BEGIN to Abrt
+
+            sort File# Index_Str (Reindex_Detect_Bad_Mode(Current_Object)) CBO
+
+            if CBO NE 0 begin
+                get Last_Operation_Aborted_State of CBO to Abrt
+
+                if Abrt begin
+                    set Last_Operation_Aborted_State of CBO to FALSE
+
+                    get CallBack of CBO "Rebuild of indexes interrupted by user." ;
+                        CALLBACK_TYPE_TEXT to Abrt
+                    get CallBack of CBO ;
+                        "Indexes of database being rebuilt will be invalid." ;
+                        CALLBACK_TYPE_TEXT to Abrt
+                    send Halt to CBO
+                end
+                else ;
+                    get Callback of CBO "" CALLBACK_TYPE_COMPLETE to Abrt
+            end
+        end
+    end_procedure
+
+    function Assign_Record_Identity integer Handle# integer New_Idx returns integer
+        local integer Ret_Val Was_Strict Was_Report Idx
+
+        move (FALSE) to Ret_Val
+
+        get_attribute DF_STRICT_ATTRIBUTES to Was_Strict
+        set_attribute DF_STRICT_ATTRIBUTES to (FALSE)
+        get_attribute DF_REPORT_UNSUPPORTED_ATTRIBUTES to Was_Report
+        set_attribute DF_REPORT_UNSUPPORTED_ATTRIBUTES to (FALSE)
+
+        set_attribute DF_FILE_RECORD_IDENTITY of Handle# to New_Idx
+        get_attribute DF_FILE_RECORD_IDENTITY of Handle# to Idx
+        move (Idx <> New_Idx) to Ret_Val
+
+        set_attribute DF_STRICT_ATTRIBUTES to Was_Strict
+        set_attribute DF_REPORT_UNSUPPORTED_ATTRIBUTES to Was_Report
+
+        function_return Ret_Val
+    end_function
+
+    procedure Convert_Database integer File# string Rt_Name string Drvr_Name ;
+            string Lgn_Parms integer Idx integer Sys_File integer Sys_Field ;
+            string Temp_Dir
+
+        local integer CBO Abrt Handle# Ret_Val Was_Idx Tot_Recs TFile#
+        local string New_Rt_Name Old_Phys_Name New_Phys_Name
+
+        if File# LE 0 ;
+            procedure_return
+
+        get CallBack_Object to CBO
+
+        if CBO NE 0 begin
+            move 0 to Abrt
+            set Value of CBO to "Convert Database"
+            send Popup to CBO
+
+            get Callback of CBO ;
+                ("Converting database " + ;
+                Logical_Name(Current_Object, File#) + ":") ;
+                CALLBACK_TYPE_BEGIN to Abrt
+        end
+
+        get Open_Database_No_Error File# to Ret_Val
+
+        indicate Err as (Err or Ret_Val)
+
+        if (Ret_Val and (CBO <> 0)) ;
+            get Callback of CBO ;
+                ("Database " + ;
+                Logical_Name(Current_Object, File#) + " could not be found/opened.") ;
+                CALLBACK_TYPE_BEGIN to Abrt
+
+        [not Err] get_attribute DF_FILE_PHYSICAL_NAME of File# to Old_Phys_Name
+
+        [not Err] structure_start Handle# Drvr_Name
+
+        [not Err] set_attribute DF_FILE_PHYSICAL_NAME of Handle# to Rt_Name
+
+
+        [not Err] structure_copy File# to Handle#
+	
+        [not Err] if Lgn_Parms GT "" ;
+            set_attribute DF_FILE_LOGIN of Handle# to Lgn_Parms
+
+        [not Err] begin
+            get_attribute DF_FILE_RECORD_IDENTITY of Handle# to Was_Idx
+
+            if ((Idx <> 0) or (Was_Idx <> 0)) begin
+                get Assign_Record_Identity Handle# Idx to Ret_Val
+
+                [not Err] if Ret_Val ;
+                    error DFERR_NUMERIC_RANGE "Record Identity"
+
+                [not Err] begin 
+                    set_attribute DF_FILE_SYSTEM_FILE of Handle# to Sys_File
+                end
+
+                [not Err] begin
+                    set_attribute DF_FILE_SYSTEM_FIELD of Handle# to Sys_Field
+                end
+            end
+
+        end
+
+        [not Err] begin
+            get_attribute DF_FILE_PHYSICAL_NAME of Handle# to New_Phys_Name
+
+            [not Err] if New_Phys_Name EQ Old_Phys_Name ;
+                error DFERR_CANT_CREATE_FILE "(Same Database)"
+        end
+
+        // disallow conversion to same physical database,
+        // but allow overwriting of a different database
+        // e.g. confirmation for converting "onto" an existing (but
+        // different) database is already assumed
+        [not Err] begin
+            get_attribute DF_FILE_PHYSICAL_NAME of Handle# to New_Phys_Name
+
+            [not Err] if New_Phys_Name EQ Old_Phys_Name ;
+                 error DFERR_CANT_CREATE_FILE "(Same Database)"
+
+            [not Err] begin
+                get First_Empty to TFile#
+                get Open_As_Database_No_Error TFile# New_Phys_Name to Ret_Val
+
+                [not Err] if not Ret_Val begin
+                    get_attribute DF_FILE_PHYSICAL_NAME of TFile# to New_Phys_Name
+
+                    send Close_As_Database TFile#
+
+                    if New_Phys_Name EQ Old_Phys_Name ;
+                        error DFERR_CANT_CREATE_FILE "(Same Database)"
+                end
+            end
+        end
+
+        [not Err] structure_end Handle# ;
+                (DF_STRUCTEND_OPT_FORCE IAND DF_STRUCTEND_OPT_RECOMPRESS) ;
+                Temp_Dir CBO
+
+        move ((Err) or Last_Operation_Aborted_State(CBO)) to Abrt
+
+        if not Abrt begin
+            if Drvr_Name NE FILELIST_DEFAULT_DRIVER_NAME ;
+                move (Drvr_Name + ":" + Rt_Name) to New_Rt_Name
+            else ;
+                move Rt_Name to New_Rt_Name
+
+            set Root_Name File# to New_Rt_Name
+            send Save_Original_Entry File#
+            set Entry_Changed File# to FALSE
+
+            get_attribute DF_FILE_RECORDS_USED of File# to Tot_Recs
+
+            if Tot_Recs GT 0 begin
+                get Open_As_Database 0 New_Rt_Name to Handle#
+
+                [not Err] if Handle# NE 0 begin
+                    copy_records File# to Handle# CALLBACK CBO
+                    send Close_As_Database Handle#
+                end
+            end
+        end
+
+        move ((Err) or Last_Operation_Aborted_State(CBO)) to Abrt
+
+        send Close_Database File#
+
+        if CBO NE 0 begin
+            if Abrt begin
+                set Last_Operation_Aborted_State of CBO to FALSE
+
+                get CallBack of CBO "Conversion of database interrupted." ;
+                    CALLBACK_TYPE_TEXT to Abrt
+                get CallBack of CBO ;
+                    "Target database will be invalid." ;
+                    CALLBACK_TYPE_TEXT to Abrt
+                send Halt to CBO
+            end
+            else ;
+                get Callback of CBO "" CALLBACK_TYPE_COMPLETE to Abrt
+        end
+    end_procedure
+end_class
+
+class File_Maintenance is a File_Definition
+    procedure Construct_Object
+        forward send Construct_Object
+
+        send Define_File_Maintenance_Protocol
+    end_procedure
+
+    import_class_protocol File_Maintenance_Mixin
+end_class
+
+//
+// Extra "_" class (_File_Maintenance_Server) to allow proper inheritance
+// (forwarding of messages)
+//
+class _File_Maintenance_Server is a File_Definition_Server
+    procedure Construct_Object
+        forward send Construct_Object
+
+        send Define_File_Maintenance_Protocol
+    end_procedure
+
+    import_class_protocol File_Maintenance_Mixin
+end_class
+
+register_procedure File_Maintenance_Server_Destroyed
+
+class File_Maintenance_Server is a _File_Maintenance_Server
+    procedure Create_Database_From_DEF integer Fnum string Rt_Name string Driver string DEF_Name
+        forward send Create_Database_From_DEF Fnum Rt_Name Driver DEF_Name
+        [not Err] send Update_Display_Objects Fnum
+    end_procedure
+
+    procedure Delete_Database integer Fnum integer Del_Entry
+        forward send Delete_Database Fnum Del_Entry
+        [not Err] send Update_Display_Objects Fnum
+    end_procedure
+
+    procedure Delete_Selected_Databases integer Del_Entry
+        local integer Fnum Was CBO Quit
+
+        get Callback_Object to CBO
+
+        get First_Selected to Fnum
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        if CBO NE 0 ;
+            get Callback of CBO "Deleting databases:" CALLBACK_TYPE_BEGIN to Quit
+
+        while ((Fnum > 0) and not(Quit))
+            if CBO NE 0 ;
+                get Callback of CBO (Logical_Name(Current_Object, Fnum)) ;
+                    CALLBACK_TYPE_TEXT to Quit
+
+            if not Quit ;
+                send Delete_Database Fnum Del_Entry
+
+            if CBO NE 0 ;
+                get Last_Operation_Aborted_State of CBO to Quit
+
+            get Next_Selected Fnum to Fnum
+        end
+
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects FILELIST_UPDATE_ALL_FILES
+
+        if (not(Quit) and (CBO <> 0)) ;
+            get Callback of CBO "" CALLBACK_TYPE_COMPLETE to Quit
+    end_procedure
+
+    function Erase_Data_Database integer Fnum returns integer
+        local integer Ret_Val
+
+        forward get Erase_Data_Database Fnum to Ret_Val
+        if not Ret_Val;
+            send Update_Display_Objects Fnum
+
+        function_return Ret_Val
+    end_function
+
+    procedure Erase_Data_Selected_Databases
+        local integer Fnum Was CBO Quit Ret_Val
+
+        get Callback_Object to CBO
+
+        get First_Selected to Fnum
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        if CBO NE 0 ;
+            get Callback of CBO "Erasing data in databases:" CALLBACK_TYPE_BEGIN to Quit
+
+        while (not(Quit) and (Fnum > 0))
+            if CBO NE 0 ;
+                get Callback of CBO ("Erasing data for " + ;
+                    (Logical_Name(Current_Object, Fnum))) ;
+                    CALLBACK_TYPE_TEXT to Quit
+
+            if not Quit begin
+                get Erase_Data_Database Fnum to Ret_Val
+
+                if CBO NE 0 ;
+                    get Last_Operation_Aborted_State of CBO to Quit
+
+                if (Ret_Val and not(Quit)) ;
+                    get Callback of CBO ("Database " + ;
+                        Logical_Name(Current_Object, Fnum) + " could not be found/opened.") ;
+                        CALLBACK_TYPE_TEXT to Quit
+            end
+
+            get Next_Selected Fnum to Fnum
+        end
+
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects FILELIST_UPDATE_ALL_FILES
+
+        if CBO NE 0 begin
+            if not Quit ;
+                get Callback of CBO "" CALLBACK_TYPE_COMPLETE to Quit
+            else begin
+                get CallBack of CBO "Interrupted by user." ;
+                    CALLBACK_TYPE_TEXT to Quit
+                send Halt to CBO
+            end
+        end
+    end_procedure
+
+    procedure Reindex
+        local integer File# CBO Abrt Files_Done
+        local string Index_Str
+
+        get First_Selected_File to File#
+
+        if File# LE 0 ;
+            procedure_return
+
+        get CallBack_Object to CBO
+
+        move 0 to Files_Done
+
+        while File# GT 0
+            get Selected_Indexes_String File# to Index_Str
+
+//            if Index_Str LE "" ;
+//                move "0" to Index_Str // just check data; maybe James or Rich will implement this in the API.
+
+            if Index_Str GT "" begin
+                if ((Files_Done <= 0) and (CBO <> 0)) begin
+                    move 0 to Abrt
+                    set Value of CBO to "Rebuild Indexes"
+                    send Popup to CBO
+                end
+
+                if CBO NE 0 ;
+                    get Callback of CBO ;
+                        ("Rebuilding indexes for " + ;
+                        Logical_Name(Current_Object, File#) + ":") ;
+                        CALLBACK_TYPE_BEGIN to Abrt
+
+                sort File# Index_Str (Reindex_Detect_Bad_Mode(Current_Object)) CBO
+
+                get Last_Operation_Aborted_State of CBO to Abrt
+
+                if Abrt begin
+                    set Last_Operation_Aborted_State of CBO to FALSE
+                    move 0 to File#
+                end
+            end
+
+            if File# GT 0 ;
+                get Next_Selected_File File# to File#
+        end
+
+        if CBO NE 0 begin
+            if Abrt begin
+//                send Close_Client to CBO
+                get CallBack of CBO "Rebuild of indexes interrupted by user." ;
+                    CALLBACK_TYPE_TEXT to Abrt
+                get CallBack of CBO "Indexes of database being rebuilt will be invalid." ;
+                    CALLBACK_TYPE_TEXT to Abrt
+                send Halt to CBO
+            end
+            else ;
+                get Callback of CBO "" CALLBACK_TYPE_COMPLETE to Abrt
+        end
+    end_procedure
+
+    procedure Convert_Database integer File# string Rt_Name string Drvr_Name ;
+            string Lgn_Parms integer Idx integer Sys_File integer Sys_Field;
+            string Temp_Dir
+
+        local integer Was
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        forward send Convert_Database file# Rt_Name Drvr_Name Lgn_Parms Idx Sys_File Sys_Field Temp_Dir
+
+        set Update_Display_Objects_State to Was
+        send Update_Display_Objects File#
+    end_procedure
+
+    function Selected_Indexes_String integer File# returns string
+        local integer Index# Segments Last_Index
+        local string Index_Str
+
+        get Last_Index_Number File# to Last_Index
+        move 1 to Index#
+
+        while Index# LE Last_Index
+            get Index_Segment_Count File# Index# to Segments
+
+            if ((Segments <> 0) and ;
+                Index_Select_State(Current_Object, File#, Index#)) ;
+                append Index_Str (string(Index#) + " ")
+
+            increment Index#
+        end
+
+        function_return (trim(Index_Str))
+    end_function
+
+    procedure Notify_Server_Destroyed
+        send File_Maintenance_Server_Destroyed to (Display_Objects(Current_Object))
+    end_procedure
+end_class

@@ -1,0 +1,19 @@
+        FILE DEFINITION LISTING FOR FILE #35
+*************************************************** 
+        FILE ROOT NAME     = JRLIST
+        USER DISPLAY NAME  = GL Journal Types Table
+        DATAFLEX FILE NAME = JRLIST
+*************************************************** 
+        RECORD LENGTH = 32  (USED = 27)
+        MAX NUMBER OF RECORDS = 50  (USED = 18)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       2   ASCII          1     0     0     CODE
+   2       3      25   ASCII          0     0     0     DESC
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   
+

@@ -1,0 +1,1359 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Confidential Trade Secret.
+// Copyright 1987-1994 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//      
+// Module: 
+//      filedlog.pkg
+//      
+// Purpose:
+//      Defines the File_Dialog_Client class.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      9/4/94
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+// Spec of windows file dialog:
+// 1) file spec, 2) file list, 3) file type list, 4) directory (no-focus),
+// 5) dir list, 6) drive list.
+//
+// You must set the MethCallBack and ObjCallBack properties to
+// appropriate message and object ids (respectively). The specified message
+// will be sent to the specified object when a filename is specified; the
+// filename (with a full path) will be passed as the first parameter for the
+// message. At the time the message is sent, the file dialog client object
+// is still active. This allows you to validate the filename and decide
+// whether to accept it or reject it. If you accept it, you should send
+// Close_Client to the object; you may generate an error if you decide to
+// reject it.
+// You may
+//
+// Each drive tracks its own current directory.
+// "/" or "\" used as directory separator.
+// ":" used to terminate drive specification.
+//
+// Current directory is changed whenever 1) a drive or directory is chosen
+// from the drive or directory list, or 2) a directory is enetered into the
+// file spec window. (When a different drive is selected, the last directory
+// chosen for that drive becomes the current directory.)
+//
+// Current unwanted limitations/problems:
+// 1) File names are limited to on-screen size.
+// 2) Using three line lists for file type and drive lists. Should use
+//    combo-boxes, but no such beast exists in char mode (yet).
+// 3) Does not support universal file naming ("//" drive/server specifiers).
+// 4) Multi-select file selection not allowed.
+// 5) Cannot perform incremental search in list while typing in File Spec.
+
+// Notes:
+//  Not using item_matching because some special (wilcard and other) chars
+//  don't match properly.
+
+use ui
+use dfmisc
+use clwindow
+use set
+use seq_chnl
+use parsefn
+// use rawfile - moved to FMAC
+
+enum_list
+    define DF_CASE_SAME for 2
+    define DF_CASE_LOWER
+    define DF_CASE_UPPER
+end_enum_list
+
+///XXXXFile_Dialog_Client_Img
+//ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+//บ____________________________________________________________________บ
+//บ                                                                    บ
+//บ File Name:                        Directories:                     บ
+//บ ________________________________  ________________________________ บ
+//บ                                                                    บ
+//บ  ______________________________    ______________________________  บ
+//บ  ______________________________    ______________________________  บ
+//บ  ______________________________    ______________________________  บ
+//บ  ______________________________    ______________________________  บ
+//บ  ______________________________    ______________________________  บ
+//บ  ______________________________    ______________________________  บ
+//บ  ______________________________    ______________________________  บ
+//บ  File Types:                       Drives:                         บ
+//บ  ______________________________    ______________________________  บ
+//บ  ______________________________    ______________________________  บ
+//บ  ______________________________    ______________________________  บ
+//บ                                                                    บ
+//บ            <F2=OK>       <Esc=Cancel>       <F1=Help>              บ
+//ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/File_Dialog_Client_Img
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ____________________________________________________________________บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+บ                                                                    บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/File_Dialog_File_Spec_Img
+File Name:                      
+________________________________
+/File_Dialog_Directory_Img
+Directories:                    
+________________________________
+/File_Dialog_File_List_Img
+______________________________
+______________________________
+______________________________
+______________________________
+______________________________
+______________________________
+______________________________
+/File_Dialog_Directory_List_Img
+______________________________
+______________________________
+______________________________
+______________________________
+______________________________
+______________________________
+______________________________
+/File_Dialog_File_Type_List_Img
+File Types:                    
+______________________________
+______________________________
+______________________________
+/File_Dialog_Drive_List_Img
+Drives:                        
+______________________________
+______________________________
+______________________________
+/File_Dialog_Button_Img
+            _______       ____________       _________              
+/*
+
+class File_Dialog_Drive_List is a Set
+    procedure Construct_Object
+        forward send Construct_Object
+
+        property integer Current_Element PUBLIC -1
+    end_procedure
+
+    function Find_Drive string Val returns integer
+        local integer Itm Cnt Len
+        local string UCVal
+
+        uppercase Val to UCVal
+
+        get Item_Count to Cnt
+        move 0 to Itm
+        length Val to Len
+        
+        while Itm LT Cnt
+            if UCVal EQ (uppercase(left(String_Value(Current_Object, Itm), ;
+                    Len))) ;
+                function_return Itm
+
+            increment Itm
+        end
+
+        function_return -1
+    end_function
+end_class
+
+class File_Dialog_List is a List
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        property integer Select_Msg     PUBLIC 0
+        property integer Selected_Item  PUBLIC -1
+
+        set Select_Mode to SINGLE_SELECT
+
+        on_key KENTER send Proceed
+    end_procedure
+
+    procedure Key integer Key_Val returns integer
+        local integer Ret_Val Cnt Itm Cur
+        local string Char
+
+        if ((Search_Mode(Current_Object) <> FIRST_CHARACTER) or ;
+                (Key_Val < 32) or (Key_Val > 255) or (Key_Val EQ KSPACE))  begin
+            forward get MSG_Key Key_Val to Ret_Val
+            procedure_return Ret_Val
+        end
+
+        uppercase (character(Key_Val)) to Char
+
+        get Current_Item to Cur
+        move (Cur + 1) to Itm
+        get Item_Count to Cnt
+
+        if Cnt LE 0 ;
+            procedure_return
+
+        while Itm LT Cnt
+            if (uppercase(left(ltrim(Value(Current_Object, Itm)), 1))) EQ Char begin
+                set Current_Item to Itm
+                procedure_return
+            end
+
+            increment Itm
+        end
+
+        move 0 to Itm
+
+        while Itm LT Cur
+            if (uppercase(left(ltrim(Value(Current_Object, Itm)), 1))) EQ Char begin
+                set Current_Item to Itm
+                procedure_return
+            end
+
+            increment Itm
+        end
+    end_procedure
+
+    procedure Proceed
+        if (Item_Count(Current_Object)) EQ 0 ;
+            send Next
+        else ;
+            send (Message(Current_Object, CURRENT))
+    end_procedure
+
+    procedure Delete_Data
+        set Select_Mode to SINGLE_SELECT
+        forward send Delete_Data
+    end_procedure
+
+define TOGGLE_SELECT_STATE for 3
+
+    procedure Select_Toggling integer Itm integer State
+        local integer New_State Msg
+        local string Val
+
+        move State to New_State
+
+        if New_State EQ TOGGLE_SELECT_STATE ;
+            move (not(Select_State(Current_Object, Itm))) to New_State
+
+        forward send Select_Toggling Itm State
+
+        if New_State begin
+            set Changed_State to TRUE
+
+            get Select_Msg to Msg
+
+            if Msg NE 0 begin
+                get Value item Itm to Val
+                delegate send Msg Val Itm
+            end
+        end
+    end_procedure
+
+    procedure Select_None
+        set Select_Mode to SINGLE_SELECT
+        set Select_Count to 0
+    end_procedure
+
+    procedure Entering
+        forward send Entering
+        set Select_Mode to AUTO_SELECT
+
+        // The following statement forces current item to be selected
+        // when scroll bar is clicked to page up/down. (The order
+        // of the message sequence makes this necessary.)
+        if ((Select_Count(Current_Object) > 0) and ;
+                not(Select_State(Current_Object, CURRENT))) ;
+            set Select_State item CURRENT to TRUE
+    end_procedure
+
+    procedure Exiting integer To_Obj
+        forward send Exiting To_Obj
+        set Select_Mode to SINGLE_SELECT
+    end_procedure
+end_class
+
+class Special_File_Dialog_List is a File_Dialog_List
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        property integer Accept_Change_Msg      PUBLIC 0
+        property integer Exiting_State          PUBLIC FALSE
+        property integer Show_Selected_State    PUBLIC FALSE
+    end_procedure
+
+// prevent selection toggling by user (no select while focus)
+    procedure Select_Toggling integer Itm integer State
+    end_procedure
+
+    procedure Entering
+//        forward send Entering
+        set Select_Mode to SINGLE_SELECT
+        set Select_State item CURRENT to FALSE
+    end_procedure
+
+    procedure Exiting integer To_Obj
+        local integer Itm Msg Ret_Val Flag
+        local string Val
+
+        if (Exiting_State(Current_Object)) ;
+            procedure_return
+
+        set Exiting_State to TRUE
+        forward send Exiting To_Obj
+
+        get Show_Selected_State to Flag
+
+        if not Flag ;
+            set Select_State item CURRENT to FALSE
+
+        get Accept_Change_Msg to Msg
+
+        if Msg NE 0 begin
+            get Msg To_Obj to Ret_Val
+            
+            if Ret_Val begin
+                get Message item CURRENT to Msg
+
+                if Msg NE 0 ;
+                    send Msg
+            end
+            else begin
+                get Selected_Item to Itm
+
+                if Itm GE 0 begin
+                    set Current_Item to Itm
+
+                    if Flag ;
+                        set Select_State item Itm to TRUE
+                end
+            end
+        end
+        else begin
+            get Selected_Item to Itm
+
+            if Itm GE 0 begin
+                set Current_Item to Itm
+
+                if Flag ;
+                    set Select_State item Itm to TRUE
+            end
+        end
+
+        set Exiting_State to FALSE
+    end_procedure
+end_class
+
+class File_Dialog_File_Type_List is a Special_File_Dialog_List
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        set Show_Selected_State to TRUE
+    end_procedure
+
+    procedure set Select_State integer Itm integer Flag
+        if (Exiting_State(Current_Object) or ;
+                (Focus(Desktop) <> Current_Object)) ;
+            forward set Select_State item Itm to Flag
+    end_procedure
+end_class
+
+class File_dialog_Button is a Button
+    procedure Mouse_Down integer P1 integer P2
+        local integer Was Ret_Val
+
+        set New_Item to (P1 - 1)
+
+        get Auto_Top_Item_State to Was
+        set Auto_Top_Item_State to FALSE
+        forward get MSG_Mouse_Down P1 P2 to Ret_Val
+        set Auto_Top_Item_State to Was
+        procedure_return Ret_Val
+    end_procedure
+end_class
+
+class File_Dialog_Client is a Client_Window
+    register_procedure Button_Proceed
+    register_procedure Accept_File_Spec
+    register_procedure Accept_File
+    register_procedure Accept_File_Type
+    register_procedure Accept_Directory
+    register_procedure Accept_Drive
+
+    register_function Cur_Drive returns string
+    register_function Cur_Path string Drv returns string
+    register_function Cur_Directory returns string
+    register_function Cur_File_Type returns string
+
+    register_procedure set Cur_Drive string Val
+    register_procedure set Cur_Dir string Val
+    register_procedure set Cur_File_Type string Val
+    register_procedure set Cur_Type string Val
+    register_procedure set Cur_File string Val
+
+    register_function Is_Ok_Button integer Obj returns integer
+
+    procedure Construct_Object integer Img
+        local string Val
+
+        forward send Construct_Object Img
+
+        property integer MethCallBack         PUBLIC MSG_Close_Client
+        property integer ObjCallBack          PUBLIC 0
+        property string  Unknown_File_Type    PUBLIC ""
+        property string  Full_Cur_Directory   PUBLIC ""
+        property integer Case_Conversion_Mode PUBLIC DF_CASE_LOWER
+
+        send Locate_In_Center_Of_Screen
+
+        set Value to "File"
+
+        object Known_Drive_List is a File_Dialog_Drive_List
+        end_object
+
+        object Full_Directory_List is an Array
+        end_object
+
+        object Dir_Sort_Array is an Array
+        end_object
+
+        object File_Spec is a Form File_Dialog_File_Spec_Img
+            set Location to 3 2 RELATIVE
+
+            item_list
+                on_item "" send Next
+            end_item_list
+
+            set Autoclear_State to TRUE
+
+            on_key KENTER send Accept_File_Spec
+        end_object
+
+        object File_List is a File_Dialog_List File_Dialog_File_List_Img
+            set Location to 6 3 RELATIVE
+            set Select_Msg to SET_Cur_File
+        end_object
+
+        object Dir is a Message File_Dialog_Directory_Img
+            set Focus_Mode to NONFOCUSABLE
+            set Location to 3 36 RELATIVE
+        end_object
+
+        object Directory_List is a Special_File_Dialog_List ;
+                File_Dialog_Directory_List_Img
+            set Location to 6 37 RELATIVE
+//            set Select_Msg to SET_Cur_Dir
+            set Accept_Change_Msg to GET_Is_Ok_Button
+            set Search_Mode to FIRST_CHARACTER
+        end_object
+
+        object File_Type_List is a File_Dialog_File_Type_List ;
+                File_Dialog_File_Type_List_Img
+            set Location to 13 3 RELATIVE
+//            set Select_Msg to SET_Cur_Type
+            set Accept_Change_Msg to GET_Is_Ok_Button
+            set Search_Mode to FIRST_CHARACTER
+        end_object
+
+        object Drive_List is a Special_File_Dialog_List ;
+                File_Dialog_Drive_List_Img
+            set Location to 13 37 RELATIVE
+//            set Select_Msg to SET_Cur_Drive
+            set Accept_Change_Msg to GET_Is_Ok_Button
+            set Search_Mode to FIRST_CHARACTER
+        end_object
+
+        object Button is a File_Dialog_Button File_Dialog_Button_Img
+            set Location to 18 1 RELATIVE
+
+            item_list
+                on_item "<F2=OK>" send DoCallback
+                define FDC_BUTTON_ITEM_OK for 0
+
+                on_item "<Esc=Cancel>" send Close_Client
+                on_item "<F1=Help>" send Help
+            end_item_list
+        end_object
+
+
+        on_key KSAVE_RECORD send DoCallback
+
+//        send Fill_Drive_List
+        send Fill_File_Type_List
+        set Cur_File_Type to (sysconf(SYSCONF_FILE_MASK))
+
+//        get Cur_Drive to Val
+//        set Cur_Directory to (Val + Cur_Path(Current_Object, Val))
+    end_procedure
+
+    function Convert_Case string Val returns string
+        local integer Mode
+
+        get Case_Conversion_Mode to Mode
+
+        if Mode EQ DF_CASE_SAME ;
+            function_return Val
+        else if Mode EQ DF_CASE_UPPER ;
+            function_return (uppercase(Val))
+        else if Mode EQ DF_CASE_LOWER ;
+            function_return (lowercase(Val))
+        else ;
+            function_return Val
+    end_function
+
+    procedure Activating
+        local string Val Drv
+//        set Cur_File to (Cur_File_Type(Current_Object))
+
+        send Reset_Drive_Changes
+
+        get_directory Val
+        get Parse_Drive Val to Drv
+        set Cur_Drive to Drv
+        set Cur_Path Drv to (Parse_Path(Val))
+        set Cur_Directory to (Drv + Cur_Path(Current_Object, Val))
+
+        send Fill_Directory_List
+        send Fill_File_List
+
+        set Changed_State of (File_Spec(Current_Object)) to FALSE
+
+        forward send Activating
+    end_procedure
+
+    function Is_Ok_Button integer Obj returns integer
+        function_return ((Obj = Button(Current_Object)) and ;
+            (Current_Item(Obj) = FDC_BUTTON_ITEM_OK))
+    end_function
+
+    procedure Fill_File_List
+        local integer Obj Chnl
+        local string Cur_Dir Val Indent_String
+
+        get Cur_Directory to Cur_Dir
+        move Cur_Dir to Val
+
+        if not (right(Val, 1)) in "\/" ;
+            append Val (sysconf(SYSCONF_DIR_SEPARATOR))
+
+        //
+        // build file list
+        //
+        move (File_List(Current_Object)) to Obj
+        set Dynamic_Update_State of Obj to FALSE
+        send Delete_Data to Obj
+
+        get Seq_Open_Input_Channel ("DIR:" + Val + ;
+            Cur_File_Type(Current_Object)) to Chnl
+
+        if Chnl EQ DF_SEQ_CHANNEL_ERROR ;
+            procedure_return
+    
+        while [not Seqeof]
+            readln Val
+    
+            if ((Val > "") and (left(Val, 1) <> "[")) ;
+                send Add_Item to Obj Msg_Accept_File (Convert_Case(Current_Object, Val))
+        end
+
+        send Seq_Close_Channel Chnl
+
+        send Sort_Items to Obj
+        set Changed_State of Obj to FALSE
+        set Changed_State of (File_Type_List(Current_Object)) to FALSE
+        set Dynamic_Update_State of Obj to TRUE
+    end_procedure
+
+    procedure Reset_FileTypes // for DF for Windows compatibility
+        send Fill_File_Type_List
+    end_procedure
+
+    procedure Fill_File_Type_List
+        local integer Obj
+
+        move (File_Type_List(Current_Object)) to Obj
+        send Delete_Data to Obj
+        send Add_FileType (sysconf(SYSCONF_FILE_MASK))
+        set Selected_Item of Obj to (Current_Item(Obj))
+        set Changed_State of Obj to FALSE
+    end_procedure 
+
+    procedure Fill_Directory_List
+        local integer Obj Chnl Ary Cnt Itm Ary_Itm Sort_Obj
+        local string Cur_Dir Val Indent_String Full_Path_Left Dir_Sep Full_Path
+
+        move (sysconf(SYSCONF_DIR_SEPARATOR)) to Dir_Sep
+
+        get Cur_Directory to Cur_Dir
+        move Cur_Dir to Val
+
+        if not (right(Val, 1)) in "\/" ;
+            append Val Dir_Sep
+
+        //
+        // build directory list
+        //
+        move (Directory_List(Current_Object)) to Obj
+        move (Full_Directory_List(Current_Object)) to Ary
+        set Dynamic_Update_State of Obj to FALSE
+        send Delete_Data to Obj
+        send Delete_Data to Ary
+
+        get Add_Path_Components Cur_Dir to Indent_String
+        set Selected_Item of Obj to (Current_Item(Obj))
+
+        move Val to Full_Path_Left
+
+        if not ("\/" contains right(Val, 1)) ;
+            append Full_Path Dir_Sep
+
+        get Seq_Open_Input_Channel ("DIR:" + Val + sysconf(SYSCONF_FILE_MASK)) to Chnl
+    
+        if Chnl EQ DF_SEQ_CHANNEL_ERROR ;
+            procedure_return
+
+        move (Dir_Sort_Array(Current_Object)) to Sort_Obj
+        send Delete_Data to Sort_Obj
+        move 0 to Cnt
+
+        while [not Seqeof]
+            readln Val
+    
+            if ((left(Val, 1) = "[") and ;
+                    (Val <> "[.]") and (Val <> "[..]")) begin
+                set Array_Value of Sort_Obj item Cnt to ;
+                    (mid(Val, (length(Val) - 2), 2))
+                increment Cnt
+            end
+        end
+
+        send Seq_Close_Channel Chnl
+
+        send Sort_Items to Sort_Obj
+
+        move 0 to Itm
+        get Item_Count of Ary to Ary_Itm
+
+        while Itm LT Cnt
+            get String_Value of Sort_Obj item Itm to Val
+            send Add_Item to Obj Msg_Accept_Directory ;
+                (Indent_String + Convert_Case(Current_Object, Val))
+            move (Full_Path_Left + Val) to Full_Path
+            set Array_Value of Ary item Ary_Itm to Full_Path
+
+            if Full_Path EQ Cur_Dir ;
+                set Current_Item of Obj to Ary_Itm
+
+            increment Itm
+            increment Ary_Itm
+        end
+    
+        set Select_Count of Obj to 0
+        set Changed_State of Obj to FALSE
+        set Changed_State of (Drive_List(Current_Object)) to FALSE
+        set Dynamic_Update_State of Obj to TRUE
+    end_procedure
+
+    function Add_Path_Components string DSpec returns string
+        local string Val Indent_String Full_Path Dir_Sep Drv
+        local integer Fwd_Pos Dir_Pos Obj Ary
+
+        move (sysconf(SYSCONF_DIR_SEPARATOR)) to Dir_Sep
+
+        move (Directory_List(Current_Object)) to Obj
+        move (Full_Directory_List(Current_Object)) to Ary
+
+        move DSpec to Val
+        while ":" in Val
+            right Val to Val (length(Val) - pos(":", Val))
+        end
+
+        left DSpec to Drv (length(DSpec) - length(Val))
+
+        if ("/\" contains left(Val, 1)) ;
+            right Val to Val (length(Val) - 1)
+
+        left DSpec to Full_Path (length(DSpec) - length(Val))
+
+        send Add_Item to Obj MSG_Accept_Directory ;
+            (Convert_Case(Current_Object, Full_Path))
+        set Array_Value of Ary item (Item_Count(Ary)) to Full_Path
+
+        move " " to Indent_String
+
+        repeat
+            pos "\" in Val to Dir_Pos
+            pos "/" in Val to Fwd_Pos
+
+            if ((Fwd_Pos > 0) and (Fwd_Pos < Dir_Pos)) ;
+                move Fwd_Pos to Dir_Pos
+            
+            if Dir_Pos GT 0 begin
+                send Add_Item to Obj MSG_Accept_Directory ;
+                    (Indent_String + ;
+                    Convert_Case(Current_Object, left(Val, Dir_Pos - 1)))
+                move (Full_Path + left(Val, Dir_Pos - 1)) ;
+                    to Full_Path
+                set Array_Value of Ary item (Item_Count(Ary)) to Full_Path
+                move (Full_Path + Dir_Sep) to Full_Path
+
+                right Val to Val (length(Val) - Dir_Pos)
+                append Indent_string " "                
+            end
+        until Dir_Pos LE 0
+
+        if Val GT "" begin
+            send Add_Item to Obj MSG_Accept_Directory ;
+                (Indent_String + Convert_Case(Current_Object, Val))
+            move (Full_Path + Val) to Full_Path
+            set Array_Value of Ary item (Item_Count(Ary)) to Full_Path
+            append Indent_string " "                
+        end
+
+        set Cur_Path Drv to (right(DSpec, (length(DSpec) - length(Drv))))
+
+        function_return Indent_String
+    end_function
+
+// temporary hack for removable drives to prevent critical error...
+//    function Removable_Drive string Drv returns integer
+//        local string Val
+//
+//        uppercase (left(Drv, 1)) to Val
+//
+//        if ((Val = "A") or (Val = "B")) ;
+//            function_return (TRUE)
+//
+//        function_return (FALSE)
+//    end_function
+
+    function Cur_OS_Path string Drv returns string
+        local string Val
+
+// temporary hack for removable drives to prevent critical error...
+//        if (Removable_Drive(Current_Object, Drv)) ;
+//            function_return (sysconf(SYSCONF_DIR_SEPARATOR))
+
+        get_directory Drv Val
+        function_return (Parse_Path(Val))
+    end_function
+
+    procedure Reset_Drive_Changes
+        local string Val Drv
+        local integer DrvX Last_DrvX Flag Obj Ary Itm
+
+        ascii "a" to DrvX
+        ascii "z" to Last_DrvX
+
+        move (Drive_List(Current_Object)) to Obj
+        move (Known_Drive_List(Current_Object)) to Ary
+
+        while DrvX LE Last_DrvX
+            character DrvX to Val
+            move (Val + ":") to Drv
+            get Find_Drive of Ary Drv to Itm
+            valid_drive Val Flag
+
+            if (not(Flag) and (Itm = -1)) begin
+                send Add_Drive Drv
+                set Cur_Path Drv to "" // (Cur_OS_Path(Current_Object, Drv))
+            end
+            else if (Flag and (Itm <> -1)) begin
+                send Delete_Item to Ary Itm
+                send Delete_Item to Obj Itm
+            end
+                
+            increment DrvX
+        end
+    end_procedure
+
+    procedure Fill_Drive_List
+        local string Val Drv
+        local integer Obj
+
+        move (Drive_List(Current_Object)) to Obj
+
+        send Delete_Data to (Known_Drive_List(Current_Object))
+        send Delete_Data to Obj
+
+        send Reset_Drive_Changes
+
+        get_directory Val
+        get Parse_Drive Val to Drv
+        set Cur_Drive to Drv
+        set Cur_Path Drv to (Parse_Path(Val))
+        set Select_Count of Obj to 0
+        set Selected_Item of Obj to (Current_Item(Obj))
+        set Changed_State of Obj to FALSE
+    end_procedure
+
+    function Cur_Drive returns string
+        local integer Itm Obj
+        local string Val Full_Val Two_Slash
+
+        move (Known_Drive_List(Current_Object)) to Obj
+
+        get Current_Element of Obj to Itm
+        if Itm EQ -1 ;
+            function_return ""
+
+        get String_Value of Obj item Itm to Full_Val
+        move Full_Val to Val
+
+        while (Val contains ":")
+            right Val to Val (length(Val) - pos(":", Val))
+        end
+
+        function_return (left(Full_Val, (length(Full_Val) - length(Val))))
+    end_function
+
+    function Cur_Path string Drv returns string
+        local integer Itm Obj
+        local string Val Two_Slash
+
+        move (Known_Drive_List(Current_Object)) to Obj
+
+        get Find_Drive of Obj Drv to Itm
+
+        if Itm LT 0 ;                               // if don't know this drive,
+            function_return (Cur_OS_Path(Current_Object, Drv)) // ask OS
+
+        get String_Value of Obj item Itm to Val
+
+        while (Val contains ":")
+            right Val to Val (length(Val) - pos(":", Val))
+        end
+
+        if Val LE "" begin
+            get Cur_OS_Path Drv to Val
+            set Cur_Path Drv to Val
+        end
+
+        function_return Val
+    end_function
+
+    function Cur_Directory returns string
+        function_return (Full_Cur_Directory(Current_Object))
+    end_function
+
+    function Cur_File returns string
+        function_return (Value(File_Spec(Current_Object), 0))
+    end_function
+
+    function Cur_File_Type returns string
+        local string Val
+
+        get Unknown_File_Type to Val
+
+        if Val GT "" ;
+            function_return Val
+        else ;
+            function_return (Value(File_Type_List(Current_Object), CURRENT))
+    end_function
+
+    function Cur_File_Spec returns string
+        local string Drv Pth
+
+        get Cur_Drive to Drv
+        get Cur_Path Drv to Pth
+
+        if (right(Pth, 1)) in "\/" ;
+            function_return (Convert_Case(Current_Object, ;
+                (Drv + Pth + Cur_File(Current_Object))))
+        else ;
+            function_return (Convert_Case(Current_Object, ;
+                (Drv + Pth + sysconf(SYSCONF_DIR_SEPARATOR) + ;
+                Cur_File(Current_Object))))
+    end_function
+
+    procedure set Cur_File string Val
+        local integer Obj Itm Cnt
+
+        move (File_Spec(Current_Object)) to Obj
+
+        set Value of Obj to (Convert_Case(Current_Object, Val))
+
+        if ((Val > "") and not(Val contains "*") and not(Val contains "?")) begin
+            move (File_List(Current_Object)) to Obj
+
+            move 0 to Itm
+            get Item_Count of Obj to Cnt
+
+            while ((Itm < Cnt) and ;
+                    (uppercase(Value(Obj, Itm)) <> uppercase(Val)))
+                increment Itm
+            end
+
+            if Itm GE Cnt ;
+                send Select_None to Obj
+            else if not (Select_State(Obj, Itm)) begin
+                set Current_Item of Obj to Itm
+                set Select_State of Obj item Itm to TRUE
+            end
+        end
+    end_procedure
+
+    procedure set Cur_Drive string Val
+        local integer Ary Obj Itm Cnt New_Drv
+
+        if Val LE "" ;
+            procedure_return
+
+        move (Known_Drive_List(Current_Object)) to Ary
+        move (Drive_List(Current_Object)) to Obj
+
+        get Find_Drive of Ary Val to Itm
+
+        if Itm LT 0 begin
+            send Add_Drive Val
+            get Find_Drive of Ary Val to Itm
+        end
+
+        set Current_Element of Ary to Itm
+
+        if ((Itm >= 0) and not(Select_State(Obj, Itm))) begin
+            set Current_Item of Obj to Itm
+//            set Select_State of Obj item Itm to TRUE
+        end
+    end_procedure
+
+    procedure set Cur_Path string Drv string Val
+        local integer Obj Itm Cnt
+        local string Old_Val Dir_Val
+
+        move (Known_Drive_List(Current_Object)) to Obj
+        get Find_Drive of Obj Drv to Itm
+
+        if Itm GE 0 begin
+            set Array_Value of Obj item Itm to (Drv + Val)
+
+            move (Full_Directory_List(Current_Object)) to Obj
+            move 0 to Itm
+            get Item_Count of Obj to Cnt
+
+            while ((Itm < Cnt) and ;
+                    (uppercase(String_Value(Obj, Itm)) <> uppercase(Drv + Val)))
+                increment Itm
+            end
+
+            move (Directory_List(Current_Object)) to Obj
+
+            if Itm GE Cnt ;  // should never happen
+                send Select_None to (Directory_List(Current_Object))
+            else if not (Select_State(Obj, Itm)) begin
+                set Current_Item of Obj to Itm
+//                set Select_State of Obj item Itm to TRUE
+            end
+        end
+    end_procedure
+
+    procedure set Cur_Dir string Parameter_Not_Used integer Dir_Itm
+        local string Val
+        local integer Obj Itm
+
+        get String_Value of (Full_Directory_List(Current_Object)) ;
+            item Dir_Itm to Val
+
+        move (Known_Drive_List(Current_Object)) to Obj
+        get Find_Drive of Obj (Parse_Drive(Val)) to Itm
+        if Itm GE 0 ;
+            set Array_Value of Obj item Itm to Val
+    end_procedure
+
+    procedure set Cur_Directory string Val
+        set Full_Cur_Directory to Val
+        set Value of (Dir(Current_Object)) to (Convert_Case(Current_Object, Val))
+    end_procedure
+
+    procedure set Cur_File_Type string Val
+        local integer Obj Itm Cnt
+        local string UCVal
+
+        uppercase Val to UCVal
+
+        move (File_Type_List(Current_Object)) to Obj
+        move 0 to Itm
+        get Item_Count of Obj to Cnt
+
+        while ((Itm < Cnt) and (uppercase(Value(Obj, Itm)) <> UCVal))
+            increment Itm
+        end
+
+        if Itm GE Cnt begin
+            if ((Val contains "*") or (Val contains "?")) begin
+                send Select_None to Obj
+                set Unknown_File_Type to Val
+                set Selected_Item of Obj to -1
+            end
+        end
+        else if not (Select_State(Obj, Itm)) begin
+            set Current_Item of Obj to Itm
+            set Select_State of Obj item Itm to TRUE
+            set Selected_Item of Obj to Itm
+            set Unknown_File_Type to ""
+        end
+    end_procedure
+
+    procedure set Cur_Type string Val
+        set Unknown_File_Type to ""
+    end_procedure
+
+    function Is_Valid_Directory string Val returns integer
+        local string Dir_Val Dir_Element
+        local integer Chnl Ret_Val
+
+        move Val to Dir_Val
+        if not (right(Dir_Val, 1)) in "\/" ;
+            append Dir_Val (sysconf(SYSCONF_DIR_SEPARATOR))
+
+        move (TRUE) to Ret_Val
+
+        get Seq_Open_Input_Channel ("DIR:" + Dir_Val + sysconf(SYSCONF_FILE_MASK)) to Chnl
+
+        if Chnl EQ DF_SEQ_CHANNEL_ERROR ;
+            function_return (FALSE)
+
+        [Seqeof] move (FALSE) to Ret_Val
+
+        send Seq_Close_Channel Chnl
+
+        function_return Ret_Val
+    end_function
+
+    function Prior_Dir_Separator string Val integer SPos returns integer
+        local integer BPos
+        local string Dir_Sep
+
+        move (sysconf(SYSCONF_DIR_SEPARATOR)) to Dir_Sep
+
+        move (SPos - 1) to BPos
+
+        while ((Bpos > 0) and (mid(Val, 1, BPos) <> Dir_Sep))
+            decrement Bpos
+        end
+
+        function_return BPos
+    end_function
+
+    // convert directory separator characters and eliminate "\..\"
+    // and "\.\" directory references
+    function Condense_File_Spec string Spec returns string
+        local integer SPos BPos Len
+        local string Val Search_Val Dir_Sep
+
+        move (sysconf(SYSCONF_DIR_SEPARATOR)) to Dir_Sep
+
+        if Dir_Sep EQ "\" ;
+            move (replaces("/", Spec, Dir_Sep)) to Val
+        else ;
+            move (replaces("\", Spec, Dir_Sep)) to Val
+
+        pos (Dir_Sep + ".") in Val to SPos
+
+        if Spos GT 0 begin
+            //
+            // remove "\.\" references
+            //
+            move (Dir_Sep + "." + Dir_Sep) to Search_Val
+            pos Search_Val in Val to SPos
+
+            while SPos GT 0
+                move (remove(Val, Spos, 2)) to Val
+                pos Search_Val in Val to SPos
+            end
+
+            //
+            // remove trailing "\."
+            //
+            if (right(Val, 2)) EQ (Dir_Sep + ".") ;
+                left Val to Val (length(Val) - 2)
+
+            //
+            // remove "\..\" references
+            //
+            move (Dir_Sep + ".." + Dir_Sep) to Search_Val
+            pos Search_Val in Val to SPos
+
+            while SPos GT 0
+                get Prior_Dir_Separator Val SPos to Bpos
+
+                if Bpos GT 0 ;
+                    move (remove( Val, BPos, Spos - BPos + 3 )) to Val
+
+                pos Search_Val in Val to SPos
+            end
+
+            //
+            // remove trailing "\.."
+            //
+            if (right(Val, 3)) EQ (Dir_Sep + "..") begin
+                get Prior_Dir_Separator Val (length(Val) - 2) to Bpos
+
+                if Bpos GT 0 ;
+                    left Val to Val (BPos - 1)
+                else ; // special case: strip "..\" from "drive:\.."
+                    left Val to Val (length(Val) - 2)
+            end
+        end
+
+        function_return Val
+    end_function
+
+    function Parse_File_Spec string Spec returns string
+        local integer Flen Chnl Sep_Pos Sep_Len Is_Dir Obj
+        local string Dir_Sep ASpec DSpec FSpec Input_ASpec Input_DSpec Val
+        local string Sep_List Sep_Char Drv_Val Dir_Val Rel_Path Indent_String
+    
+        move (sysconf(SYSCONF_DIR_SEPARATOR)) to Dir_Sep
+    
+        //
+        // Determine absolute Spec (ASpec)
+        //
+        if Spec LE "" begin
+            get Cur_Drive to Drv_Val
+            move (Drv_Val + Cur_Path(Current_Object, Drv_Val)) to ASpec
+        end
+        else if ":\" in Spec begin
+            left Spec to Drv_Val (pos(":\", Spec))
+            move Spec to ASpec              // path in Spec is absolute
+        end
+        else if ":/" in Spec begin
+            left Spec to Drv_Val (pos(":/", Spec))
+            move Spec to ASpec              // path in Spec is absolute
+        end
+        else if (left(Spec, 1)) in "\/" begin
+            get Cur_Drive to Drv_Val
+            move (Cur_Drive(Current_Object) + Spec) to ASpec
+        end
+        else begin
+            if ":" in Spec begin
+                pos ":" in Spec to Sep_Pos
+                left Spec to Drv_Val Sep_Pos
+                right Spec to Rel_Path (length(Spec) - Sep_Pos)
+            end
+            else begin
+                get Cur_Drive to Drv_Val
+                move Spec to Rel_Path
+            end
+    
+            get Cur_Path Drv_Val to Dir_Val
+    
+            if (right(Dir_Val, 1)) in "\/" ;
+                move (Drv_Val + Dir_Val + Rel_Path) to ASpec
+            else ;
+                move (Drv_Val + Dir_Val + Dir_Sep + Rel_Path) to ASpec
+        end
+    
+        //
+        // Strip out excess \.\ and \..\ directories
+        //
+        get Condense_File_Spec ASpec to ASpec
+    
+        function_return ASpec
+    end_function
+
+    procedure Add_Drive string Val
+        local integer Obj Ary Itm
+
+        move (Drive_List(Current_Object)) to Obj
+        move (Known_Drive_List(Current_Object)) to Ary
+
+        set Array_Value of Ary item (Item_Count(Ary)) to Val
+        send Add_Item to Obj MSG_Accept_Drive ;
+            (Convert_Case(Current_Object, Val))
+
+        send Sort_Items to Ary
+        send Sort_Items to Obj
+
+        get Find_Drive of Ary Val to Itm
+
+        if Itm GE 0 begin
+            set Current_Element of Ary to Itm
+            set Current_Item of Obj to Itm
+//            set Select_State of Obj item Itm to TRUE
+        end
+    end_procedure
+
+    procedure Add_FileType string Val
+        local integer Obj
+
+        move (File_Type_List(Current_Object)) to Obj
+        send Add_Item to Obj MSG_Accept_File_Type ;
+            (Convert_Case(Current_Object, Val))
+        send Sort_Items to Obj
+    end_procedure
+
+    procedure Default_FileType string Val
+        set Cur_File_Type to Val
+        set Cur_File to Val
+    end_procedure
+
+    procedure DoCallback
+        send Process_File_Spec
+    end_procedure
+
+    procedure Process_File_Spec
+        local integer Msg Obj Itm
+        local string Val Drv Pth FSpec
+
+        get Cur_File to Val
+        trim Val to Val
+        set Cur_File to Val
+
+        get Parse_File_Spec (Cur_File(Current_Object)) to Val
+        get Parse_Drive Val to Drv
+        get Parse_Path Val to Pth
+        get Parse_File Val to FSpec
+
+        if not (Is_Valid_Directory(Current_Object, (Drv + Pth))) ;
+            error DFERR_READ_ERROR (Drv + Pth)
+        else begin
+            //
+            // reset current directory if not an explicit file
+            //
+            if ((FSpec <= "") or (FSpec contains "?") or (FSpec contains "*")) begin
+                set Cur_Drive to Drv
+                set Cur_Directory to (Drv + Pth)
+    
+                if (Changed_State(File_Spec(Current_Object)) and (FSpec > "")) ;
+                    set Cur_File_Type to FSpec
+                else if (Changed_State(File_Type_List(Current_Object))) begin
+                    move (File_Type_List(Current_Object)) to Obj
+                    set Cur_File_Type to (Value(Obj, Selected_Item(Obj)))
+                end
+
+                send Fill_Directory_List
+                set Cur_Path Drv to Pth
+                send Fill_File_List
+                set Cur_File to FSpec
+                set Changed_State of (File_Spec(Current_Object)) to FALSE
+            end
+            else begin  // if explicit file, process it! (don't reset cur dir)
+                get MethCallBack to Msg
+
+                if Msg NE 0 begin
+                    get ObjCallBack to Obj
+
+                    if Obj EQ 0 ;
+                        send Msg (Convert_Case(Current_Object, Val)) // probably gets delegated, but
+                    else ;                                           // who knows (or cares)
+                        send Msg to Obj (Convert_Case(Current_Object, Val))
+                end
+            end
+        end
+    end_procedure
+
+    function Changed_State returns integer
+        function_return (Changed_State(File_Spec(Current_Object)) or ;
+            Changed_State(File_List(Current_Object)) or ;
+            Changed_State(Directory_List(Current_Object)) or ;
+            Changed_State(Drive_List(Current_Object)) or ;
+            Changed_State(File_Type_List(Current_Object)))
+    end_function
+
+    procedure Refill_Lists
+        local string Val
+
+        if (Changed_State(File_Type_List(Current_Object))) ;
+            set Cur_File to (Cur_File_Type(Current_Object))
+
+        get Cur_Drive to Val
+        set Cur_Directory to (Val + Cur_Path(Current_Object, Val))
+        send Fill_Directory_List
+        send Fill_File_List
+
+        set Cur_File to (Cur_File(Current_Object))
+
+        set Changed_State of (File_Spec(Current_Object)) to FALSE
+    end_procedure
+
+    procedure Accept_File_Spec
+        local string Val
+
+        get Cur_File to Val
+
+        if (Changed_State(Current_Object) or ;
+                ((Val > "") and not(Val contains "*") and ;
+                not(Val contains "?"))) ;
+            send Process_File_Spec
+        else ;
+            send Next to (Focus(Desktop))
+    end_procedure
+
+    procedure Accept_File
+        if (Changed_State(Current_Object)) ;
+            send Process_File_Spec
+        else ;
+            send Next to (Focus(Desktop))
+    end_procedure
+
+    procedure Accept_Directory
+        local integer Obj Cur Was
+
+        move (Directory_List(Current_Object)) to Obj
+        get Current_Item of Obj to Cur
+        get Selected_Item of Obj to Was
+
+        if Cur NE Was begin
+            set Selected_Item of Obj to Cur
+            set Cur_Dir to "" Cur
+            send Refill_Lists
+        end
+        else ;
+            send Next to (Focus(Desktop))
+    end_procedure
+
+    procedure Accept_File_Type
+        local integer Obj Cur Was
+        local string Val FSpec
+
+        move (File_Type_List(Current_Object)) to Obj
+        get Current_Item of Obj to Cur
+        get Selected_Item of Obj to Was
+
+        if Cur NE Was begin
+            get Value of Obj item CURRENT to Val
+            set Cur_File_Type to Val
+
+            get Parse_File (Cur_File(Current_Object)) to FSpec
+
+            if ((FSpec contains "*") or (FSpec contains "?")) ;
+                set Cur_File to Val
+            
+            set Selected_Item of Obj to Cur
+            send Refill_Lists
+        end
+        else ;
+            send Next to (Focus(Desktop))
+    end_procedure
+
+    procedure Accept_Drive
+        local integer Obj Cur Was
+
+        move (Drive_List(Current_Object)) to Obj
+        get Current_Item of Obj to Cur
+        get Selected_Item of Obj to Was
+
+        if Cur NE Was begin
+            set Selected_Item of Obj to Cur
+            set Cur_Drive to (Value(Obj, Cur))
+            send Refill_Lists
+        end
+        else ;
+            send Next to (Focus(Desktop))
+    end_procedure
+end_class

@@ -1,0 +1,107 @@
+/HEADER
+/BODY RESIDENT
+__________.__ 
+/SUBTOTAL1    RESIDENT
+______________________________ __________ ________.__ _ ______________________
+/TOTAL 
+______________________________________________________________________________
+Total Defendants  _____     _____. ____________.__  _________.__ __________.__
+/SELECT
+
+/info
+
+    changes made on 10/11/1999 by Jeff March
+        added direct_output to LPT1: and calcDate.inc for Y2k update.
+        
+    this is a new job used by Saline Co to perform a nightly batch job for 
+    paying hot check fees over the internet.
+    -- Jeff March 08/22/2005
+ 
+    changes made on 9/27/2005 by Jeff March
+    	allowed warrant date to be overridden by offense.warr_over
+    	to allow payments to be made on these offenses
+		
+	changes made on 4/1/2009 by Jeff March
+		Dist6 request to pick up Active offenses after 3/1/2009
+ 
+ 
+/*
+use y2k.pkg
+Read_dfini "dfini23.cfg"
+//----------------- Cannot Run Program From Command Line (DOS)
+//IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+#INCLUDE calcDATE.INC
+#INCLUDE MACS.FRM
+
+OPEN DEFENDNT
+OPEN OFFENSE INDEX.5
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+STRING NAME LAST_NAME
+INTEGER DEF_TOTAL DEFS
+NUMBER OFF_TOTAL DEF_CREDIT DEF_AMT
+DATE TODAY
+SYSDATE4 TODAY
+MOVE 0 TO PAGEEND
+
+direct_output "internet.dat"
+REPORT OFFENSE BY INDEX.5 BREAK OFFENSE.IDNO
+
+INDICATE SELECT AS OFFENSE.ACTIVE IN  ' '
+//[SELECT] INDICATE SELECT AS OFFENSE.ENTRY_DATE GT "3/1/2009"
+
+SECTION SUBHEADER1
+
+	MOVE 'N' TO SUBTOTAL1.4
+	MOVE DEFENDNT.NAME TO NAME
+	POS "," IN NAME
+	REPLACE "," IN NAME WITH ""
+	LEFT NAME TO LAST_NAME
+	
+        PRINT DEFENDNT.NAME TO SUBTOTAL1.1
+        PRINT DEFENDNT.IDNO TO SUBTOTAL1.2
+        PRINT LAST_NAME TO SUBTOTAL1.5
+        
+        MOVE DEFENDNT.CREDIT TO DEF_CREDIT
+        MOVE (TOTAL.5 + TOTAL.4) TO TOTAL.5
+        MOVE 0 TO DEF_TOTAL
+SECTION BODY
+        PRINT (OFFENSE.MFEE + OFFENSE.PFEE + OFFENSE.CKAMT)
+
+	IF OFFENSE.WARR_OVER NE "Y" BEGIN        
+	        IF OFFENSE.WARR_DATE GT "01/01/1900" BEGIN
+           		 PRINT 'Y' TO SUBTOTAL1.4
+	        End
+        END
+        
+        INCREMENT DEF_TOTAL
+SECTION SUBTOTAL1
+        INCREMENT DEFS
+//        PRINT DEF_TOTAL TO SUBTOTAL1.3
+//        MOVE (TOTAL.3 + DEF_TOTAL) TO TOTAL.3
+        SUBTOTAL BODY.1 TO TOTAL.5
+        MOVE (TOTAL.5 - DEF_CREDIT) TO SUBTOTAL1.3
+ //	PRINT OFF_TOTAL TO SUBTOTAL1.4	
+ //       PRINT (SUBTOTAL1.3 - SUBTOTAL1.4) TO SUBTOTAL1.4
+ //       MOVE (TOTAL.6 + SUBTOTAL1.5) TO TOTAL.6
+        OUTPUT SUBTOTAL1
+//        MOVE 'N' TO SUBTOTAL1.5
+SECTION TOTAL
+//        PRINT DEFS TO TOTAL.2
+//        OUTPUT TOTAL
+REPORTEND
+//FORMFEED
+ABORT

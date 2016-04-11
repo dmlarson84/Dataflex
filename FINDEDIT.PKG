@@ -1,0 +1,266 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+//
+//
+//     $Source: k:\RCS\.\pkg\findedit.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: findedit.pkg,v $
+//Revision 2.1  1993/08/25  17:48:04  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:05  james
+//Initial revision
+//
+//Revision 1.7  92/06/20  04:21:14  lee
+//altered wrapping to 1) ignore wrap_state, and 2) only save if not a child of 
+//a deo (child_wrapping will save if it's a child of a deo).
+//
+//Revision 1.6  92/06/03  15:19:44  steve-l
+//altered WRAPPING to check wrap_state (kindly ignore comments for prior rev.)
+//
+//Revision 1.5  92/06/03  15:17:29  steve-l
+//altered Child_Wrapping for proper argument dereferencing
+//
+//Revision 1.4  92/06/03  15:09:53  steve-l
+//added WRAPPING function
+//
+//Revision 1.3  92/05/14  15:46:18  unknown
+//Updated Copyright slug - SWM.
+//
+//Revision 1.2  92/03/09  19:01:57  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:20:43  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: FindEdit.Inc
+// Creation Date: January 1, 1991
+// Modified Date: May 23, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module defines the messages and properties required to support
+// the data-editing standard for data-entry objects, collected in the
+// abstract class Find_Edit_Mixin.
+//
+// This file should be USEd prior to and IMPORTed within the scope of the
+// class definition by any user-interface (esp. data-entry) class which
+// must support the data-entry object standards.
+//
+// This file is used by ENTRYFRM.PKG, TEXT_WIN.PKG, and TABLE.PKG.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+use fndmodes    // special find modes
+
+class find_edit_mixin is a message
+  //
+  // Description
+  //
+  //   This procedure defines the accelerator keys and properties required to
+  //   support the data-editing standard for data-entry objects.  This includes
+  //   accelerator keys to support the finding, clearing, saving, and deleting
+  //   of database records, and two properties governing certain automatic
+  //   functions of editing (see Notes).
+  //
+  // Assumptions/Preconditions
+  //
+  //   This procedure should only be called from within the Construct_Object
+  //   procedure of a class definition.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   The Auto_Save_State property governs whether a Save is automatically
+  //   issued upon rotation wrap-around (from the last object/item to the
+  //   first object/item).
+  //
+  //   The Auto_Clear_DEO_State property governs whether a Clear is
+  //   automatically issued after a successful Save or Delete operation.
+  //
+  procedure define_find_edit
+    on_key kBegin_of_Data       SEND Beginning_of_Data  PRIVATE
+    on_key kClear               SEND Request_Clear      PRIVATE
+    on_key kClear_All           SEND Request_Clear_All  PRIVATE
+    on_key kDelete_Record       SEND Request_Delete     PRIVATE
+    on_key kEnd_of_Data         SEND End_of_Data        PRIVATE
+    on_key kFind                SEND Find_GE            PRIVATE
+    on_key kFind_Next           SEND Find_Next          PRIVATE
+    on_key kFind_Previous       SEND Find_Previous      PRIVATE
+    on_key kSave_Record         SEND Request_Save       PRIVATE
+    on_key kSuper_Find          SEND SuperFind          PRIVATE
+    on_key kSuper_Find_Next     SEND SuperFind_Next     PRIVATE
+    on_key kSuper_Find_Previous SEND SuperFind_Previous PRIVATE
+    Property integer Auto_Save_State      PUBLIC  0
+    Property integer Auto_Clear_DEO_State PUBLIC  1
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure finds greater-than-or-equal-to using the file and field,
+  //   if any, of the current item.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Depends entirely upon Request_Find.
+  //
+  procedure Find_GE
+    send Request_Find GE TRUE
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure finds greater-than using the file and field, if any,
+  //   of the current item.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Depends entirely upon Request_Find.
+  //
+  procedure Find_Next
+    send Request_Find GT TRUE
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure finds less-than using the file and field, if any,
+  //   of the current item.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Depends entirely upon Request_Find.
+  //
+  procedure Find_Previous
+    send Request_Find LT TRUE
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure superfinds greater-than-or-equal-to using the file and
+  //   field, if any, of the current item.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Depends entirely upon Request_SuperFind.
+  //
+  procedure SuperFind
+    send Request_SuperFind GE
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure superfinds greater-than using the file and field, if
+  //   any, of the current item.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Depends entirely upon Request_SuperFind.
+  //
+  procedure SuperFind_Next
+    send Request_SuperFind GT
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure superfinds less-than using the file and field, if any,
+  //   of the current item.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Depends entirely upon Request_SuperFind.
+  //
+  procedure SuperFind_Previous
+    send Request_SuperFind LT
+  end_procedure
+
+  function wrapping
+    //
+    // if this is a child of a DEO, it will be saved by child_wrapping.
+    // however, if this is not a child of a DEO, and we are wrapping,
+    // and auto_save is true, save.
+    //
+    if (not(component_state(current_object)) AND ;
+        auto_save_state(current_object)) ;
+        send request_Save
+  end_function
+end_class
+

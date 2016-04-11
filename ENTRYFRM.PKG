@@ -1,0 +1,573 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\entryfrm.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: entryfrm.pkg,v $
+//Revision 2.1  1993/08/25  17:47:41  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:04  james
+//Initial revision
+//
+//Revision 1.14  92/06/19  16:31:52  james
+//Last minute changes made to correct problem with
+//SWITCH_BACK
+//
+//Revision 1.13  92/06/10  02:27:09  lee
+//child_wrpping now saves if autosave in origin OR in current object
+//
+//Revision 1.12  92/06/05  16:31:37  steve-l
+//altered set current_item occurrances to use set item false/true/2/3 instead,
+//in order to properly handle displayonly/noenter items on top-of-panel et al.
+//
+//Revision 1.11  92/06/03  15:21:41  steve-l
+//altered child_wrapping for proper dereferencing of new argument
+//
+//Revision 1.10  92/06/03  15:11:22  steve-l
+//altered child_wrapping for new argument
+//
+//Revision 1.9  92/06/01  17:58:29  steve-l
+//guarded REQUEST_SAVE behavior with server=0 | not(read-only(server))
+//
+//Revision 1.8  92/05/29  14:06:18  lee
+//removed end_construct_* messages from mixins; now, classes that use the mixin
+//send the message that used to be sent by the end_construct_* message (for
+//efficiency).
+//
+//Revision 1.7  92/05/14  16:45:07  SWM
+//Updated Copyright slug.
+//
+//Revision 1.6  92/04/20  18:04:26  lee
+//added image argument error checking
+//
+//Revision 1.5  92/03/29  18:44:57  lee
+//added MSG_END_CONSTRUCT_OBJECT, moved ENDMAC macro stuff into END_CONSTRUCT-
+//OBJECT procedures (in .pkgs). moved Flag_ITems to list.pkg after generalizing
+//it based on PROTOTYPE_OBJECT instead of Whether or not it is a table-oriented
+//object. Moved define_access_keys mechanism completely into actionbr.pkg.
+//fixed two typos: import_class_protocol used !# instead of !3, and register-
+//procedure used !1 instead of !2.
+//
+//Revision 1.4  92/03/09  19:01:32  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of
+//compiler.
+//
+//Revision 1.3  92/03/05  15:46:38  steve-l
+//Request_Superfind changed to set ERR false before clling server and to
+//check err (with found) afterward, in case of non-file-boundary errors.
+//
+//Revision 1.2  91/11/08  09:18:05  steve-l
+//it
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: EntryFrm.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: Oct 28, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Entry_Form class definition.
+//************************************************************************/
+
+//************************************************************************
+// Version: 1.0
+//  12-09-1992 : Created
+//
+// Author: John J. Tuohy
+//
+// 1. Adds Stop_UI_State Support
+// 2. Adds Should_Save Property // (LS) not anymore!
+// 3. Modifies Changed_State to check Should_save (fixes DAC bug) (LS - not modified anymore)
+// 4. Adds Request_Save_No_Clear Message. Saves without clearing.
+// 5. Adds auto-prompt
+// 6. Adds Validate_all_items_state
+// 7. Adds dependent_item support
+// 8. Adds checkbox support
+// 9. Adds movable support (ver 1.1)
+//10. Added Validate_mode (mixin). No change by default. Added here for
+//                                 sake of completeness.
+//11. Added entry_defaults (and better retains) through mixin
+//
+// 10-07-1993  Add include file with new exit_function procedure. DAC bug
+// 03/01/94    Items 5 and 6 added for 1.1
+// 03/11/94    Item 7 and 8 for 1.1
+// 03/17/94    Item 9 v.1.1
+// 04/08/94    v1.1 (LS) Added DEO delegation.
+// 05/02/94    Added Validate_Mode to handle validation (and their errors)
+//             in a more friendly fashion. Done with mixin class.
+// 07/18/94    Add Clear_mx mixin for better setting of default values
+// 09/02/94    JJT Added delegate logic to request_save_no_clear
+//************************************************************************/
+
+//************************************************************************/
+// 12/22/94 JJT Merge Changes
+//              Merged the 0 class into entry_form.
+//              Added DEO delegate logic to request_???? messages.
+//              Cleaned up request_save a little bit removing
+//              redundant checks for no server.
+// 05/22/95 JJT Added object_item_validation to focus support in
+//              request_clear and request_clear_all (also see deodlgmx.pkg)
+// 05/22/95 JJT Added object_item_validation to focus support in
+//              request_clear and request_clear_all (also see deodlgmx.pkg)
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+use NESTING     //include DEO nesting standard support module
+use NAVIGATE    //include DEO navigation standard support module
+use VERIFY      //include Verification support module
+use SERVER      //include Server support module
+use ACTIONBR    //include action-bar support module
+use FINDEDIT    //include Finding/Editing support module
+use ENTITEM     //include Entry-Item support module
+use fndmodes    // special find modes
+Use Dep_item   // v1.1 Auto-dependent-item support
+Use CkBox_Mx   // v1.1 checkbox mixin support
+Use ClMoveMx   // v1.1 Move image support
+Use DEODlgMx   // v1.1 DEO delegation support
+Use Val_MX     // v1.1 test validate options
+Use Clear_mx   // v1.1 new defaults upon clear
+Use Code_DEO   // v1.1 code file support
+
+
+//
+//  Entry_form:
+//
+//
+
+class Entry_Form is an ENTRY STARTMAC EFstart
+  procedure construct_object integer img
+    forward send construct_object img
+    set auto_top_item_state to FALSE
+    send define_nesting    //invoke DEO nesting standard support constructor
+    send define_navigation //invoke DEO navigation standard support constructor
+    send define_verify     //invoke Verification support constructor
+    send define_server     //invoke Server support constructor
+    send define_action_bar //invoke action-bar support constructor
+    send define_find_edit  //invoke finding/editing support constructor
+    send define_entry_item //invoke entry-item support constructor
+    Send Define_Validate
+    Send Define_CheckBox_Support       // v1.1 support for checkbox
+    Send define_Movable_Client_Support // v1.1
+    Send Define_DEO_Delegate           // v1.1
+    Send Define_Clear_Defaults
+  end_procedure
+
+  IMPORT_CLASS_PROTOCOL Nesting_Mixin     //these statements
+  IMPORT_CLASS_PROTOCOL Navigate_Mixin    //import the methods
+  IMPORT_CLASS_PROTOCOL Verify_Mixin      //from the mixins
+  IMPORT_CLASS_PROTOCOL Server_Mixin      //into the current class
+  IMPORT_CLASS_PROTOCOL Action_Bar_Mixin  //instead of using
+  IMPORT_CLASS_PROTOCOL Find_Edit_Mixin   //bulky
+  // entry_item_mixin must mixin after Movable_cient_mixin. A message
+  // in entry-item (move_client_location) needs to replace the message
+  // in movable-client. (see entitem)
+  IMPORT_CLASS_PROTOCOL Movable_Client_Mixin
+  IMPORT_CLASS_PROTOCOL Entry_Item_Mixin  //include-files
+
+  IMPORT_CLASS_PROTOCOL Code_DEO_Mixin
+  IMPORT_CLASS_PROTOCOL DEO_Dependent_item_mixin //v1.1
+  IMPORT_CLASS_PROTOCOL Entry_CheckBox_Mixin // v1.1
+  IMPORT_CLASS_PROTOCOL DEO_Delegate_Mixin // ver 1.1
+  IMPORT_CLASS_PROTOCOL Validate_Mixin // ver 1.1
+          // Note: This augments: Next and Validate_Items
+  IMPORT_CLASS_PROTOCOL Clear_Defaults_Mixin // ver 1.1
+
+  // Create the cbox object. This only gets created if required.
+  // We create this in the class and not the mixin because you seem to
+  // get odd results if objects are created in mixin procedures
+  //
+  Function Create_Cbox_Object returns Integer // returns ID of object
+    Local Integer Obj
+    Object CBox is a CBox_array   // keep track of list of
+       Move Current_Object to Obj // items which are check_box items
+    End_Object
+    Function_return Obj
+  End_Function
+
+  //
+  // Navigation support behavior
+  //
+  procedure Top_of_Panel
+    local integer retval
+    //
+    // modification for EntItem support
+    //
+    get Object_Validation to retval
+    set Object_Validation to false
+    if (focus(desktop) <> current_object) send activate
+//    set current_item to 0
+    set item TRUE                  //go to first enterable item
+
+    set Object_Validation to retval
+  end_procedure
+
+  //
+  // Navigation support behavior
+  //
+  procedure Bottom_of_Panel
+    local integer lastChild
+    //
+    // modification for Nesting support
+    //
+    if (Has_Components_State(current_object)) begin
+      get Find_Last_DEO to lastChild
+      if lastChild ne 0 begin
+        send Bottom_Of_Panel to lastChild
+        procedure_return
+      end
+    end
+    send activate
+//    set current_item to (item_count(current_object) - 1)
+    set item FALSE                  //go to last enterable item
+  end_procedure
+
+  //
+  // navigation support standard behavior
+  //
+  procedure Child_Wrapping integer direction integer xorigID
+    local integer origID
+
+    if NUM_ARGUMENTS gt 1 move xorigID to origID
+    else get focus of desktop to origID
+    if origID eq 0 move current_object to origID
+
+    send activate
+
+    //
+    //save only if wrapping forward
+    //
+    if direction EQ 1 begin
+        if (Auto_Save_State(origID)) send request_Save to origID
+        else if (auto_save_state(current_object)) send request_save
+    end
+
+//    if direction eq 0 set current_item to (item_count(current_object) - 1)
+//    else set current_item to 0
+
+    // JJR set item direction - go to first/last enterable item
+
+    procedure_return 1
+  end_procedure
+
+  //
+  // created for server support
+  //
+  procedure display
+    send entry_display 0 0
+  end_procedure
+
+  //
+  // created for server support
+  //
+  procedure clear
+    send entry_clear 1           //notification of empty record buffer(s)
+  end_procedure
+
+  //
+  // created for server support
+  //
+  procedure clear_All
+    send entry_clear_all 1       //notification of empty data-set
+  end_procedure
+
+  //
+  // created for server support
+  //
+  procedure clear_set            //clear required by dependency
+    send entry_clear 1
+  end_procedure
+
+  //
+  // FindEdit support behavior
+  //
+  procedure Request_Clear
+    local integer obj# retval Foc
+    If (Should_delegate_Clear(Current_Object)) ;
+       Delegate Send Request_Clear
+    else begin
+       get Server to obj#
+       //
+       // modification for Verify support
+       //
+       if (Should_Save(current_object) AND ;
+           (Verify_Data_Loss(current_object) <> 0)) ;
+         procedure_return
+
+       Get Focus to Foc
+       get Object_Item_Validation of Foc to retval
+       set Object_Item_Validation of Foc to false
+       //
+       // modification for Server support
+       //
+       if obj# ne 0 send clear to obj#
+       //
+       // standard non-server behavior
+       //
+       else send entry_clear 0
+       if (Auto_Top_Panel_State(current_object)) send beginning_of_panel
+       set Object_Item_Validation of Foc to retval
+    End
+  end_procedure
+
+  //
+  // FindEdit support behavior
+  //
+  procedure Request_Clear_All
+    local integer obj# retval Foc
+    If (Should_delegate_Clear(Current_Object)) ;
+       Delegate Send Request_Clear_all
+    else begin
+       get Server to obj#
+       //
+       // modification for Verify support
+       //
+       if (Should_Save(current_object) AND ;
+           (Verify_Data_Loss(current_object) <> 0)) ;
+         procedure_return
+
+       Get Focus to Foc
+       get Object_Item_Validation of Foc to retval
+       set Object_Item_Validation of Foc to false
+       //
+       // modification for Server support
+       //
+       if obj# ne 0 send clear_all to obj#
+       else send entry_clear_all 0
+       if (Auto_Top_Panel_State(current_object)) send beginning_of_panel
+       set Object_Item_Validation of Foc to retval
+    end
+  end_procedure
+
+  //
+  // FindEdit support behavior
+  //
+  procedure Request_Delete
+    local integer obj#
+    If (Should_delegate_Delete(Current_Object)) ;
+       Delegate Send Request_Delete
+    else begin
+       indicate err false
+       get Server to obj#
+       if (obj# <> 0 AND can_delete(obj#) <> 0) begin
+         //
+         // modification for Verify
+         //
+         if (Verify_Delete(current_object) <> 0) procedure_return
+         //
+         // modification for Server
+         //
+         set changed_State to false
+         if (Deferred_State(current_object)) ;
+             send Request_Assign to obj# 0  //0 means main_file of Server
+         send Request_Delete to obj#
+         [not err] if (Auto_Clear_DEO_State(current_object)) send Request_Clear
+       end
+    End
+  end_procedure
+
+  //
+  // FindEdit support behavior
+  //
+  procedure Beginning_of_Data
+    send Request_Find FIRST_RECORD FALSE
+  end_procedure
+
+  //
+  // FindEdit support behavior
+  //
+  procedure End_of_Data
+    send Request_Find LAST_RECORD FALSE
+  end_procedure
+
+  //
+  // FindEdit support behavior
+  //
+  procedure Request_SuperFind integer mode
+    local integer obj# datafile
+    If (Should_delegate_Find(Current_Object)) ;
+       Delegate Send Request_SuperFind Mode
+    else begin
+       get Server to obj#
+       get data_file to datafile
+       //
+       // modification for Server
+       //
+       if datafile gt 0 begin
+         if obj# ne 0 begin
+           indicate err false
+           send Request_SuperFind to obj# mode datafile ;
+               (data_field(current_object,CURRENT))
+           [not found not err] begin
+             if mode lt 2 error 41
+             else error 42
+           end
+         end
+         //
+         // standard form behavior
+         //
+         else begin
+           send Entry_SuperFind mode datafile
+           [found] send entry_display 0 0
+         end
+       end
+    end
+  end_procedure
+
+  //
+  // FindEdit support behavior
+  //
+  procedure Request_Save
+    local integer obj# curItem retval
+    If (Should_delegate_Save(Current_Object)) ;
+       Delegate Send Request_Save
+    else begin
+       get Server to obj#
+       //if (obj# = 0 OR not(Read_Only_State(obj#))) begin
+       // Since serverless saves do not save it makes no sense to even
+       // allow serverless saves to get past this point. Without this a
+       // serverless save acts like a save (verifies, validates, clears) but
+       // never performs an actual save. So, no server, no save.
+       if (obj#<>0 AND not(Read_Only_State(obj#))) begin
+         indicate err false
+         //
+         // modification for EntItem support
+         // (JJT) Removed redudant checks for server's (obj) existance.
+         get current_item to curItem
+         if (exec_validate(Current_Object,curItem) <> 0) procedure_return
+         if (exec_exit(Current_Object,curItem) <> 0) procedure_return
+         if (Should_Save(current_object)) begin
+           //if obj# ne 0 get Request_Validate of obj# to retval
+           //else get Validate_Items FALSE to retval
+           get Request_Validate of obj# to retval
+           if retval ne 0 procedure_Return
+           //
+           // modification for Verify support
+           //
+           if (Verify_Save(current_object) <> 0) procedure_return
+           //
+           // modification for Save support
+           //
+           //if obj# ne 0 begin
+           if (Deferred_State(current_object)) ;
+              send Request_Assign to obj# 0  //0 means main_file of server
+           send Request_Save to obj#
+           //end
+         end
+         [not err] if (Auto_Clear_DEO_State(current_object)) send Request_Clear
+       end
+    end
+  end_procedure
+
+   // this allows us to save a record without it clearing regardless of
+   // the Auto_Clear_DEO_State value
+   //
+   Procedure Request_Save_No_Clear
+     Local integer oldclr
+    If (Should_delegate_Save(Current_Object)) ;
+       Delegate Send Request_Save_no_Clear
+    else begin
+        Get Auto_Clear_DEO_State to OldClr  // whatever it was
+        Set Auto_Clear_DEO_State to False   // it is now NO!
+        send request_save                   // do your magic
+        Set Auto_Clear_DEO_State to OldClr  // back to whatever it was
+     end
+   End_procedure
+
+  //
+  // FindEdit support behavior
+  //
+  procedure Request_Find integer mode integer entUpdtFlag
+    local integer dataFile ser# dfrdState
+    If (Should_delegate_Find(Current_Object)) ;
+       Delegate Send Request_Find mode entUpdtFlag
+    else begin
+       get Data_File to dataFile
+       get Server to ser#
+       get Deferred_State to dfrdState
+
+       //
+       // server augmentation & deferred-state use
+       //
+       if (ser# <> 0 AND dataFile > 0) begin
+         send Item_Find to ser# mode dataFile ;
+           (Data_Field(current_object,CURRENT)) entUpdtFlag TRUE dfrdState
+         [found] if dfrdState send entry_display 0 0
+       end
+       //
+       // standard form behavior
+       //
+       else begin
+         send Entry_Find mode
+         [found] send entry_display 0 0
+       end
+    End
+  end_procedure
+
+  //
+  // EntItem support behavior
+  //
+  procedure entry_autofind integer mode
+    local integer obj# dataFile item#
+    get Server to obj#
+    get autofind_item to item#
+    get Data_File item item# to dataFile
+    //
+    // modification for Server support
+    //
+    if (obj# <> 0 AND dataFile > 0) send Item_Find to obj# mode dataFile ;
+        (Data_Field(current_object,item#)) TRUE FALSE ;
+        (Deferred_State(current_object))
+    //
+    // standard behavior
+    //
+    else forward send entry_autofind mode
+  end_procedure
+
+  procedure End_Construct_Object
+    send Mark_Components      // nesting
+    send Define_Access_Keys 0 // action_bar_keys
+    forward send End_Construct_Object
+  end_procedure
+
+end_class
+
+
+//
+// EFstart <class> <image> { ACTION_BAR <actionbar#> } { POP_UP | POPUP}
+//         { RING } { USING <ServerID> }
+//
+// handles optional syntax for entry_form's constructor statement
+//
+#COMMAND EFstart R R
+  #IFDEF !2
+  #ELSE
+    #IFDEF !2.N
+    #ELSE
+      #ERROR 100 IMAGE ARGUMENT MISSING IN OBJECT STATEMENT
+    #ENDIF
+  #ENDIF
+  FORWARD_BEGIN_CONSTRUCT !1 !2
+  bind_action_bar !3 !4 !5 !6 !7 !8 !9
+  bind_pop_up !3 !4 !5 !6 !7 !8 !9
+  bind_ring !3 !4 !5 !6 !7 !8 !9
+  bind_using !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+

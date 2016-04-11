@@ -1,0 +1,82 @@
+// KP_HELP.PKG
+// May 23, 1991
+// LS
+//
+// Keyproc_Help package for use in non-ui and "mixed" ui programs
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use Help
+
+class Keyproc_Help_Name is an Array
+    procedure Construct_Object
+        forward send Construct_Object
+
+        property integer Keyproc_Help_State Public 0
+        property integer Help_Name_ID       Public 0
+    end_procedure
+
+    function Help_Name returns String
+        local string Hlp_Nam
+
+        if (Keyproc_Help_State( Current_Object )) function_return ;
+          ("IMAGE_" + string( Help_Name_ID( Current_Object ) ))
+        else begin
+            forward get Help_Name to Hlp_Nam
+            function_return Hlp_Nam
+        end
+    end_function
+end_class
+
+object Keyproc_Help is a Keyproc_Help_Name
+    object Window_Help is a Keyproc_Help_Name
+        function Help_Name returns String
+            local string Hlp_Nam
+
+            if (Keyproc_Help_State( Parent( Current_Object ) )) ;
+              function_return ;
+              ("WINDOW_" + string( Help_Name_ID( Current_Object ) ))
+            else begin
+                forward get Help_Name to Hlp_Nam
+                function_return Hlp_Nam
+            end
+        end_function
+    end_object
+
+    procedure UI_Help integer Img integer Win
+        set Keyproc_Help_State to True
+        set Help_Name_ID to Img
+        set Help_Name_ID of (Window_Help( Current_Object )) to Win
+
+//        send View_Context_Help to Help_Object (Window_Help( Current_Object ))
+//        start_ui
+
+        send Help to (Window_Help( Current_Object ))
+        set Keyproc_Help_State to False
+
+    end_procedure
+end_object
+
+procedure Keyproc_Help FOR DESKTOP
+    send UI_Help to Keyproc_Help Current_Image Current_Window
+end_procedure
+
+//procedure Request_Cancel FOR HELP_SYSTEM
+//    local integer Pri_Sco
+//
+//    if not (Keyproc_Help_State( Keyproc_Help( Desktop ) )) begin
+//        get Prior_Scope to Pri_Sco
+//        if Pri_Sco EQ 0 move Desktop to Pri_Sco
+//        set Current_Scope to Pri_Sco
+//    end
+//
+//    send Deactivate
+//    send Close_Help True
+//    if (Remain_Open_State( Current_Object )) send Restore_Records
+//
+//    if (Keyproc_Help_State( Keyproc_Help( Desktop ) )) begin
+//        set Keyproc_Help_State of Keyproc_Help to False
+//        procedure_return 1
+//    end
+//end_procedure
+

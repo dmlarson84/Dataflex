@@ -1,0 +1,119 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\ftxtclnt.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: ftxtclnt.pkg,v $
+//Revision 2.1  1993/08/25  17:48:10  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:05  james
+//Initial revision
+//
+//Revision 1.3  92/05/14  15:59:22  unknown
+//Updated Copyright slug.
+//
+//Revision 1.2  92/03/09  19:02:12  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:20:53  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: FTxtClnt.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: May 23, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Find-Text pop-up object for the Text_Editor
+// class.
+//
+// This package implements a pop-up object for text searching within a
+// text-editor object
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+Use UI
+
+
+/findTxtImg
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³                                                  ³
+³ Find what: ____________________________________  ³
+³                                                  ³
+³          <__>                <______>            ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+/*
+sub_page findTxtWin  FROM findTxtImg 1
+sub_page findTxtBtns FROM findTxtImg 2 3
+
+//
+//Attribute: Find_Text_Area
+//
+//Description: pop-up form to enter search text
+//
+//Representation: FORM, with item sending FIND message
+//
+object Find_Text_Area is a CLIENT findTxtImg
+  set LOCATION to 7 10 relative
+  set DELEGATION_MODE to DELEGATE_PRIOR_LEVEL
+  set BLOCK_MOUSE_STATE to true
+  set SCOPE_STATE to TRUE
+  set exit_msg to cancel_scope
+  procedure cancel_scope
+    send deactivate 3
+  end_procedure
+  on_key kCancel        SEND cancel_scope
+  on_key kExit_Function SEND cancel_scope
+  object Find_Text_Window is a FORM findTxtWin
+    item_list 
+      on_item "" SEND Find_Text
+    end_item_list 
+  end_object
+  object OK_Button_Area is a BUTTON findTxtBtns
+    item_list
+      on_item "OK"     SEND Finis
+      on_item "CANCEL" SEND cancel_scope
+    end_item_list
+  end_object
+  procedure Finis
+    send find_text
+    send cancel_scope
+  end_procedure
+  //
+  //Operation: FIND_TEXT
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): perform find using value of Find_Text_Area's item as search
+  //         pattern.  if match not found, ring bell
+  //
+  //Algorithm: sends find, if result = 0, rings bell
+  //
+  //Usage: invoked by item
+  //
+  procedure Find_Text
+    local integer retval
+    send find (value(Find_Text_Window(current_object),0)) retval  
+    if retval eq 0 send bell to Desktop
+  end_procedure
+end_object
+
+

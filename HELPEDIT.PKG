@@ -1,0 +1,2306 @@
+// HELPEDIT.PKG
+// January 22, 1991
+// LS
+//
+// Context-sensitive Help Editing object
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+use Data_Set
+use EntryFrm
+use HelpMsgs
+use Key_Btn
+use Menu
+use Msg_Btn
+use Dfh_Util
+
+#COMMAND USE_FILE R
+  #IFDEF !1.RECNUM
+  #ELSE
+    #INCLUDE !1.FD
+  #ENDIF
+
+  #IFDEF !1.FILE_NUMBER
+  #ELSE
+    #SET Q$ !1.RECNUM
+    #REPLACE !1.FILE_NUMBER |CI!q
+  #ENDIF
+
+  #IF (!0>1)
+    USE_FILE !2 !3 !4 !5 !6 !7 !8 !9
+  #ENDIF
+#ENDCOMMAND
+
+DEFINE HELP_FOR_HELP_NAME   FOR 'HELP FOR HELP' // value of HELP_NAME
+DEFINE HELP_NAME_LENGTH     FOR 40
+DEFINE HELP_GRP_FILENAME    FOR 'helpgrp' // default filenames
+DEFINE HELP_SBJ_FILENAME    FOR 'helpsbj'
+DEFINE HELP_XRF_FILENAME    FOR 'helpxrf'
+DEFINE HELP_CTX_FILENAME    FOR 'helpctx'
+DEFINE HELP_FILENAME_PREFIX FOR 'help'
+
+DEFINE MAX_LINES_ALLOWED FOR 32767
+
+DEFINE YES_STATUS_STRING FOR 'Yes'
+DEFINE NO_STATUS_STRING  FOR 'No'
+
+#IFDEF POINTED_CURSOR_TYPE
+#ELSE
+  #REPLACE POINTED_CURSOR_TYPE |CI2
+#ENDIF
+
+use_file grp sbj xrf ctx
+
+//////////////////////////////////
+////////////////////////////////// global variables
+//////////////////////////////////
+
+integer Original_Grp Original_Sbj Original_Xrf Original_Ctx
+                                     // temporary storage for record numbers
+
+string Original_Group_Filename Original_Subject_Filename
+string Original_Link_Filename  Original_Context_Filename
+                              // temporary storage for help system filenames
+
+register_object Help_Object  // to allow testing of access method for existence
+register_object Help_Editor  // to allow forward reference
+
+//////////////////////////////////
+////////////////////////////////// desktop procedures and functions
+//////////////////////////////////
+
+procedure Deactivate_Area for Desktop
+    send Deactivate AREA_TYPE
+end_procedure
+
+function Context_Help_Name for Desktop returns string
+    function_return (Trim( Right( Help_Name( Current_Object ), ;
+      HELP_NAME_LENGTH ) ))
+end_function
+
+// global procedures for accessing Help while inside Help_Edit
+
+procedure Request_Help_In_Help_Edit for Desktop integer Msg integer Arg
+    local integer Obj Ed_Obj
+
+    move (Help_Object( Desktop )) to Obj
+
+    if Obj NE Null_Object begin
+        move (Help_Editor( Desktop )) to Ed_Obj
+
+        if (Active_State( Ed_Obj )) send Use_System_Help_Files to Ed_Obj
+
+        if Num_Arguments GT 1 send Request_Help to Obj Msg Arg
+        else send Request_Help to Obj Msg
+
+        if (Active_State( Ed_Obj )) send Use_Original_Help_Files to Ed_Obj
+    end
+end_procedure
+
+procedure Extended_Help for Desktop
+    send Request_Help_In_Help_Edit Msg_View_Context_Help Current_Object
+end_procedure
+
+procedure Help for Desktop
+    send Request_Help_In_Help_Edit Msg_View_Context_Help Current_Object
+end_procedure
+
+procedure Help_For_Help for Desktop
+    send Request_Help_In_Help_Edit Msg_View_Help_For_Help
+end_procedure
+
+procedure Help_Index for Desktop
+    send Request_Help_In_Help_Edit Msg_View_Help_Index
+end_procedure
+
+procedure Keys_Help for Desktop
+    send Request_Help_In_Help_Edit Msg_View_Keys_Help
+end_procedure
+
+/Help_Edit_Message_Img
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                              บ
+บ                                                              บ
+บ                                                              บ
+บ                                                              บ
+บ                                                              บ
+บ                                                              บ
+บ                                                              บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/Help_Edit_Ok_Help_Btns_Img
+                   ____           ______                    
+/*
+//                 <OK>           <Help>
+
+/Help_Edit_Save_Ctx_Btns_Img
+        _______________________     ________________        
+             ________                    ______             
+/*
+//      <Save Link and Context>     <Save Link only>
+//           <Cancel>                    <Help>
+
+/Help_Edit_Delete_Ctx_Xrf_Btns_Img
+    _____________________      _________________________    
+         ________                       ______              
+/*
+//  <Delete Context only>      <Delete Link and Context>
+//       <Cancel>                       <Help>
+
+/Help_Edit_Delete_Ctx_Btns_Img
+         ________________      ________      ______         
+/*
+//       <Delete Context>      <Cancel>      <Help>
+
+/Help_Edit_Delete_Xrf_Btns_Img
+        _____________        ________        ______        
+/*
+//      <Delete Link>        <Cancel>        <Help>
+
+object Help_Edit_Message is a Message_Button Help_Edit_Message_Img
+    set Delegation_Mode to Delegate_Prior_Level
+    set Location        to 7 8 Relative
+    set Text_Size       to 4 60
+
+    object Ok_Help_Buttons is a Button Help_Edit_Ok_Help_Btns_Img
+        set Focus_Mode to No_Activate
+        set Location   to 6 1 Relative
+
+        item_list
+            on_item "<OK>"   send Ok
+            on_item "<Help>" send Help
+        end_item_list
+
+        on_key kCancel           send None
+        on_key kExit_Application send Quit_Help_Edit
+    end_object
+
+    object Save_Ctx_Buttons is a Button Help_Edit_Save_Ctx_Btns_Img
+        set Focus_Mode to No_Activate
+        set Location   to 6 1 Relative
+
+        item_list
+            on_item "<Save Link and Context>" send Save_Both
+            on_item "<Save Link only>"        send Save_Link
+            on_item "<Cancel>"                send Cancel
+            on_item "<Help>"                  send Help
+        end_item_list
+
+        on_key kExit_Application send Quit_Help_Edit
+    end_object
+
+    object Delete_Ctx_Xrf_Buttons is a Button Help_Edit_Delete_Ctx_Xrf_Btns_Img
+        set Focus_Mode to No_Activate
+        set Location   to 6 1 Relative
+
+        item_list
+            on_item "<Delete Context only>"     send Delete_Ctx
+            on_item "<Delete Link and Context>" send Delete_Both
+            on_item "<Cancel>"                  send Cancel
+            on_item "<Help>"                    send Help
+        end_item_list
+
+        on_key kExit_Application send Quit_Help_Edit
+    end_object
+
+    object Delete_Ctx_Buttons is a Button Help_Edit_Delete_Ctx_Btns_Img
+        set Focus_Mode to No_Activate
+        set Location   to 6 1 Relative
+
+        item_list
+            on_item "<Delete Context>" send Delete_Ctx
+            on_item "<Cancel>"         send Cancel
+            on_item "<Help>"           send Help
+        end_item_list
+
+        on_key kExit_Application send Quit_Help_Edit
+    end_object
+
+    object Delete_Xrf_Buttons is a Button Help_Edit_Delete_Xrf_Btns_Img
+        set Focus_Mode to No_Activate
+        set Location   to 6 1 Relative
+
+        item_list
+            on_item "<Delete Link>" send Delete_Link
+            on_item "<Cancel>"      send Cancel
+            on_item "<Help>"        send Help
+        end_item_list
+
+        on_key kExit_Application send Quit_Help_Edit
+    end_object
+
+    on_key kCancel send Cancel
+
+    enum_list
+        DEFINE HELP_OK_HELP_BTN_TYPE FOR 1
+        DEFINE HELP_SAVE_CTX_BTN_TYPE
+        DEFINE HELP_DELETE_CTX_XRF_BTN_TYPE
+        DEFINE HELP_DELETE_CTX_BTN_TYPE
+        DEFINE HELP_DELETE_XRF_BTN_TYPE
+    end_enum_list
+
+    procedure Set Button_Type integer Val
+        set Focus_Mode of (Ok_Help_Buttons( Current_Object ))        to No_Activate
+        set Focus_Mode of (Save_Ctx_Buttons( Current_Object ))       to No_Activate
+        set Focus_Mode of (Delete_Ctx_Xrf_Buttons( Current_Object )) to No_Activate
+        set Focus_Mode of (Delete_Ctx_Buttons( Current_Object ))     to No_Activate
+        set Focus_Mode of (Delete_Xrf_Buttons( Current_Object ))     to No_Activate
+
+             if Val EQ HELP_OK_HELP_BTN_TYPE        set Focus_Mode of (Ok_Help_Buttons( Current_Object ))        to Focusable
+        else if Val EQ HELP_SAVE_CTX_BTN_TYPE       set Focus_Mode of (Save_Ctx_Buttons( Current_Object ))       to Focusable
+        else if Val EQ HELP_DELETE_CTX_XRF_BTN_TYPE set Focus_Mode of (Delete_Ctx_Xrf_Buttons( Current_Object )) to Focusable
+        else if Val EQ HELP_DELETE_CTX_BTN_TYPE     set Focus_Mode of (Delete_Ctx_Buttons( Current_Object ))     to Focusable
+        else if Val EQ HELP_DELETE_XRF_BTN_TYPE     set Focus_Mode of (Delete_Xrf_Buttons( Current_Object ))     to Focusable
+    end_procedure
+
+    procedure quit_help_edit
+        procedure_return msg_quit_help_edit
+    end_procedure
+end_object
+
+//------------------- HELP_EDIT_CONSTRAINTED_DATA_SET ----------------//
+
+class Help_Edit_Constrained_Data_Set is a Data_Set
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        property integer Constrain_To_Grp Public 1
+        property integer Constrain_To_Sbj Public 1
+    end_procedure
+
+    begin_constraints
+        if (Constrain_To_Grp( Current_Object )) constrain xrf relates to grp
+        if (Constrain_To_Sbj( Current_Object )) constrain xrf relates to sbj
+    end_constraints
+end_class
+
+class help_edit_prompt_client_button is a key_button
+    procedure construct_object integer img
+        forward send construct_object img
+
+        item_list
+            on_item "<F4=Prompt>"  send prompt to (parent(current_object))
+            on_item "<Esc=Cancel>" send request_cancel_area
+            on_item "<F1=Help>"    send help
+        end_item_list
+
+        on_key kcancel           send request_cancel_area
+        on_key kprompt           send prompt to (parent(current_object))
+        on_key ksave_record      send request_ok
+    end_procedure
+
+    procedure set shadow_prompt_state integer flag
+        set shadow_state item 0 to flag
+    end_procedure
+
+    function shadow_prompt_state returns integer
+        function_return (shadow_state(current_object,0))
+    end_function
+end_class
+
+class Help_Edit_Import_Export_Client is a Client
+    procedure Construct_Object integer Img integer File_Img integer Btns_Img
+        forward send Construct_Object Img
+
+        set Block_Mouse_State to True
+        set Popup_State       to True
+        set Scope_State       to True
+
+        object Path is a Form File_Img
+            item_list
+                on_item "" send Ok
+            end_item_list
+
+            on_key kExit_Application send Quit_Help_Edit
+        end_object
+
+        object Buttons is a Button Btns_Img
+            item_list
+                on_item "<F2=OK>"      send Ok
+                on_item "<Esc=Cancel>" send Cancel
+                on_item "<F1=Help>"    send Help
+            end_item_list
+
+            on_key kExit_Application send Quit_Help_Edit
+        end_object
+
+        on_key kSave_Record      send Ok
+        on_key kCancel           send Cancel
+    end_procedure
+
+    function Filename returns string
+        function_return (Value( Path( Current_Object ), 0 ))
+    end_function
+
+    procedure Quit_Help_Edit
+        delegate send Quit_Help_Edit
+        procedure_return Msg_Cancel
+    end_procedure
+end_class
+
+//---------------------  HELP_EDIT_OBJECT_BROWSER class  -----------------//
+
+class help_edit_object_browser is a client
+  procedure construct_object integer img integer parent_img ;
+    integer current_img integer child_img
+
+    forward send construct_object img
+
+    set scope_state to true
+  
+    object parent_button is a button parent_img
+      item_list
+        on_item "" send select_parent
+      end_item_list
+    end_object
+
+    object current_button is a button current_img
+      item_list
+        on_item "" send select_current
+      end_item_list
+    end_object
+  
+    object child_list is a list child_img
+    end_object
+  end_procedure
+
+  procedure delete_data
+    send delete_data to (parent_button(current_object))
+    set checkbox_item_state of (parent_button(current_object)) to false
+    send delete_data to (current_button(current_object))
+    set checkbox_item_state of (current_button(current_object)) to false
+    send delete_data to (child_list(current_object))
+  end_procedure
+
+  procedure set select_mode integer sel_mode
+    set select_mode of (parent_button(current_object)) to sel_mode
+    set select_mode of (current_button(current_object)) to sel_mode
+    set select_mode of (child_list(current_object)) to sel_mode
+  end_procedure
+
+  function select_mode returns integer
+    function_return (select_mode( child_list( current_object ) ))
+  end_function
+
+  function browse_name integer obj returns string
+    function_return (name(obj)) // can be overridden
+  end_function
+  
+  procedure select_parent
+    send display_object (aux_value( parent_button( current_object), 0 ))
+  end_procedure
+    
+  procedure select_current
+    // for override
+  end_procedure
+
+  procedure select_child
+    send display_object (aux_value( child_list(current_object), current ))
+  end_procedure
+
+  procedure store_object integer id integer obj integer itm
+    if id ne 0 set value of obj item itm to (browse_name(current_object,id))
+    else set value of obj item itm to ""
+
+    set aux_value of obj item itm to id
+  end_procedure
+
+  procedure display_object integer id
+    local integer counter old_obj chd chd_count
+
+    if id ne 0 begin
+      set dynamic_update_state of (parent_button( current_object )) to false
+      set dynamic_update_state of (current_button( current_object )) to false
+      set dynamic_update_state of (child_list( current_object )) to false
+      send delete_data
+      send store_object id (current_button( current_object )) 0
+
+      if id ne desktop send store_object (parent(id)) ;
+        (parent_button(current_object)) 0
+      else send store_object 0 (parent_button(current_object)) 0
+
+      move 1 to counter
+      get child_count of id to chd_count
+      move current_object to old_obj
+
+      while counter le chd_count
+        move id to current_object
+        get object_id of (-counter) to chd
+        move old_obj to current_object
+
+        if chd ne 0 begin
+          send add_item to (child_list(current_object)) msg_select_child ""
+          send store_object chd (child_list(current_object)) ;
+            (item_count( child_list(current_object ) ) - 1)
+        end
+
+        increment counter
+      end
+
+      set current_item of (child_list( current_object )) to 0
+      set dynamic_update_state of (parent_button(current_object)) to true
+      set dynamic_update_state of (current_button(current_object)) to true
+      set dynamic_update_state of (child_list(current_object)) to true
+      if not (active_state(current_object)) send activate
+      send activate to (current_button(current_object))
+    end
+  end_procedure
+end_class
+
+//---------------------  HELP_EDIT_CONTEXT_BROWSER class  -----------------//
+
+class Help_Edit_Context_Browser is a help_edit_Object_Browser
+    procedure Construct_Object integer Img integer Par_Img ;
+      integer Cur_Img integer Chd_Img
+        forward send Construct_Object Img Par_Img cur_Img Chd_Img
+
+        property integer Invoking_Object Public
+
+        set Block_Mouse_State to True
+        set Popup_State       to True
+        set Scope_State       to True
+        set Select_Mode       to Multi_Select
+
+        on_key key_Alt+key_F1    send Original_Context
+        on_key key_Alt+key_F2    send Display_Topic
+        on_key kCancel           send Exit_Object
+        on_key kDelete_Record    send Delete_Context
+        on_key kExit_Application send Quit_Help_Edit
+        on_key kSave_Record      send Save_Context
+        on_key kSpace            send None
+    end_procedure
+
+    procedure Activate returns integer
+        local integer Retval
+        set Invoking_Object to (Focus( Desktop ))
+        forward get Msg_Activate to Retval
+        procedure_return Retval
+    end_procedure
+
+    function Browse_Name integer Obj returns string
+        function_return (Context_Help_Name( Obj ))
+    end_function
+
+    function Find_Context integer Obj returns integer
+        clear Ctx
+        get Application_Name  of Obj to Ctx.App_Name
+        get Module_Name       of Obj to Ctx.Mod_Name
+        get Context_Help_Name of Obj to Ctx.Hlp_Name
+        find EQ Ctx.Hlp_Name
+        [ Found ] function_return 1
+    end_function
+
+    function Find_Valid_Context integer Obj integer Cur_Xrf returns integer
+        local integer Ret_Val
+
+        get Find_Context Obj to Ret_Val
+        if (Ret_Val and Ctx.Xrf_Recnum = Cur_Xrf) function_return 1
+    end_function
+
+    procedure Store_Object integer Ctx_Obj integer Obj integer Itm
+        forward send Store_Object Ctx_Obj Obj Itm
+
+        set Checkbox_Item_State of Obj item Itm to (Ctx_Obj <> 0)
+        set Select_State of Obj item Itm ;
+          to (if( Ctx_Obj = 0, 0, Find_Valid_Context( Current_Object, Ctx_Obj, ;
+          Current_Record( Invoking_Object( Current_Object ) ) ) ))
+    end_procedure
+
+    procedure Popup
+        local integer Obj
+
+        forward send Popup
+        send Original_Context
+    end_procedure
+
+    procedure Original_Context
+        local integer Obj
+
+        get Original_Focus of (Invoking_Object( Current_Object )) to Obj
+        send Display_Object Obj
+    end_procedure
+
+    procedure Display_Topic
+        local integer Obj Ret_Val
+
+        get Aux_Value of (Focus(Desktop)) item Current to Obj
+        get Find_Context Obj to Ret_Val
+
+        if Ret_Val begin
+            get Server of (Invoking_Object( Current_Object )) to Obj
+
+            set Constrain_To_Grp of Obj to False
+            set Constrain_To_Sbj of Obj to False
+            send Rebuild_Constraints to Obj
+            send Find_By_Recnum to Obj Xrf.File_Number Ctx.Xrf_Recnum
+            set Constrain_To_Grp of Obj to True
+            set Constrain_To_Sbj of Obj to True
+            send Rebuild_Constraints to Obj
+
+            send Exit_Object
+        end
+        else send Bell // no context exists
+    end_procedure
+
+    procedure Save_Context
+        local integer Cur_Xrf Foc Inv_Obj
+
+        get Focus of Desktop to Foc
+        if (Select_State( Foc, Current )) procedure_return
+
+        get Invoking_Object to Inv_Obj
+
+        indicate Err False
+        send Save_Help to Help_Editor Inv_Obj False
+        get Current_Record of Inv_Obj to Cur_Xrf
+
+        if Cur_Xrf EQ 0 procedure_return // could not/did not save
+
+        clear Ctx
+        get Application_Name to Ctx.App_Name
+        get Module_Name to Ctx.Mod_Name
+        get Value of Foc to Ctx.Hlp_Name
+
+        indicate Err False
+        lock
+        [ not Err ] find EQ Ctx.Hlp_Name
+        [ not Err ] move Cur_Xrf to Ctx.Xrf_Recnum
+        [ not Err ] saverecord Ctx
+        unlock
+        [ not Err ] set Select_State of Foc to True
+    end_procedure
+
+    procedure Delete_Context
+        local integer Cur_Xrf Foc
+
+        get Focus of Desktop to Foc
+        if not (Select_State( Foc, Current )) procedure_return
+
+        get Current_Record of (Invoking_Object( Current_Object )) to Cur_Xrf
+
+        clear Ctx
+        get Application_Name to Ctx.App_Name
+        get Module_Name to Ctx.Mod_Name
+        get Value of Foc to Ctx.Hlp_Name
+        find EQ Ctx.Hlp_Name
+
+        indicate Err False
+        reread Ctx
+        [ not Err ] delete Ctx
+        unlock
+        [ not Err ] set Select_State of Foc to False
+    end_procedure
+
+    procedure Deactivating returns integer
+        local integer Retval
+        forward get Msg_Deactivating to Retval
+        send Delete_Data
+        procedure_return Retval
+    end_procedure
+
+    procedure Exit_Object
+        local integer Obj
+
+        get Prior_Scope to Obj
+        if Obj EQ 0 move Desktop to Obj
+        set Current_Scope to Obj
+        send Deactivate
+    end_procedure
+
+    procedure quit_help_edit
+        send exit_object
+        send quit_help_edit to (focus(desktop))
+    end_procedure
+end_class
+
+//---------------------------  HELP_SYSTEM_EDITOR class  -------------------//
+
+class Help_System_Editor is a HELP
+    procedure Construct_Object integer Img
+        local integer Obj
+
+        forward send Construct_Object Img
+
+        property string  Context_Filename        Public  HELP_CTX_FILENAME
+        property string  Filename_Prefix         Private HELP_FILENAME_PREFIX
+        property string  Group_Filename          Public  HELP_GRP_FILENAME
+        property string  Link_Filename           Public  HELP_XRF_FILENAME
+        property integer Original_Focus          Public  0
+        property integer Remain_Open_State       Public  0
+        property string  Subject_Filename        Public  HELP_SBJ_FILENAME
+
+        move Current_Object to Obj
+
+        object Grp_Data is a Data_Set no_image main_file Grp
+            set Focus_Mode to No_Activate
+        end_object
+
+        object Sbj_Data is a Data_Set no_image main_file Sbj
+            set Focus_Mode to No_Activate
+        end_object
+
+        object Xrf_Data is a Help_Edit_Constrained_Data_Set no_image ;
+          main_file Xrf updating (Grp_Data( Obj )) (Sbj_Data( Obj ))
+            set Focus_Mode to No_Activate
+        end_object
+    end_procedure
+
+    procedure Open_Help integer Local_Open
+        if (Active_State( Current_Object )) procedure_return
+        if Num_Arguments LE 0 set Remain_Open_State to True
+        open (Group_Filename( Current_Object ))   as Grp // language
+        open (Subject_Filename( Current_Object )) as Sbj // dependent file
+        open (Link_Filename( Current_Object ))    as Xrf // names are in
+        open (Context_Filename( Current_Object )) as Ctx // properties
+    end_procedure
+
+    procedure Close_Help integer Local_Close
+        if (Num_Arguments Min 1) NE (Remain_Open_State( Current_Object )) begin
+            close Grp
+            close Sbj
+            close Xrf
+            close Ctx
+        end
+    end_procedure
+
+    procedure Set Filename_Prefix string Prefix
+        local integer Old_Pre_Len
+        local string Old_Name
+
+        length (!$.Filename_Prefix( Current_Object )) to Old_Pre_Len
+        set !$.Filename_Prefix to Prefix
+
+        get Group_Filename to Old_Name
+        set Group_Filename to ;
+          (Prefix + mid( Old_Name, length( Old_Name ) - Old_Pre_Len, Old_Pre_Len + 1 ))
+
+        get Subject_Filename to Old_Name
+        set Subject_Filename to ;
+          (Prefix + mid( Old_Name, length( Old_Name ) - Old_Pre_Len, Old_Pre_Len + 1 ))
+
+        get Link_Filename to Old_Name
+        set Link_Filename to ;
+          (Prefix + mid( Old_Name, length( Old_Name ) - Old_Pre_Len, Old_Pre_Len + 1 ))
+
+        get Context_Filename to Old_Name
+        set Context_Filename to ;
+          (Prefix + mid( Old_Name, length( Old_Name ) - Old_Pre_Len, Old_Pre_Len + 1 ))
+    end_procedure
+
+    function Filename_Prefix returns string
+        function_return (!$.Filename_Prefix( Current_Object ))
+    end_function
+
+    procedure Request_Cancel
+        send Deactivate_Area
+    end_procedure
+end_class
+
+//-------------------------------------------------------------------------//
+//-------------------------  CTX_ASSIGNMENT object  -----------------------//
+//-------------------------------------------------------------------------//
+
+/Help_Edit_Ctx_Img
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                 Context Maintenance                 บ
+บ Parent:                                             บ
+บ ___________________________________________________ บ
+บฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤบ
+บ Current:                                            บ
+บ ___________________________________________________ บ
+บฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤบ
+บ Children:                                           บ
+บ ___________________________________________________ บ
+บ ___________________________________________________ บ
+บ ___________________________________________________ บ
+บ ___________________________________________________ บ
+บ ___________________________________________________ บ
+บฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤบ
+บ ___________  ___________________  _________________ บ
+บ  ______________________   ___________   _________   บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+//<F2=Select>  <Shift+F2=Deselect>  <Alt+F1=Original>
+// <Alt+F2=Display topic>   <Esc=Close>   <F1=Help>
+
+sub_page Help_Edit_Parent_Ctx_Img  from Help_Edit_Ctx_Img 1
+sub_page Help_Edit_Current_Ctx_Img from Help_Edit_Ctx_Img 2
+sub_page Help_Edit_Child_Ctx_Img   from Help_Edit_Ctx_Img Vertical 3 5
+sub_page Help_Edit_Ctx_Keys_Img    from Help_Edit_Ctx_Img Horizontal 8 6
+
+object Ctx_Assignment is a Help_Edit_Context_Browser Help_Edit_Ctx_Img ;
+  Help_Edit_Parent_Ctx_Img Help_Edit_Current_Ctx_Img ;
+  Help_Edit_Child_Ctx_Img
+
+    set Location to 7 13 Relative
+
+    object Keys is a Key_Button Help_Edit_Ctx_Keys_Img
+        set Focus_Mode to Pointer_Only
+
+        item_list
+            on_item "<F2=Select>"            send Save_Context
+            on_item "<Shift+F2=Deselect>"    send Delete_Context
+            on_item "<Alt+F1=Original>"      send Original_Context
+            on_item "<Alt+F2=Display topic>" send Display_Topic
+            on_item "<Esc=Close>"            send Exit_Object
+            on_item "<F1=Help>"              send Help
+        end_item_list
+    end_object
+end_object
+
+//--------------------------------------------------------------------------//
+//------------------------------  HELP_EDITOR object  ------------------------//
+//--------------------------------------------------------------------------//
+
+/Help_Edit_Img
+ษอออออออออออออออออออออออ Edit Help อออออออออออออออออออออออป
+บ                                                         บ
+บ                                                         บ
+บ                                                         บ
+บ                                                         บ
+บฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤบ
+บ                                                         บ
+บ                                                         บ
+บ                                                         บ
+บ                                                         บ
+บ                                                         บ
+บ                                                         บ
+บ                                                         บ
+บ                                                         บ
+บ                                                         บ
+บ                                                         บ
+บฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤบ
+บ                                                         บ
+บ                                                         บ
+บ                                                         บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/Help_Edit_Zoom_Keys_Img
+         ____________________         _________          
+/Help_Edit_Action_Bar_Img
+  ______  ____  ___________  ____                        
+/Help_Edit_Record_Exit_Pull_Down_Img
+ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
+ณ _____________________________ ณ
+ณ _____________________________ ณ
+ณ _____________________________ ณ
+ณ _____________________________ ณ
+ณ _____________________________ ณ
+ณ _____________________________ ณ
+ณ _____________________________ ณ
+ณ _____________________________ ณ
+ณ _____________________________ ณ
+ณ _____________________________ ณ
+ณ _____________________________ ณ
+ณ _____________________________ ณ
+รฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤด
+ณ _____________________________ ณ
+ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+/Help_Edit_Text_Pull_Down_Img
+ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
+ณ _______________________ ณ
+ณ _______________________ ณ
+ณ _______________________ ณ
+ณ _______________________ ณ
+ณ _______________________ ณ
+ณ _______________________ ณ
+ณ _______________________ ณ
+ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+/Help_Edit_Maint_Pull_Down_Img
+ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
+ณ _____________________ ณ
+ณ _____________________ ณ
+ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+/Help_Edit_Help_Pull_Down_Img
+ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
+ณ ________________ ณ
+ณ ________________ ณ
+ณ ________________ ณ
+ณ ________________ ณ
+ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+/*
+/Help_Edit_Topic_Img
+     Group: _________________________________ 
+   Subject: _________________________________ 
+/Help_Edit_Link_Status_Img
+ Linked:   
+   ___     
+/Help_Edit_Keys_Img
+    ___________      __________    __________________    
+    _________________      ___________      _________    
+/*
+//  <F4=Prompt>      <F5=Clear>    <Alt+F9=Zoom text>
+//  <Alt+F1=Original>      <Esc=Close>      <F1=Help>
+
+/Help_Edit_Export_Img
+ษออออออออออออออออออออออออออออออออออออออออออออป
+บ  File to export text to:                   บ
+บ  ________________________________________  บ 
+บ                                            บ
+บ    _______    ____________    _________    บ
+ศออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+//   <F2=OK>    <Esc=Cancel>    <F1=Help>
+sub_page Help_Edit_Export_File_Img from Help_Edit_Export_Img 1
+sub_page Help_Edit_Export_Btns_Img from Help_Edit_Export_Img 2 3 4
+
+/Help_Edit_Import_Img
+ษออออออออออออออออออออออออออออออออออออออออออออป
+บ  File to import text from:                 บ
+บ  ________________________________________  บ 
+บ                                            บ
+บ    _______    ____________    _________    บ
+ศออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+//   <F2=OK>    <Esc=Cancel>    <F1=Help>
+sub_page Help_Edit_Import_File_Img from Help_Edit_Import_Img 1
+sub_page Help_Edit_Import_Btns_Img from Help_Edit_Import_Img 2 3 4
+
+object Help_Editor is a Help_System_Editor Help_Edit_Img
+    register_object help_edit_grp_prompt
+    register_object help_edit_sbj_prompt
+
+    set Block_Mouse_State to True
+    set Client_Area_State to True
+    set Location          to 2 11 Relative
+    set Popup_State       to True
+    set Ring_State        to True
+    set Scope_State       to True
+
+//- - - - - - - - - - - - - HELP_EDIT_ACTION_BAR object  - - - - - - - - - -//
+
+    create_menu Action_Bar Help_Edit_Action_Bar_Img
+        set Action_Bar_Keys_Msg to Help_Editor_Keys
+        set Location            to 1 1 Relative
+
+        on_item "Record" begin_pull_down Record_Pull_Down Help_Edit_Record_Exit_Pull_Down_Img
+            on_item "Clear/Add                  F5" send Request_Clear
+            on_item "Clear all             Ctrl+F5" send Request_Clear_All
+            on_item "Delete               Shift+F2" send Request_Delete
+            on_item "Find                       F9" send Find_GE
+            on_item "Next                       F8" send Find_Next
+            on_item "Previous                   F7" send Find_Previous
+            on_item "Superfind            Shift+F9" send Superfind
+            on_item "Superfind next       Shift+F8" send Superfind_Next
+            on_item "Superfind previous   Shift+F7" send Superfind_Previous
+            on_item "Find first          Ctrl+Home" send Beginning_Of_Data
+            on_item "Find last            Ctrl+End" send End_Of_Data
+            on_item "Save                       F2" send Request_Save
+            on_item "Exit"                          send Exit_Area
+        
+            on_key kexit_application send quit_help_edit
+        end_pull_down
+
+        register_object Text_Pull_Down
+        on_item "Text" send Activate_Pull_Down to (Text_Pull_Down( Current_Object ))
+
+        object Text_Pull_Down is a Shadow_Text_Pull_Down_Menu Help_Edit_Text_Pull_Down_Img
+            multi$ register_procedure Mark_Block Mark_Column Cut_Marked_Area
+            multi$ register_procedure Copy_Marked_Area Paste_Block
+
+            item_list
+                on_item "Block mark"            send Mark_Block
+                on_item "Column mark"           send Mark_Column
+                on_item "Cut marked text"       send Cut_Marked_Area
+                on_item "Copy marked text"      send Copy_Marked_Area
+                on_item "Paste text"            send Paste_Block
+                on_item "Import file..."        send Import_Text
+                on_item "Export marked text..." send Export_Marked_Area
+            end_item_list
+
+            on_key kexit_application send quit_help_edit
+        end_object
+
+        on_item "Maintenance" begin_pull_down Maint_Pull_Down Help_Edit_Maint_Pull_Down_Img
+            on_item "Context assignment..." send Context_Assignment
+            on_item "Cleanup..."            send Cleanup
+
+            on_key kexit_application send quit_help_edit
+        end_pull_down
+
+        on_item "Help" begin_pull_down Help_Pull_Down Help_Edit_Help_Pull_Down_Img
+            on_item "Help for help..." send Help_For_Help to Desktop
+            on_item "Extended help..." send Extended_Help to Desktop
+            on_item "Keys help..."     send Keys_Help     to Desktop
+            on_item "Help index..."    send Help_Index    to Desktop
+
+            on_key kexit_application send quit_help_edit
+        end_pull_down
+    end_menu
+
+    procedure Help_Editor_Keys for Desktop integer Obj
+        on_key key_Alt+key_R send Activate to (Record_Pull_Down( Obj )) Private
+        on_key key_Alt+key_T send Activate to (Text_Pull_Down( Obj )) Private
+        on_key key_Alt+key_M send Activate to (Maint_Pull_Down( Obj )) Private
+        on_key key_Alt+key_H send Activate to (Help_Pull_Down( Obj )) Private
+    end_procedure
+  
+    object topic is an entry_form Help_Edit_topic_img ;
+            using (Xrf_Data( Help_Editor( Desktop ) )) ;
+            action_bar (Action_Bar( Help_Editor( Desktop ) ))
+
+        set auto_clear_deo_state to false
+        set Location         to 3 1 Relative
+
+        item_list
+            entry_item grp.grp_name { autofind, iprompt=(Help_Edit_grp_prompt(desktop)) }
+            entry_item sbj.sbj_name { iprompt=(Help_Edit_sbj_prompt(desktop)) }
+        end_item_list
+
+        on_key key_Alt+key_F1     send Original_Help     Private
+        on_key kExit_Application  send Request_Cancel    Private
+        on_key kZoom              send Toggle_Zoom_Text  Private
+        on_key kSwitch_Panel      send None              Private
+        on_key kSwitch_Panel_Back send None              Private
+
+        procedure request_cancel
+            delegate send request_cancel
+        end_procedure
+
+        procedure request_clear
+            send request_clear_all
+        end_procedure
+
+        procedure request_delete
+            delegate send delete_help
+        end_procedure
+
+        procedure request_save
+            local integer cur_grp cur_sbj cur_xrf
+
+            get current_record of (grp_data(help_editor(desktop))) to cur_grp
+            get current_record of (sbj_data(help_editor(desktop))) to cur_sbj
+            get current_record of (xrf_data(help_editor(desktop))) to cur_xrf
+            if ((cur_grp or cur_sbj) and not(cur_xrf)) set changed_state to true
+
+            delegate send save_help (focus(desktop)) true
+        end_procedure
+
+        procedure request_superfind integer mode
+            local integer Obj
+
+            get Server to Obj
+            set Constrain_To_Grp of Obj to False
+            set Constrain_To_Sbj of Obj to False
+            send rebuild_constraints to Obj
+            forward send request_superfind mode
+            set Constrain_To_Grp of Obj to True
+            set Constrain_To_Sbj of Obj to True
+            send rebuild_constraints to Obj
+        end_procedure
+    end_object
+
+    object link_status is an entry_form Help_Edit_link_status_img ;
+            using (Xrf_Data( Help_Editor( Desktop ) ))
+        register_function link_value returns string
+
+        set auto_fill_state to true
+        set skip_state      to true
+        set location        to 3 47 relative
+
+        item_list
+            entry_item (link_value(current_object))
+        end_item_list
+
+        function link_value returns string
+            if xrf.recnum eq 0 function_return NO_STATUS_STRING
+            else function_return YES_STATUS_STRING
+        end_function
+
+        procedure entry_clear integer flag
+            forward send entry_clear flag
+            send clear_item_value
+        end_procedure
+
+        procedure entry_clear_all integer flag
+            forward send entry_clear_all flag
+            send clear_item_value
+        end_procedure
+
+        procedure clear_item_value
+            if (grp.recnum <> 0 and sbj.recnum <> 0) ;
+                set value item 0 to "No"
+        end_procedure
+    end_object
+
+    object text is a Help_Maintenance_Text_Window using (Xrf_Data( Help_Editor( Desktop ) )) ;
+            action_bar (Action_Bar( Help_Editor( Desktop ) ))
+
+        set Auto_Clear_Deo_State to False
+        set Location             to 6 1 Relative
+        set Size                 to 10 56
+
+        assign_dbms_field Sbj.Sbj_Text
+
+        object zoom_keys is a key_button help_edit_zoom_keys_img
+            set Location   to 18 0 Relative
+            set Focus_Mode to No_Activate
+
+            item_list
+                on_item "<Alt+F9=Cancel zoom>" send Toggle_Zoom_Text
+                on_item "<F1=Help>"            send Help
+            end_item_list
+        end_object
+
+        object Export_File is a Help_Edit_Import_Export_Client Help_Edit_Export_Img Help_Edit_Export_File_Img Help_Edit_Export_Btns_Img
+            set Location to 3 5 Relative
+        end_object
+
+        set Export_Object to (Export_File( Current_Object ))
+
+        object Import_File is a Help_Edit_Import_Export_Client Help_Edit_Import_Img Help_Edit_Import_File_Img Help_Edit_Import_Btns_Img
+            set Location to 3 5 Relative
+        end_object
+
+        set Import_Object to (Import_File( Current_Object ))
+
+        on_key key_Alt+key_F1     send Original_Help      Private
+        on_key key_Alt+key_A      send Context_Assignment Private
+        on_key kCancel            send Request_Cancel     Private
+        on_key kExit_Application  send Request_Cancel     Private
+        on_key kZoom              send Toggle_Zoom_Text   Private
+
+        procedure Prompt
+            if not (Zoom_State( Current_Object )) ;
+                    send Popup to (Help_Edit_Sbj_Prompt( Desktop ))
+        end_procedure
+
+        procedure Request_Save
+            local integer Cur_Grp Cur_Sbj Cur_Xrf
+
+            get Current_Record of (Grp_Data( Help_Editor( Desktop ) )) to Cur_Grp
+            get Current_Record of (Sbj_Data( Help_Editor( Desktop ) )) to Cur_Sbj
+            get Current_Record of (Xrf_Data( Help_Editor( Desktop ) )) to Cur_Xrf
+            if ((Cur_Grp or Cur_Sbj) and not( Cur_Xrf )) set Changed_State to True
+
+            delegate send Save_Help (Focus( Desktop )) True
+        end_procedure
+
+        procedure Request_Delete
+            delegate send Delete_Help
+        end_procedure
+
+        procedure Request_Cancel
+            delegate send Request_Cancel
+            if (Zoom_State( Current_Object )) send Shrink_Text
+        end_procedure
+
+        procedure Request_Clear
+            send Request_Clear_All
+        end_procedure
+
+        procedure Request_Clear_All
+            forward send Request_Clear_All
+            if (Zoom_State( Current_Object )) send Shrink_Text
+            set Current_Item of (Topic( Parent( Current_Object ) )) to 0
+            send Activate to (Topic( Parent( Current_Object ) ))
+        end_procedure
+
+        procedure Toggle_Zoom_Text
+            if not (Zoom_State( Current_Object )) send Zoom_Text
+            else send Shrink_Text
+        end_procedure
+
+        procedure Zoom_Text
+            set Location to 1 1 Relative
+            set Size to 18 56
+
+            set Focus_Mode of (Zoom_Keys( Current_Object )) to Pointer_Only
+            send Add_Focus to (zoom_keys( Current_Object )) Current_Object
+            if (Focus( Desktop )) NE Current_Object send Activate
+
+            set Zoom_State to True
+        end_procedure
+
+        procedure Shrink_Text
+            send Deactivate to (Zoom_Keys( Current_Object ))
+            set Focus_mode of (Zoom_Keys( Current_Object )) to No_Activate
+
+            set Size to 10 56
+            set Location to 6 1 Relative
+
+            set Zoom_State to False
+        end_procedure
+    end_object // Text
+
+//- - - - - - - - - - - - - - - -  KEYS object  - - - - - - - - - - - - - - -//
+
+    object Keys is a Key_Button Help_Edit_Keys_Img
+        set Location to 18 1 Relative
+
+        item_list
+            on_item "<F4=Prompt>"                 send Prompt
+            on_item "<F5=Clear>"                  send Request_Clear
+            on_item "<Alt+F9=Zoom text>"          send Toggle_Zoom_Text
+            on_item "<Alt+F1=Original>"           send Original_Help
+            on_item "<Esc=Close>"                 send Request_Cancel
+            on_item "<F1=Help>"                   send Help
+        end_item_list
+    end_object
+
+/help_edit_cleanup_img
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ______________________________________________________________บ
+บ                                                              บ
+บ       This option deletes Context records for the current    บ
+บ       Application and Module names, but with Help names      บ
+บ       that do not match any Object names in the current      บ
+บ       program.                                               บ
+บ                                                              บ
+บ       Warning: Using this option in programs with modified   บ
+บ       Help name functions may delete valid Context           บ
+บ       records.                                               บ
+บ                                                              บ
+บ          ________________________________________            บ
+บ                                                              บ
+บ  __________  _____________________  ___________  _________   บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+// <F2=Begin>  <Alt+F2=Display only>  <Esc=Close>  <F1=Help>
+sub_page help_edit_cleanup_title_img     from help_edit_cleanup_img 1
+sub_page help_edit_cleanup_write_del_img from help_edit_cleanup_img 2
+sub_page help_edit_cleanup_buttons_img   from help_edit_cleanup_img 3 4 5 6
+
+    object cleanup is a client help_edit_cleanup_img
+        set block_mouse_state to true
+        set location          to 2 -2 relative
+        set popup_state       to true
+        set scope_state       to true
+
+        object title_box is a title help_edit_cleanup_title_img
+            set center_state item 0 to true
+            set value item 0 to "Cleanup"
+        end_object
+
+        object write_del is a checkbox help_edit_cleanup_write_del_img
+            set select_mode to single_select
+
+            item_list
+                on_item "Write to .DEL file" send next
+            end_item_list
+
+            on_key key_alt+key_f2    send display_only   private
+            on_key ksave_record      send request_begin  private
+            on_key kcancel           send request_cancel private
+            on_key kexit_application send quit_help_edit private
+        end_object
+
+        object buttons is a button help_edit_cleanup_buttons_img
+            item_list
+                on_item "<F2=Begin>"            send request_begin
+                on_item "<Alt+F2=Display only>" send display_only
+                on_item "<Esc=Close>"          send request_cancel
+                on_item "<F1=Help>"            send help
+            end_item_list
+
+            on_key key_alt+key_f2    send display_only   private
+            on_key ksave_record      send request_begin  private
+            on_key kcancel           send request_cancel private
+            on_key kexit_application send quit_help_edit private
+        end_object
+
+/help_edit_cleanup_process_img
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ       Deleting invalid Context records for this program.      บ
+บ                                                               บ
+บ             Validated: _____.     Deleted: _____.             บ
+บ                                                               บ
+บ                                                               บ
+บ                                                               บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/help_edit_cleanup_process_cancel_btn_img
+____________
+/*
+        object process is a client help_edit_cleanup_process_img
+            set popup_state to true
+            set location    to 2 -1 relative
+
+            object button is a button help_edit_cleanup_process_cancel_btn_img
+                set location to 5 26 relative
+
+                item_list
+                    on_item "<Esc=Cancel>" send none
+                end_item_list
+
+/help_edit_cleanup_interrupt_img
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                 Cleanup interrupted.                  บ
+บ                                                       บ
+บ             _____________     ___________             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+
+                object interrupt is a button help_edit_cleanup_interrupt_img
+                    set block_mouse_state to true
+                    set location          to 0 -23 relative
+                    set popup_state       to true
+                    set scope_state       to true
+
+                    item_list
+                        on_item "<F2=Continue>" send ok
+                        on_item "<Esc=Abort>"   send cancel
+                    end_item_list
+
+                    on_key ksave_record      send ok
+                    on_key kcancel           send cancel
+                    on_key kexit_application send cancel
+                end_object
+
+                function check_interrupt returns integer
+                    local string trash
+                    local integer wloc mloc ret_val
+
+                    inkey trash
+
+                    if (termchar eq kexit_application or ;
+                        termchar eq kcancel or ;
+                        termchar eq kmouse) begin
+
+                        if (termchar eq kmouse) begin
+                            get window_location item 1 to wloc
+                            move (wloc + location(current_object)) to wloc
+                            get absolute_mouse_location to mloc
+                            if not (mloc >= wloc and mloc < (wloc + length(value(current_object,0)))) ;
+                                function_return 0
+                        end
+
+                        set kbd_input_mode to 1
+                        set highlight_state to false
+                        ui_accept (interrupt(current_object)) to ret_val
+                        if ret_val ne msg_ok function_return 1
+                        set highlight_state to true
+                        set kbd_input_mode to 2
+                    end
+
+                    function_return 0
+                end_function
+            end_object // button
+
+            procedure init_process
+                set value item 0 to 0
+                set value item 1 to 0
+            end_procedure
+
+            function scan_for_key integer itm returns integer
+                local integer ret_val obj
+
+                set value item itm to (value(current_object,itm) + 1)
+                get check_interrupt of (button(current_object)) to ret_val
+                function_return ret_val
+            end_function
+        end_object // process
+
+/help_edit_cleanup_display_list_img
+ษอออออออออออออออออออออออออออออออออออออออออออป
+บ___________________________________________บ
+บ                                           บ
+บ                                           บ
+บ                                           บ
+บ                                           บ
+บ                                           บ
+บ                                           บ
+บ                                           บ
+บ                                           บ
+บ                                           บ
+บ                                           บ
+ศอออออออออออออออออออออออออออออออออออออออออออผ
+/help_edit_cleanup_display_list_btn_img
+         _______         _________        
+/*
+//       <F2=OK>         <F1=Help>
+
+        object display_list is a client help_edit_cleanup_display_list_img
+            set block_mouse_state   to true
+            set center_state item 0 to true
+            set location            to 0 8 relative
+            set popup_state         to true
+            set scope_state         to true
+            set value        item 0 to "Records to be deleted"
+
+            object button is a button help_edit_cleanup_display_list_btn_img
+                set location to 11 1 relative
+
+                item_list
+                    on_item "<F2=OK>"   send request_ok
+                    on_item "<F1=Help>" send help
+                end_item_list
+
+                on_key ksave_record      send request_ok     private
+                on_key kexit_application send quit_help_edit private
+            end_object
+
+// button before list places focus on button during default activate of client
+
+            object list is a help_maintenance_text_window
+                set size            to 8 42
+                set location        to 3 1 relative
+                set read_only_state to true
+
+                on_key ksave_record send request_ok private
+            end_object
+
+            procedure insert_line string txt
+                local integer obj
+                local string newline
+
+                move (list(current_object)) to obj
+
+                set read_only_state of obj to false
+                send insert to obj txt
+                send process_key to obj kenter
+                set read_only_state of obj to true
+            end_procedure
+
+            procedure request_ok
+                send deactivate_area
+                send delete_data
+                delegate send restart
+            end_procedure
+
+            procedure delete_data
+                send delete_data to (list(current_object))
+            end_procedure
+
+            procedure release_focus returns integer
+                local integer retval
+                forward get msg_release_focus to retval
+                if retval procedure_return retval
+                send delete_data
+            end_procedure
+
+            procedure show_del_grp string grp_name
+                send insert_line "DELETE GROUP:"
+                send insert_line (trim(grp_name))
+            end_procedure
+
+            procedure show_del_sbj string sbj_name
+                send insert_line "DELETE SUBJECT:"
+                send insert_line (trim(sbj_name))
+            end_procedure
+
+            procedure show_del_xrf string grp_name string sbj_name
+                send insert_line "DELETE LINK FOR:"
+                send insert_line (trim(grp_name))
+                send insert_line (trim(sbj_name))
+            end_procedure
+
+            procedure show_del_ctx string app_name string mod_name string hlp_name
+                send insert_line "DELETE CONTEXT:"
+                send insert_line (trim(app_name))
+                send insert_line (trim(mod_name))
+                send insert_line (trim(hlp_name))
+            end_procedure
+        end_object // display_list
+
+/help_edit_cleanup_done_img
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                    Cleanup complete.                  บ
+บ                                                       บ
+บ                     ____    ______                    บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+        object done is a button help_edit_cleanup_done_img
+            set block_mouse_state to true
+            set location          to 6 2 relative
+            set popup_state       to true
+            set scope_state       to true
+
+            item_list
+                on_item "<OK>"   send request_cancel
+                on_item "<Help>" send help
+            end_item_list
+
+            on_key kexit_application send quit_help_edit private
+        end_object
+
+        object sbj_text is an edit
+            set focus_mode to no_activate
+            set size to 1 56
+        end_object
+
+        procedure restart
+            set kbd_input_mode to 1
+            send deactivate to (process(current_object))
+            send deactivate to (display_list(current_object))
+        end_procedure
+
+        procedure init_process integer live
+            local integer obj
+
+            if not live begin
+                set max_lines of (list(display_list(current_object))) to MAX_LINES_ALLOWED
+                send delete_data to (display_list(current_object))
+                send popup to (display_list(current_object))
+            end
+
+            move (process(current_object)) to obj
+            send delete_data to obj
+            send popup to obj
+            set highlight_state of (button(obj)) to true
+            set kbd_input_mode to 2
+        end_procedure
+
+        procedure process_complete integer live
+            set kbd_input_mode to 1
+            set highlight_state of (button(process(current_object))) to false
+
+            if live send popup to (done(current_object))
+            else begin
+                set max_lines of (list(display_list(current_object))) to (line_count(list(display_list(current_object))) + 1)
+                send deactivate to (process(current_object))
+            end
+        end_procedure
+
+        procedure request_begin
+            send request_cleanup true
+        end_procedure
+
+        procedure display_only
+            send request_cleanup false
+        end_procedure
+
+        function help_name_exists integer obj returns integer
+            local integer chd_cnt chd_num chd_obj cur_obj
+
+            get child_count of obj to chd_cnt
+            if chd_cnt le 0 function_return 0
+
+            for chd_num from 1 to chd_cnt
+                move current_object to cur_obj
+                move obj to current_object
+                get object_id of (-chd_num) to chd_obj
+                move cur_obj to current_object
+                if chd_obj ne 0 begin
+                        if (uppercase(trim(name(chd_obj)))) ;
+                            eq (uppercase(trim(ctx.hlp_name))) function_return 1
+                        if (help_name_exists(current_object,chd_obj)) function_return 1
+                end
+            loop
+
+            function_return 0
+        end_function
+
+        procedure request_cleanup integer live
+            local integer disp wr_del
+            local string app_val mod_val hlp_val
+
+            move (display_list(current_object)) to disp
+
+            send init_process live
+
+            get select_state of (write_del(current_object)) item 0 to wr_del
+
+            send init_process to (process(current_object))
+            if wr_del direct_output (context_filename(help_editor.obj) + ".DEL")
+
+            uppercase (trim(application_name(desktop))) to app_val
+            uppercase (trim(module_name(desktop))) to mod_val
+
+            clear ctx
+            move app_val to ctx.app_name
+            move mod_val to ctx.mod_name
+            find ge ctx.hlp_name
+            [found] indicate found as app_val eq (uppercase(trim(ctx.app_name)))
+            [found] indicate found as mod_val eq (uppercase(trim(ctx.mod_name)))
+
+            [found] repeat
+                if (scan_for_key(current_object,0)) begin
+                    if wr_del close_output
+                    send restart
+                    procedure_return
+                end
+
+                if not (help_name_exists(current_object,desktop)) begin
+                    if live begin
+                        move ctx.hlp_name to hlp_val
+                        if wr_del send write_del_ctx
+
+                        indicate err false
+
+                        reread ctx
+                        [not err] delete ctx
+                        unlock
+
+                        clear ctx
+                        move app_val to ctx.app_name
+                        move mod_val to ctx.mod_name
+                        move hlp_val to ctx.hlp_name
+                    end
+                    else send show_del_ctx to disp ctx.app_name ctx.mod_name ctx.hlp_name
+
+                    if (scan_for_key(current_object,1)) begin
+                        if wr_del close_output
+                        send restart
+                        procedure_return
+                    end
+                end
+
+                find gt ctx.hlp_name
+                [found] indicate found as app_val eq (uppercase(trim(ctx.app_name)))
+                [found] indicate found as mod_val eq (uppercase(trim(ctx.mod_name)))
+            [found] loop
+
+            close_output
+            send process_complete live
+        end_procedure
+
+        procedure write_del_grp
+            writeln grp.recnum
+            writeln grp.grp_name
+        end_procedure
+
+        procedure write_del_sbj
+            writeln sbj.recnum
+            writeln sbj.sbj_name
+            close_output
+            send write to (sbj_text(current_object)) ;
+                (context_filename(help_editor.obj) + ".DEL") true // true=append
+            append_output (context_filename(help_editor.obj) + ".DEL")
+            writeln (character(255))
+        end_procedure
+
+        procedure Write_Del_Xrf
+            writeln Xrf.Recnum
+            writeln Xrf.Grp_Recnum
+            writeln Xrf.Sbj_Recnum
+        end_procedure
+
+        procedure Write_del_ctx
+            writeln ctx.recnum
+            writeln ctx.app_name
+            writeln ctx.mod_name
+            writeln ctx.hlp_name
+            writeln ctx.xrf_recnum
+        end_procedure
+
+        function scan_for_key integer itm returns integer
+            function_return (scan_for_key(process(current_object),itm))
+        end_function
+
+        procedure request_cancel
+            send deactivate_area
+        end_procedure
+
+        procedure quit_help_edit
+            send request_cancel
+            delegate send quit_help_edit
+        end_procedure
+    end_object // cleanup
+
+// - - - - - - - - - - - - -  PROCEDURES AND FUNCTIONS  - - - - - - - - - - -//
+
+    function Current_Group returns string
+        function_return (Value( Topic( Current_Object ), 0 ))
+    end_function
+    
+    function Current_Subject returns string
+        function_return (Value( Topic( Current_Object ), 1 ))
+    end_function
+    
+    function Current_Record returns integer
+        function_return (current_record(xrf_data(current_object)))
+    end_function
+
+    function Find_Help_Context string App_Name string Mod_Name string Hlp_Name ;
+            returns integer
+        local integer Ret_Val
+
+        clear Ctx
+        move App_Name to Ctx.App_Name
+        move Mod_Name to Ctx.Mod_Name
+        trim Hlp_Name to Ctx.Hlp_Name
+        find EQ Ctx.Hlp_Name
+        move 0 to Ret_Val
+        [Found] move 1 to Ret_Val
+        function_return Ret_Val
+    end_function
+
+    procedure Context_Assignment
+       send Popup to Ctx_Assignment
+    end_procedure
+
+    procedure Cleanup
+       send Popup to (Cleanup( Current_Object ))
+    end_procedure
+
+    procedure Original_Help
+        local integer Orig_Foc Obj Ret_Val
+        local string App_Name Mod_Name
+
+        get Original_Focus to Orig_Foc
+        move Orig_Foc to Obj
+
+        repeat
+            get Find_Help_Context (Application_Name( Obj )) (Module_Name( Obj )) ;
+              (Context_Help_Name( Obj )) to Ret_Val
+
+            if not Ret_Val begin
+                if Obj EQ Desktop move -1 to Ret_Val
+                else get Parent of Obj to Obj
+            end
+        until Ret_Val NE 0
+
+        if Ret_Val LE 0 begin
+            set Text_Value of Help_Edit_Message to ;
+'There is no help assigned to Application "%1", Module "%2", Context "%3".'
+
+            set Arguments of Help_Edit_Message to ;
+                    (Application_Name( Orig_Foc )) ;
+                    (Module_Name( Orig_Foc )) ;
+                    (Help_Name( Orig_Foc ))
+
+            set Button_Type of Help_Edit_Message to HELP_OK_HELP_BTN_TYPE
+
+            ui_accept Help_Edit_Message to Ret_Val
+
+            if Ret_Val ne Msg_Cancel send Request_Clear to (Topic( Current_Object ))
+            if Ret_Val eq Msg_Quit_Help_Edit send Quit_Help_Edit
+        end
+        else send Find_By_Recnum to (Xrf_Data( Current_Object )) ;
+            Xrf.File_Number Ctx.Xrf_Recnum
+    end_procedure
+
+    procedure Toggle_Zoom_Text
+        local integer Obj
+
+        move (Text( Current_Object )) to Obj
+        if not (Zoom_State( Obj )) begin
+            send Zoom_Text to Obj
+            send Activate to Obj
+        end
+        else send Shrink_Text to Obj
+    end_procedure
+
+    procedure Save_Both returns integer
+        procedure_return Current_Message
+    end_procedure
+
+    procedure Save_Link returns integer
+        procedure_return Current_Message
+    end_procedure
+
+    procedure Save_Help integer Obj integer Confirm_Flag
+        local integer Ret_Val Orig_Foc
+        local string Hlp_Name Cur_Grp_Name Cur_Sbj_Name
+
+        get Current_Group to Cur_Grp_Name
+        get Current_Subject to Cur_Sbj_Name
+
+        if (Cur_Grp_Name = "" or Cur_Sbj_Name = "") procedure_return
+                                                    // don't save blank names
+
+        move (Original_Focus( Current_Object )) to Orig_Foc
+        get Context_Help_Name of Orig_Foc to Hlp_Name
+        get Find_Help_Context (Application_Name( Orig_Foc )) (Module_Name( Orig_Foc )) ;
+              Hlp_Name False to Ret_Val
+
+        if Confirm_Flag begin
+            set Text_Value of Help_Edit_Message to ;
+'Confirm save of Link for Group "%1" and Subject "%2", assigning Link to Context "%3".'
+
+            set Arguments of Help_Edit_Message to Cur_Grp_Name Cur_Sbj_Name ;
+                    Ctx.Hlp_Name
+                    
+            set Button_Type of Help_Edit_Message to HELP_SAVE_CTX_BTN_TYPE
+            ui_accept Help_Edit_Message to Ret_Val
+        end
+        else move Msg_Save_Both to Ret_Val
+
+        if Ret_Val ne Msg_Cancel send Save_Help_Records Ret_Val Obj Hlp_Name
+        if Ret_Val eq Msg_Quit_Help_Edit send Quit_Help_Edit
+    end_procedure
+
+    procedure Save_Help_Records integer Save_Type integer Obj string Hlp_Name
+        local integer Cur_Xrf Fail Old_State Orig_foc
+        local string App_Name Mod_Name
+
+        if Save_Type EQ Msg_Save_Both begin
+            move 0 to Fail
+            indicate Err False
+            get Auto_Clear_DEO_State of Obj to Old_State
+            set Auto_Clear_DEO_State of Obj to False
+            send Request_Save to (Server( Obj ))
+            [ Err ] move 1 to Fail
+            set Auto_Clear_DEO_State of Obj to Old_State
+            if Fail procedure_return
+
+            get Current_Record of (Server( Obj )) to Cur_Xrf
+
+            get Original_Focus to Orig_Foc
+            get Application_Name of Orig_Foc to App_Name
+            get Module_Name of Orig_Foc to Mod_Name
+            indicate Err False
+            lock
+
+            if status Ctx begin
+                find EQ Ctx.Recnum
+                [ not Found ] error 25 "CTX"
+            end
+
+            [ not Err ] move App_Name to Ctx.App_Name
+            [ not Err ] move Mod_Name to Ctx.Mod_Name
+            [ not Err ] move Hlp_Name to Ctx.Hlp_Name
+            [ not Err ] move Cur_Xrf to Ctx.Xrf_Recnum
+            [ not Err ] saverecord Ctx
+            unlock
+            [ not Err ] if (Auto_Clear_DEO_State( Obj )) ;
+              send Request_Clear to Obj
+        end
+
+        if Save_Type EQ Msg_Save_Link begin
+            send Request_Save to (Server( Obj ))
+        end
+    end_procedure
+
+    procedure Delete_Both returns integer
+        procedure_return Current_Message
+    end_procedure
+
+    procedure Delete_Ctx returns integer
+        procedure_return Current_Message
+    end_procedure
+
+    procedure Delete_Link returns integer
+        procedure_return Current_Message
+    end_procedure
+
+    procedure Delete_Ctx_Record
+        indicate Err False
+        reread Ctx
+        [ not Err ] delete Ctx
+        unlock
+    end_procedure
+
+    enum_list
+        DEFINE NO_DEL_TYPE FOR 0
+        DEFINE DEL_CTX_XRF_TYPE
+        DEFINE DEL_CTX_TYPE
+        DEFINE DEL_LINK_TYPE
+    end_enum_list
+
+    procedure Delete_Help
+        local integer Ret_Val Obj Orig_Foc Del_Type Cur_Xrf
+
+        get Current_Record of (Xrf_Data( Current_Object )) to Cur_Xrf
+
+        if Cur_Xrf EQ 0 begin
+            error 71 "XRF"
+            procedure_return
+        end
+
+        move DEL_LINK_TYPE to Del_Type
+
+        clear Ctx
+        move Cur_Xrf to Ctx.Xrf_Recnum
+        find GE Ctx.Xrf_Recnum
+        [ Found ] indicate Found as Ctx.Xrf_Recnum EQ Cur_Xrf
+        [ Found ] move DEL_CTX_XRF_TYPE to Del_Type
+
+        [ Found ] find GT Ctx.Xrf_Recnum
+        [ Found ] indicate Found as Ctx.Xrf_Recnum EQ Cur_Xrf
+        [ Found ] move DEL_CTX_TYPE to Del_type
+
+        get Original_Focus to Orig_Foc
+        get Find_Help_Context (Application_Name( Orig_Foc )) (Module_Name( Orig_Foc )) ;
+              (Context_Help_Name( Orig_Foc )) to Ret_Val
+
+        [ not Found ] if Del_Type NE DEL_LINK_TYPE ;
+              move NO_DEL_TYPE to Del_Type
+
+        get Focus to Obj
+
+        if (Del_Type = DEL_CTX_XRF_TYPE or Del_Type = DEL_CTX_TYPE) begin
+            set Text_Value of Help_Edit_Message to ;
+'Confirm deletion of Context "%1" for Linked Group "%2" and Subject "%3".'
+
+            set Arguments of Help_Edit_Message to ;
+                    Ctx.Hlp_Name ;
+                    Grp.Grp_Name ;
+                    Sbj.Sbj_Name
+                    
+            if Del_Type eq DEL_CTX_XRF_TYPE ;
+                  set Button_Type of Help_Edit_Message to HELP_DELETE_CTX_XRF_BTN_TYPE
+            else set Button_Type of Help_Edit_Message to HELP_DELETE_CTX_BTN_TYPE
+
+            ui_accept Help_Edit_Message to Ret_Val
+
+            if Ret_Val EQ Msg_Delete_Both begin
+                send Request_Delete to (Server( Obj ))
+                send Clear to (Server(Obj))
+                send Delete_Ctx_Record
+            end
+
+            if Ret_Val EQ Msg_Delete_Ctx send Delete_Ctx_Record
+            if Ret_Val eq Msg_Quit_Help_Edit send Quit_Help_Edit
+        end
+
+        if Del_Type EQ DEL_LINK_TYPE begin
+            set Text_Value of Help_Edit_Message to ;
+'Confirm deletion of Link only.  Link for Group "%1" and Subject "%2" is not assigned to a Context.'
+
+            set Arguments of Help_Edit_Message to ;
+                    Grp.Grp_Name ;
+                    Sbj.Sbj_Name
+                    
+            set Button_Type of Help_Edit_Message to HELP_DELETE_XRF_BTN_TYPE
+
+            ui_accept Help_Edit_Message to Ret_Val
+
+            if Ret_Val EQ Msg_Delete_Link begin
+                send Request_Delete to (Server( Obj ))
+                send Clear to (Server(Obj))
+            end
+
+            if Ret_Val eq Msg_Quit_Help_Edit send Quit_Help_Edit
+        end
+
+        if Del_Type EQ NO_DEL_TYPE begin
+            set Text_Value of Help_Edit_Message to ;
+'Deletion not allowed.  Link for Group "%1" Subject "%2" is assigned to Context(s) other than "%3".'
+
+            set Arguments of Help_Edit_Message to ;
+                    Grp.Grp_Name ;
+                    Sbj.Sbj_Name ;
+                    Ctx.Hlp_Name
+                    
+            set Button_Type of Help_Edit_Message to HELP_OK_HELP_BTN_TYPE
+
+            ui_accept Help_Edit_Message to Ret_Val
+
+            if Ret_Val eq Msg_Quit_Help_Edit send Quit_Help_Edit
+        end
+    end_procedure
+
+    procedure Request_Edit_Help integer Obj
+        if (Active_State( Current_Object )) procedure_return // no nested access
+
+        send Open_Help True
+        set Original_Focus to Obj
+        send Popup
+        send Activate to (Topic( Current_Object ))
+        send Original_Help
+    end_procedure
+
+    procedure Release_Focus returns integer
+        local integer Retval
+        send Request_Clear to (Topic( Current_Object ))
+        forward get Msg_Release_Focus to Retval
+        if Retval procedure_return Retval
+        send Close_Help True
+    end_procedure
+
+    procedure Use_System_Help_Files
+        local integer Obj
+
+        move (Help_Object( Desktop )) to Obj
+
+        get Group_Filename of Obj to Original_Group_Filename
+        set Group_Filename of Obj to HELP_GRP_FILENAME
+
+        move Grp.Recnum to Original_Grp
+        close Grp
+
+        get Subject_Filename of Obj to Original_Subject_Filename
+        set Subject_Filename of Obj to HELP_SBJ_FILENAME
+
+        move Sbj.Recnum to Original_Sbj
+        close Sbj
+
+        get Link_Filename of Obj to Original_Link_Filename
+        set Link_Filename of Obj to HELP_XRF_FILENAME
+
+        move Xrf.Recnum to Original_Xrf
+        close Xrf
+
+        get Context_Filename of Obj to Original_Context_Filename
+        set Context_Filename of Obj to HELP_CTX_FILENAME
+
+        move Ctx.Recnum to Original_Ctx
+        close Ctx
+
+        send Open_Help to Obj True
+    end_procedure
+
+    procedure Use_Original_Help_Files
+        local integer Obj
+        local string Fname
+
+        move (Help_Object( Desktop )) to Obj
+
+        send Close_Help to Obj // unconditional close
+
+        set Group_Filename of Obj to Original_Group_Filename
+
+        get Group_Filename to Fname
+        open Fname as Grp
+        clear Grp
+        if Original_Grp NE 0 begin
+            move Original_Grp to Grp.Recnum
+            find EQ Grp.Recnum
+        end
+
+        set Subject_Filename of Obj to Original_Subject_Filename
+
+        get Subject_Filename to Fname
+        open Fname as Sbj
+        clear Sbj
+        if Original_Sbj NE 0 begin
+            move Original_Sbj to Sbj.Recnum
+            find EQ Sbj.Recnum
+        end
+
+        set Link_Filename of Obj to Original_Link_Filename
+
+        get Link_Filename to Fname
+        open Fname as Xrf
+        clear Xrf
+        if Original_Xrf NE 0 begin
+            move Original_Xrf to Xrf.Recnum
+            find EQ Xrf.Recnum
+        end
+
+        set Context_Filename of Obj to Original_Context_Filename
+
+        get Context_Filename to Fname
+        open Fname as Ctx
+        clear Ctx
+        if Original_Ctx NE 0 begin
+            move Original_Ctx to Ctx.Recnum
+            find EQ Ctx.Recnum
+        end
+    end_procedure
+
+    procedure Quit_Help_Edit
+        send Request_Cancel
+    end_procedure
+end_object // Help_Editor
+
+object Help_Edit_Grp_Prompt_Data is a Data_Set no_image main_file Grp
+    set Focus_Mode to No_Activate
+end_object
+
+object Help_Edit_Sbj_Prompt_Data is a Data_Set no_image main_file Sbj
+    set Focus_Mode to No_Activate
+end_object
+
+object Help_Edit_Xrf_Prompt_Data is a Help_Edit_Constrained_Data_Set no_image ;
+  main_file Xrf updating Help_Edit_Grp_Prompt_Data Help_Edit_Sbj_Prompt_Data
+    set Focus_Mode to No_Activate
+end_object
+
+/Help_Edit_Grp_Prompt_Img
+ษออออออออออออออออออออออออออออออออออออออออออออออป
+บ______________________________________________บ
+บ                                              บ
+บ                                              บ
+บ                                              บ
+บ                                              บ
+บ                                              บ
+บ                                              บ
+บ                                              บ
+บ                                              บ
+บ                                              บ
+บ                                              บ
+บ                                              บ
+ศออออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+sub_page Help_Edit_Grp_Prompt_Title_Img from Help_Edit_Grp_Prompt_Img 1
+/Help_Edit_Grp_Prompt_List_Img
+_________________________________
+_________________________________
+_________________________________
+_________________________________
+_________________________________
+_________________________________
+_________________________________
+_________________________________
+/Help_Edit_Grp_Prompt_Btn_Img
+   ___________    ____________    _________   
+/*
+
+object Help_Edit_Grp_Prompt is a Help_Maintenance_Prompt_Client Help_Edit_Grp_Prompt_Img
+    set Location to 3 16 Relative
+
+    object Title_Box is a Title Help_Edit_Grp_Prompt_Title_Img
+        set Center_state item 0 to True
+        set Value        item 0 to "Groups"
+    end_object
+
+    object List is a Help_Maintenance_Selection_List Help_Edit_Grp_Prompt_List_Img ;
+            using Help_Edit_Grp_Prompt_Data main_file Grp by Index.1
+
+        set Export_Server to (Grp_Data(Help_Editor(Desktop)))
+        set Location      to 3 7 Relative
+        set Select_Mode   to Auto_Select
+
+        begin_row
+            entry_item Grp.Grp_Name
+        end_row
+
+        on_key kCancel           send Request_Cancel_Area
+        on_key kEnter            send Request_Ok
+        on_key kExit_Application send Quit_Help_Edit
+        on_key kPrompt           send Prompt to (Parent(Current_Object))
+    end_object
+
+    object Buttons is a Help_Edit_Prompt_Client_Button Help_Edit_Grp_Prompt_Btn_Img
+        set Location to 12 1 Relative
+    end_object
+
+    procedure Quit_Help_Edit
+        local integer Obj
+
+        send Request_Cancel_Area
+        move (Help_Edit_Sbj_Prompt( Desktop )) to Obj
+        if (Active_State( Obj )) send Request_Cancel_Area to Obj
+        send Quit_Help_Edit to (Help_Editor(Desktop))
+    end_procedure
+
+    procedure Popup_For_Xrf
+        local integer obj
+
+        set value of (title_box(current_object)) item 0 to ("Groups for " + trim(sbj.sbj_name))
+
+        set shadow_prompt_state of (buttons(current_object)) to true
+
+        move (list(current_object)) to obj
+        set export_server of obj to (xrf_data(help_editor(desktop)))
+        set main_file     of obj to xrf.file_number
+        set ordering      of obj to index.2
+        set server        of obj to (help_edit_xrf_prompt_data(desktop))
+        send scan_servers to obj
+
+        set constrain_to_sbj of help_Edit_xrf_prompt_data to true
+        send rebuild_constraints to help_Edit_xrf_prompt_data
+
+        set focus_mode to focusable
+        send activate
+    end_procedure
+
+    procedure Popup
+        send Reset
+        forward send Popup
+    end_procedure
+
+    procedure Prompt
+        if not (Shadow_Prompt_State(Buttons(Current_Object))) ;
+            send Popup_For_Xrf to Help_Edit_Sbj_Prompt
+    end_procedure
+
+    procedure Request_Cancel_Area
+        local integer Obj Svr Flag
+
+        move (List(Current_Object)) to Obj
+        send Request_Cancel to Obj
+
+        send Cancel to Obj
+
+        get Active_State of Help_Edit_Sbj_Prompt to Flag
+        if Flag send Reset
+
+        forward send Request_Cancel_Area
+    end_procedure
+
+    procedure Request_Ok
+        local integer Obj
+
+        send Ok to (List(Current_Object))
+        move (Help_Edit_Sbj_Prompt(Desktop)) to Obj
+        if (Active_State(Obj)) begin
+            send Reset
+            send Request_Cancel to (List(Obj))
+        end
+    end_procedure
+
+    procedure Reset
+        local integer obj
+
+        set value of (title_box(current_object)) item 0 to "Groups"
+
+        set shadow_prompt_state of (buttons(current_object)) to false
+
+        move (list(current_object)) to obj
+        set export_server of obj to (grp_data(help_editor(desktop)))
+        set main_file     of obj to grp.file_number
+        set ordering      of obj to index.1
+        set server        of obj to (help_Edit_grp_prompt_data(desktop))
+        send scan_servers to obj
+
+        set constrain_to_sbj of help_edit_xrf_prompt_data to false
+    end_procedure
+end_object // Help_Edit_Grp_Prompt
+
+/Help_Edit_Sbj_Prompt_Img
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ___________________________________________________________บ
+บ                                                           บ
+บ            ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ           บ
+บ            ณ                                  ณ           บ
+บ            ณ                                  ณ           บ
+บ            ณ                                  ณ           บ
+บ            ณ                                  ณ           บ
+บ            ณ                                  ณ           บ
+บ            ณ                                  ณ           บ
+บ            ณ                                  ณ           บ
+บ            ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู           บ
+บฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟบ
+บณ                                                         ณบ
+บณ                                                         ณบ
+บณ                                                         ณบ
+บภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤูบ
+บ                                                           บ
+บ                                                           บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+sub_page Help_Edit_Sbj_Prompt_Title_Img from Help_Edit_Sbj_Prompt_Img 1
+/Help_Edit_Sbj_Prompt_List_Img
+_________________________________
+_________________________________
+_________________________________
+_________________________________
+_________________________________
+_________________________________
+_________________________________
+/Help_Edit_Sbj_Prompt_Btn_Img
+        ___________      ____________      _________       
+/*
+
+object Help_Edit_Sbj_Prompt is a Help_Maintenance_Prompt_Client Help_Edit_Sbj_Prompt_Img
+    set Location to 1 10 Relative
+
+    object Title_Box is a Title Help_Edit_Sbj_Prompt_Title_Img
+        set Center_State item 0 to True
+        set Value        item 0 to "Subjects"
+    end_object
+
+    object List is a Help_Maintenance_Selection_List Help_Edit_Sbj_Prompt_List_Img ;
+            using Help_Edit_Sbj_Prompt_Data main_file Sbj by Index.1
+
+        set Export_Server to (Sbj_Data(Help_Editor(Desktop)))
+        set Location      to 4 14 Relative
+        set Select_Mode   to Auto_Select
+
+        begin_row
+            entry_item Sbj.Sbj_Name
+        end_row
+
+        object Text is a Help_Maintenance_Text_Window
+            set Focus_Mode      to Nonfocusable
+            set Location        to 9 -12 Relative
+            set Read_Only_State to True
+            set Size            to 3 56
+
+            assign_dbms_field Sbj.Sbj_Text
+        end_object
+
+        on_key kCancel           send Request_Cancel_Area
+        on_key kEnter            send Request_Ok
+        on_key kExit_Application send Quit_Help_Edit
+        on_key kPrompt           send Prompt to (Parent( Current_Object ))
+
+        procedure Find_Record integer Rec
+            forward send Find_Record Rec
+            send Entry_Display to (Text(Current_Object)) 0 0
+        end_procedure
+
+        procedure Beginning_Of_Data
+            forward send Beginning_Of_Data
+            send Entry_Display to (Text(Current_Object)) 0 0
+        end_procedure
+
+        procedure End_Of_Data
+            forward send End_Of_Data
+            send Read_By_Recnum to (Server( Current_Object )) (Main_File( Current_Object )) (Current_Record( Current_Object ))
+            send Entry_Display to (Text( Current_Object )) 0 0
+        end_procedure
+    end_object // List
+
+    object Buttons is a Help_Edit_Prompt_Client_Button Help_Edit_Sbj_Prompt_Btn_Img
+        set Location to 18 1 Relative
+    end_object
+
+    procedure Quit_Help_Edit
+        local integer Obj
+
+        send Request_Cancel_Area
+        move (Help_Edit_Grp_Prompt( Desktop )) to Obj
+        if (Active_State( Obj )) send Request_Cancel_Area to Obj
+        send Quit_Help_Edit to (Help_Editor(Desktop))
+    end_procedure
+
+    procedure Popup_For_Xrf
+        local integer obj
+
+        set value of (title_box(current_object)) item 0 to ("Subjects for " + trim(grp.grp_name))
+        set shadow_prompt_state of (buttons(current_object)) to true
+
+        move (list(current_object)) to obj
+        set export_server of obj to (xrf_data(help_editor(desktop)))
+        set main_file     of obj to xrf.file_number
+        set ordering      of obj to index.1
+        set server        of obj to (Help_Edit_xrf_prompt_data(desktop))
+        send scan_servers to obj
+
+        set constrain_to_grp of Help_Edit_xrf_prompt_data to true
+        send rebuild_constraints to Help_Edit_xrf_prompt_data
+
+        set focus_mode to focusable
+        send activate
+    end_procedure
+
+    procedure Popup
+        send Reset
+        forward send Popup
+    end_procedure
+
+    procedure Prompt
+        if not (Shadow_Prompt_State(Buttons(Current_Object))) ;
+            send Popup_For_Xrf to Help_Edit_Grp_Prompt
+    end_procedure
+
+    procedure Request_Cancel_Area
+        local integer Obj Svr
+        
+        move (List(Current_Object)) to Obj
+        send Request_Cancel to Obj
+
+        send Cancel to Obj
+
+        if (Active_State(Help_Edit_Grp_Prompt(Desktop))) send Reset
+
+        forward send Request_Cancel_Area
+    end_procedure
+
+    procedure Request_Ok
+        local integer Obj
+
+        send Ok to (List(Current_Object))
+        move (Help_Edit_Grp_Prompt(Desktop)) to Obj
+        if (Active_State(Obj)) begin
+            send Reset
+            send Request_Cancel to (List(Obj))
+        end
+    end_procedure
+
+    procedure Reset
+        local integer obj
+
+        set value of (title_box(current_object)) item 0 to "Subjects"
+
+        set shadow_prompt_state of (buttons(current_object)) to false
+
+        move (list(current_object)) to obj
+
+        set export_server of obj to (sbj_data(help_editor(desktop)))
+        set main_file     of obj to sbj.file_number
+        set ordering      of obj to index.1
+        set server        of obj to (Help_Edit_sbj_prompt_data(desktop))
+        send scan_servers to obj
+
+        set constrain_to_grp of Help_Edit_xrf_prompt_data to false
+    end_procedure
+end_object // Help_Edit_Sbj_Prompt
+
+// global accelerator key to activate help edit object:
+on_key key_Shift+key_F1 send Edit_Help
+
+ 

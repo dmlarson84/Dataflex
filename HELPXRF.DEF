@@ -1,0 +1,28 @@
+  DATE: 01/20/92      TIME: 01:32                                  PAGE:  1
+  FILE DEFINITION FOR FILE: XRF (# 253)
+-----------------------------------------------------------------------------
+  FILE ROOT NAME          : HELPXRF
+  USER DISPLAY NAME       : LINK
+  DATAFLEX FILE NAME      : XRF
+-----------------------------------------------------------------------------
+  RECORD LENGTH           : 8         ( USED: 6 )
+  MAX NUMBER OF RECORDS   : 10000     ( USED: 0 )
+  FILE COMPRESSION        : None
+  RE-USE DELETED SPACE    : Yes
+  MULTI-USER REREAD       : Yes
+-----------------------------------------------------------------------------
+
+NUM  FIELD NAME       TYPE SIZE  OFFST IX   RELATES TO FILE.FIELD
+---  ---------------  ---- ----- ----- --   ---------------------------------
+  1  GRP_RECNUM       NUM    6.0     1  1   FILE_251.RECNUM (251,0)
+  2  SBJ_RECNUM       NUM    6.0     4  2   FILE_252.RECNUM (252,0)
+
+
+INDEX# FIELDS          DES U/C    LENGTH LEVELS SEGMENTS MODE
+------ --------------- --- ---    ------ ------ -------- -------
+  1    GRP_RECNUM      No  No       6      3       2     Online
+       SBJ_RECNUM      No  No 
+
+  2    SBJ_RECNUM      No  No       6      3       2     Online
+       GRP_RECNUM      No  No 
+

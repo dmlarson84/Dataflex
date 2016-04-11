@@ -1,0 +1,766 @@
+// HELP_SYS.PKG
+// February 2, 1992
+// LS
+//
+// Help System Package
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+use Sellist
+use Data_Set
+
+#COMMAND USE_FILE R
+  #IFDEF !1.RECNUM
+  #ELSE
+    #INCLUDE !1.FD
+  #ENDIF
+
+  #IFDEF !1.FILE_NUMBER
+  #ELSE
+    #SET Q$ !1.RECNUM
+    #REPLACE !1.FILE_NUMBER |CI!q
+  #ENDIF
+
+  #IF (!0>1)
+    USE_FILE !2 !3 !4 !5 !6 !7 !8 !9
+  #ENDIF
+#ENDCOMMAND
+
+DEFINE HELP_FOR_HELP_NAME   FOR 'HELP FOR HELP' //special values of
+DEFINE HELP_KEYS_NAME       FOR 'KEYS HELP' // HELP_NAME 
+DEFINE HELP_NAME_LENGTH     FOR 40
+DEFINE HELP_GRP_FILENAME    FOR 'helpgrp' // default filenames
+DEFINE HELP_SBJ_FILENAME    FOR 'helpsbj'
+DEFINE HELP_XRF_FILENAME    FOR 'helpxrf'
+DEFINE HELP_CTX_FILENAME    FOR 'helpctx'
+DEFINE HELP_FILENAME_PREFIX FOR 'help'// default filename prefix
+DEFINE HELP_STACK_ELEMENTS  FOR 50 // # of previous topics to remember
+
+DEFINE MAX_LINES_ALLOWED    FOR 32767
+
+USE_FILE GRP SBJ XRF CTX  // allow file and field references w/o opening files
+
+/////////////////////////////////////////////////////////////////////////////
+////////////////////////////  C L A S S E S  ////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+//-//-//-//-//-//-//-//   HELP_TEXT
+
+// help oriented subclass of edit class - read_only, no block marking,
+// recognizes zoom/shrink functions
+
+class Help_Text is an EDIT
+    procedure Construct_Object
+        forward send Construct_Object
+
+        property integer Zoom_Cancel_Obj Public 0
+        property integer Zoom_State      Public 0
+
+        set Read_Only_State to True
+
+        on_key kDownarrow    send Scroll_Down_Line Private
+        on_key kUparrow      send Scroll_Up_Line   Private
+        on_key kScroll_Left  send None             Private
+        on_key kScroll_Right send None             Private
+    end_procedure
+
+    procedure Mouse_Drag integer wdw integer char_pos
+        send Mouse_Down wdw char_pos
+    end_procedure
+
+    procedure Next
+        if not (Zoom_State( Current_Object )) forward send Next
+    end_procedure
+
+    procedure Previous
+        if not (Zoom_State( Current_Object )) forward send Previous
+    end_procedure
+
+    procedure Read string Fil
+      set Max_Lines to MAX_LINES_ALLOWED
+      if NUM_ARGUMENTS GE 1 forward send Read Fil
+      else forward send Read
+      set Max_Lines to (Line_Count(Current_Object))
+    end_procedure
+
+    procedure Request_Cancel
+        local integer Ret_Val
+
+        delegate get Msg_Request_Cancel to Ret_Val
+        procedure_return Ret_Val
+    end_procedure
+
+    procedure Scroll_Down_Line
+      send Scroll Downward_Direction 1
+    end_procedure
+
+    procedure Scroll_Up_Line
+      send Scroll Upward_Direction 1
+    end_procedure
+
+    procedure Shrink_Text
+        set Zoom_State to False
+        send Deactivate to (Zoom_Cancel_Obj( Current_Object ))
+    end_procedure
+
+    procedure View_Help_For_Help
+        if not (Zoom_State( Current_Object )) delegate send View_Help_For_Help
+    end_procedure
+
+    procedure Zoom_Text
+        send Activate
+        send Popup to (Zoom_Cancel_Obj( Current_Object ))
+        send Activate
+        set Zoom_State to True
+    end_procedure
+end_class
+
+//-//-//-//-//-//-//-//   HELP_PICK_DATA_SET
+
+// help pick data set class for pick list (below).
+
+class Help_Pick_Data_Set is a DATA_SET
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        object Xrf_Set is a DATA_SET no_image main_file Xrf
+            set Focus_Mode to No_Activate
+        end_object
+    end_procedure
+end_class
+
+//-//-//-//-//-//-//-//   HELP_PICK
+
+// help pick class for selecting groups in help index and subjects of
+// specific groups.
+
+class Help_Pick is a CLIENT
+    procedure Construct_Object integer Img integer List_Img integer Cancel_Img
+        forward send Construct_Object Img
+
+        property integer Action_Msg Public 0
+
+        set Block_Mouse_State   to True
+        set Center_State item 0 to True
+        set Popup_State         to True
+        set Scope_State         to True
+
+        object Grp_Set is a Help_Pick_Data_Set no_image main_file Grp
+            set Focus_Mode to No_Activate
+        end_object
+
+        object List is a SELECTION_LIST List_Img
+            set Local_Rotate_State to False
+            set Ordering           to Index.1
+            set Select_Mode        to No_Select
+
+            begin_row
+                entry_item Grp.Grp_Name
+            end_row
+
+            // list must become batch to allow sorting of sbj_names - no index
+            // ordered by sbj_name for xrf file.  currently displays in
+            // sbj.recnum sequence.
+
+            on_key kCancel           send Request_Cancel Private
+            on_key kEnter            send Choose_Topic   Private
+            on_key kExit_Application send Quit_Help      Private
+            on_key kHelp             send None           Private
+        end_object
+
+        object Cancel is a BUTTON Cancel_Img
+            set Focus_Mode to Pointer_Only
+
+            item_list
+                on_item "<Esc=Cancel>" send Request_Cancel
+            end_item_list
+
+            on_key kCancel           send Request_Cancel Private
+            on_key kExit_Application send Quit_Help      Private
+            on_key kHelp             send None           Private
+        end_object
+    end_procedure
+
+    procedure Accept_List integer Msg
+        set Action_Msg to Msg
+        send Popup
+    end_procedure
+
+    procedure Add_Focus integer Obj
+        local integer Lst
+
+        move (List( Current_Object )) to Lst
+        set Dynamic_Update_State of Lst to False
+        forward send Add_Focus Obj
+        send Beginning_Of_Data to Lst
+        set Dynamic_Update_State of Lst to True
+    end_procedure
+
+    procedure Choose_Topic
+        local integer Obj Rec_ID
+
+        get Prior_Level to Obj
+        get Current_Record of (List( Current_Object )) to Rec_ID
+        send Deactivate
+        send (Action_Msg( Current_Object )) to Obj Rec_ID
+    end_procedure
+
+    procedure Delete_Data
+        send Delete_Data to (List( Current_Object ))
+    end_procedure
+
+    procedure Pick_Group integer Msg
+        local integer Itm Lst
+
+        clear Grp
+        find GE Grp.Grp_Name
+
+        [ Found ] begin
+            move (List( Current_Object )) to Lst
+            set Main_File of Lst to Grp.File_Number
+            set Server of Lst to (Grp_Set( Current_Object ))
+            set Data_File of (Element( Lst )) item 0 to Grp.File_Number
+            send Prepare_List "Help Index" Grp.File_Number ;
+              (Grp_Set( Current_Object )) Grp.File_Number
+            send Accept_List Msg
+        end
+    end_procedure
+
+    procedure Pick_Subject integer Grp_Num String Ttl integer Msg
+        local integer Itm Lst
+
+        clear Xrf
+        move Grp_Num to Xrf.Grp_Recnum
+        find GE Xrf.Grp_Recnum
+        [ Found ] indicate Found as Xrf.Grp_Recnum EQ Grp_Num
+
+        [ Found ] begin
+            send Prepare_List Ttl Xrf.File_Number ;
+              (Xrf_Set( Grp_Set( Current_Object ) )) Sbj.File_Number
+            send Accept_List Msg
+        end
+    end_procedure
+
+    procedure Prepare_List string Ttl integer Mfil integer Svr integer Ffil
+        local integer Lst
+
+        set Value item 0 to Ttl
+        move (List( Current_Object )) to Lst
+        set Main_File of Lst to Mfil
+        set Server of Lst to Svr
+        set Data_File of (Element( Lst )) item 0 to Ffil
+        send Scan_Servers to Lst
+        send Rebuild_Constraints to Svr
+        send Delete_Data
+    end_procedure
+
+#IFSUB 'AREA_FLAG'
+#ELSE
+  #REPLACE AREA_FLAG 3  //scope AND popup
+#ENDIF
+
+    procedure Request_Cancel
+        send Deactivate AREA_FLAG
+    end_procedure
+
+    procedure Quit_Help
+    local integer Ret_Val
+
+    send Request_Cancel
+        delegate get Msg_Request_Cancel to Ret_Val
+        procedure_return Ret_Val
+    end_procedure
+end_class
+
+//-//-//-//-//-//-//-//   HELP_STACK
+
+// help stack class for storing and retrieving the list of topics
+// selected by the user during a help session.
+
+class Help_Stack is an ARRAY
+    procedure Construct_Object
+        forward send Construct_Object
+        property integer Current_Item Public -1 // -1 = no items
+    end_procedure
+
+    procedure Delete_Data
+        forward send Delete_Data
+        set Current_Item to -1
+    end_procedure
+
+    procedure Push_Item integer Val
+        set Current_Item to (Current_Item( Current_Object ) + 1)
+
+        if (Current_Item( Current_Object )) GE HELP_STACK_ELEMENTS ;
+            set Current_Item to 0
+
+        set Array_Value item (Current_Item( Current_Object )) to Val
+    end_procedure
+
+    function Pop_Item returns integer
+        local integer Old_Itm New_Itm Ret_Val
+
+        move -1 to Ret_Val
+        get Current_Item to Old_Itm
+
+        if (Old_Itm >= 0 and Integer_Value( Current_Object, Old_Itm ) <> 0 ) ;
+          begin
+            move (Old_Itm - 1) to New_Itm
+
+            if (New_Itm < 0 and Integer_Value( Current_Object, ;
+              HELP_STACK_ELEMENTS - 1) <> 0) ;
+              move (HELP_STACK_ELEMENTS - 1) to New_Itm
+
+            if New_Itm GE 0 get Integer_Value item New_Itm to Ret_Val
+
+            if Ret_Val GT 0 set Array_Value item Old_Itm to 0
+            else move Old_Itm to New_Itm
+            set Current_Item to New_Itm
+        end
+
+        function_return Ret_Val
+    end_function
+end_class
+
+//-//-//-//-//-//-//-//   HELP_SYSTEM
+
+// standard help system class for full context sensitive help support
+
+class Help_System is a HELP
+    procedure Construct_Object integer Img ;
+      integer See_Also_Img integer Menu_Img ;
+      integer Pick_Img integer Pick_List_Img integer Pick_Cancel_Img ;
+      integer Zoom_Cancel_Img integer Cant_Open_Img
+
+        forward send Construct_Object Img
+
+        property string  Context_Filename  Public  HELP_CTX_FILENAME
+        property string  Filename_Prefix   Private HELP_FILENAME_PREFIX
+        property string  Group_Filename    Public  HELP_GRP_FILENAME
+        property string  Link_Filename     Public  HELP_XRF_FILENAME
+        property integer Remain_Open_State Public  0 // to keep help files open
+        property string  Subject_Filename  Public  HELP_SBJ_FILENAME
+
+        set Block_Mouse_State   to True
+        set Center_State item 0 to True
+        set Center_State item 1 to True
+        set Client_Area_State   to True
+        set Location            to 2 11 Relative
+        set Popup_State         to True
+        set Ring_State          to True
+        set Scope_State         to True
+
+        object Text is a HELP_TEXT
+            set Location to 3 1 Relative
+            set Size     to 10 56
+
+            send Read_Dbms Sbj.Sbj_Text True // True arg sets Filename w/o read
+
+            on_key kCancel           send Request_Cancel     Private
+            on_key kExit_Application send Request_Cancel     Private
+            on_key kHelp             send View_Help_For_Help Private
+            on_key kZoom             send Toggle_Zoom        Private
+        end_object
+
+        object Zoom_Cancel is a BUTTON Zoom_Cancel_Img
+            set Focus_Mode  to Pointer_Only
+            set Location    to 19 1 Relative
+            set Popup_State to True
+
+            item_list
+                on_item "<Alt+F9=Cancel zoom>" send Toggle_Zoom
+                on_item "<Esc=Exit>"           send Request_Cancel
+            end_item_list
+        end_object
+
+        set Zoom_Cancel_Obj of (Text( Current_Object )) to (Zoom_Cancel( Current_Object ))
+
+        object See_Also is a LIST See_Also_Img
+            on_key kCancel           send Request_Cancel     Private
+            on_key kExit_Application send Request_Cancel     Private
+            on_key kHelp             send View_Help_For_Help Private
+            on_key kZoom             send Toggle_Zoom        Private
+        end_object
+
+        object Menu is a MENU Menu_Img
+            set Wrap_State   to True
+
+            item_list
+                on_item "Help for help  F1" send View_Help_For_Help
+                on_item "Keys help"         send View_Keys_Help
+                on_item "Previous help"     send View_Last_Help
+                on_item "Help index"        send View_Help_Groups
+                on_item "Zoom text  Alt+F9" send Toggle_Zoom
+                on_item "Exit          Esc" send Request_Cancel
+            end_item_list
+
+            on_key kCancel           send Request_Cancel     Private
+            on_key kExit_Application send Request_Cancel     Private
+            on_key kHelp             send View_Help_For_Help Private
+            on_key kZoom             send Toggle_Zoom        Private
+        end_object
+
+        object Pick is a HELP_PICK Pick_Img Pick_List_Img Pick_Cancel_Img
+            set Location to 3 11 Relative
+        end_object
+
+        object Stack is a HELP_STACK
+        end_object
+
+        object Records is an ARRAY
+        end_object
+
+        object Cant_Open is a Button Cant_Open_Img
+            set Block_Mouse_State to True
+            set Location          to 9 7 Relative
+            set Popup_State       to True
+            set Scope_State       to True
+
+            item_list
+                on_item "<OK>" send Ok
+            end_item_list
+
+            on_key kHelp             send None Private
+            on_key kExit_Application send None Private
+        end_object
+    end_procedure
+
+    register_procedure Goto_See_Also
+    register_procedure View_Help_Subjects integer Grp_Num
+
+    procedure Close_Help integer Local_Close
+        if (Num_Arguments Min 1) NE (Remain_Open_State( Current_Object )) begin
+            close Grp
+            close Sbj
+            close Xrf
+            close Ctx
+        end
+
+        send Delete_Data to (Text( Current_Object ))
+        send Delete_Data to (See_Also( Current_Object ))
+        send Delete_Data to (Pick( Current_Object ))
+        send Delete_Data to (Stack( Current_Object ))
+    end_procedure
+
+    function Display_Help returns integer
+        local integer Xrf_Num Xrf_Count
+        local string Grp_Name Sbj_Name
+        local integer SA_Obj Tx_Obj
+
+        move (See_Also( Current_Object )) to SA_Obj
+        move (Text( Current_Object )) to Tx_Obj
+
+        move Xrf.Recnum to Xrf_Num
+        clear Xrf
+        move Sbj.Recnum to Xrf.Sbj_Recnum
+        find GE Xrf.Sbj_Recnum
+        [Found] indicate Found as Xrf.Sbj_Recnum EQ Sbj.Recnum
+        [not Found] function_return 0
+
+        trim Grp.Grp_Name to Grp_Name
+        trim Sbj.Sbj_Name to Sbj_Name
+        set Dynamic_Update_State of SA_Obj to False
+        set Dynamic_Update_State of Tx_Obj to False
+        send Delete_Data to SA_Obj
+        move 0 to Xrf_Count
+
+        repeat
+            relate Xrf
+            send Add_Item to SA_Obj Msg_Goto_See_Also (Trim( Grp.Grp_Name ))
+            set Aux_Value of SA_Obj item Xrf_Count to Grp.Recnum
+            increment Xrf_Count
+            find GT Xrf.Sbj_Recnum
+            [ Found ] indicate Found as Xrf.Sbj_Recnum EQ Sbj.Recnum
+        until [not Found ]
+
+        set Value item 0 to Grp_Name
+        set Value item 1 to Sbj_Name
+        send Delete_Data to Tx_Obj
+        send Read to Tx_Obj
+        send Beginning_Of_Data to Tx_Obj
+        send Sort_Items to SA_Obj
+        set Current_Item of SA_Obj to 0
+        set Dynamic_Update_State of Tx_Obj to True
+        set Dynamic_Update_State of SA_Obj to True
+        function_return Xrf_Num
+    end_function
+
+    procedure Error_Report integer Error_Info string Err_Text
+        local integer Ret_Val
+        ui_accept (Cant_Open( Current_Object )) to Ret_Val
+    end_procedure
+
+    procedure Set Filename_Prefix string Prefix
+        local integer Old_Pre_Len
+        local string Old_Name
+
+        length (Help_system.Filename_Prefix( Current_Object )) to Old_Pre_Len
+        set Help_System.Filename_Prefix to Prefix
+
+        get Group_Filename to Old_Name
+        set Group_Filename to ;
+          (Prefix + mid( Old_Name, length( Old_Name ) - Old_Pre_Len, Old_Pre_Len + 1 ))
+
+        get Subject_Filename to Old_Name
+        set Subject_Filename to ;
+          (Prefix + mid( Old_Name, length( Old_Name ) - Old_Pre_Len, Old_Pre_Len + 1 ))
+
+        get Link_Filename to Old_Name
+        set Link_Filename to ;
+          (Prefix + mid( Old_Name, length( Old_Name ) - Old_Pre_Len, Old_Pre_Len + 1 ))
+
+        get Context_Filename to Old_Name
+        set Context_Filename to ;
+          (Prefix + mid( Old_Name, length( Old_Name ) - Old_Pre_Len, Old_Pre_Len + 1 ))
+    end_procedure
+
+    function Filename_Prefix returns string
+        function_return (Help_System.Filename_Prefix( Current_Object ))
+    end_function
+
+    function Find_Help string App_Name string Mod_Name string Hlp_Name ;
+            returns integer
+        local integer Ret_Val
+
+        clear Ctx
+        move App_Name to Ctx.App_Name
+        move Mod_Name to Ctx.Mod_Name
+        trim (Uppercase( Hlp_Name )) to Ctx.Hlp_Name
+        find EQ Ctx.Hlp_Name
+        move 0 to Ret_Val
+        [Found] move 1 to Ret_Val
+        [Found] relate Ctx
+        function_return Ret_Val
+    end_function
+
+    procedure Goto_See_Also
+        send View_Help_Subjects ;
+          (Aux_Value( See_Also( Current_Object ), Current ))
+    end_procedure
+
+    procedure Open_Help integer Local_Open
+        local integer Rem_Opn Old_Error_ID
+
+        if (Active_State( Current_Object )) procedure_return
+
+        indicate Err False
+
+        move Error_Object_ID to Old_Error_ID
+        move Current_Object to Error_Object_ID
+
+        open (Group_Filename( Current_Object )) as Grp Index.1             // language
+        [not Err] open (Subject_Filename( Current_Object )) as Sbj Index.1 // dep. file
+        [not Err] open (Link_Filename( Current_Object )) as Xrf Index.2    // names in
+        [not Err] open (Context_Filename( Current_Object )) as Ctx         // properties
+
+        [Err] begin
+            close Grp
+            close Sbj
+            close Xrf
+            close Ctx
+        end
+
+        move Old_Error_Id to Error_Object_ID
+
+        [not Err] begin
+            get Remain_Open_State to Rem_Opn
+            if Num_Arguments LE 0 set Remain_Open_State to True
+            if Rem_Opn send Store_Records
+        end
+    end_procedure
+
+    procedure Request_Cancel
+        local integer Pri_Sco
+
+        if (Zoom_State( Text( Current_Object ) )) send Shrink_Help
+
+        get Prior_Scope to Pri_Sco
+        if Pri_Sco EQ 0 move Desktop to Pri_Sco
+        set Current_Scope to Pri_Sco
+        send Deactivate_Group
+        send Close_Help True
+        if (Remain_Open_State( Current_Object )) send Restore_Records
+        procedure_return 1
+    end_procedure
+
+    procedure Request_Help integer Msg_ID integer Arg
+        local integer Was_Err
+
+        move 0 to Was_Err
+        [err] move 1 to Was_Err
+        indicate Err False
+
+        if NUM_ARGUMENTS GT 1 send Msg_ID Arg
+        else send Msg_ID
+        [not Err] start_ui
+
+        indicate Err as Was_Err NE 0
+    end_procedure
+
+    procedure Restore_Records
+        local integer Obj
+
+        move (Records( Current_Object )) to Obj
+        clear Grp Sbj Xrf Ctx
+        get Array_Value of Obj item 0 to Grp.Recnum
+        get Array_Value of Obj item 1 to Sbj.Recnum
+        get Array_Value of Obj item 2 to Xrf.Recnum
+        get Array_Value of Obj item 3 to Ctx.Recnum
+        find EQ Grp.Recnum
+        find EQ Sbj.Recnum
+        find EQ Xrf.Recnum
+        find EQ Ctx.Recnum
+    end_procedure
+
+    procedure Shrink_Help
+        local integer Obj
+
+        move (Text( Current_Object )) to Obj
+        send Shrink_Text to Obj
+        set Size of Obj to 10 56
+        set Location of Obj to 3 1 Relative
+        set Block_Mouse_State of Obj to False
+    end_procedure
+
+    procedure Store_Records
+        local integer Obj
+
+        move (Records( Current_Object )) to Obj
+        set Array_Value of Obj item 0 to Grp.Recnum
+        set Array_Value of Obj item 1 to Sbj.Recnum
+        set Array_Value of Obj item 2 to Xrf.Recnum
+        set Array_Value of Obj item 3 to Ctx.Recnum
+    end_procedure
+
+    procedure Toggle_Zoom
+      if not (Zoom_State( Text( Current_Object ) )) send Zoom_Help
+      else send Shrink_Help
+    end_procedure
+
+    procedure Topic_Help integer Xrf_Num
+        clear Xrf
+        move Xrf_Num to Xrf.Recnum
+        find EQ Xrf.Recnum
+
+        if [Found] begin
+            relate Xrf
+            send View_Help
+        end
+    end_procedure
+
+    procedure View_Context_Help integer Obj_Num
+        local integer Obj Ret_Val
+        local string App_Name Mod_Name
+
+        send Open_Help True
+        [err] procedure_return
+
+        move Obj_Num to Obj
+
+        repeat
+            get Find_Help (Application_Name( Obj )) (Module_Name( Obj )) ;
+              (Right( Help_Name( Obj ), HELP_NAME_LENGTH )) to Ret_Val
+
+            if not Ret_Val begin
+                if Obj EQ Desktop begin
+                    send View_Help_Index
+                    move -1 to Ret_Val
+                end
+                else get Parent of Obj to Obj
+            end
+        until Ret_Val NE 0
+
+        if Ret_Val GT 0 send View_Help
+    end_procedure
+
+    procedure View_Help
+        local integer Xrf_Num
+
+        get Display_Help to Xrf_Num
+        if Xrf_Num send Push_Item to (Stack( Current_Object )) Xrf_Num
+        if not (Active_State( Current_Object )) send Popup
+        else send Activate to (Text( Current_Object ))
+    end_procedure
+
+    procedure View_Help_For_Help
+        send Open_Help True
+        [err] procedure_return
+
+        if (Find_Help( Current_Object, "", "", HELP_FOR_HELP_NAME )) ;
+          send View_Help
+        else begin
+            clear Grp Sbj Xrf Ctx
+            send View_Help
+            send Popup
+            send View_Help_Groups
+        end
+    end_procedure
+
+    procedure View_Help_Groups
+        send Pick_Group to (Pick( Current_Object )) Msg_View_Help_Subjects
+    end_procedure
+
+    procedure View_Help_Index
+        local integer Ret_Val
+
+        send Open_Help True
+        [err] procedure_return
+
+        if not (Active_State( Current_Object )) begin
+            get Find_Help "" "" HELP_FOR_HELP_NAME to Ret_Val
+            send View_Help
+            send Popup
+        end
+
+        send View_Help_Groups
+    end_procedure
+
+    procedure View_Help_Subjects integer Grp_Num
+        clear Grp
+        move Grp_Num to Grp.Recnum
+        find EQ Grp.Recnum
+        send Pick_Subject to (Pick( Current_Object )) Grp_Num (Trim( Grp.Grp_Name )) ;
+          Msg_Topic_Help
+    end_procedure
+
+    procedure View_Keys_Help
+        send Open_Help True
+        [err] procedure_return
+
+        if (Find_Help( Current_Object, "", "", HELP_KEYS_NAME )) send View_Help
+        else send View_Help_Index
+    end_procedure
+
+    procedure View_Last_Help
+        local string Sbj_Name
+        local integer Itm Ret_Val
+
+        if (Current_Item( Stack( Current_Object ) )) GE 0 begin
+            clear Xrf
+            get Pop_Item of (Stack( Current_Object )) to Ret_Val
+
+            if Ret_Val NE -1 begin
+                move Ret_Val to Xrf.Recnum
+                find EQ Xrf.Recnum
+            end
+
+            if Status Xrf begin
+                relate Xrf
+                get Display_Help to Ret_Val
+            end
+        end
+
+        send Activate to (Text( Current_Object ))
+    end_procedure
+
+    procedure Zoom_Help
+        local integer Obj
+
+        move (Text( Current_Object )) to Obj
+        set Location of Obj to 1 1 Relative
+        set Size of Obj to 18 56
+        set Block_Mouse_State of Obj to True
+        send Zoom_Text to Obj
+    end_procedure
+end_class

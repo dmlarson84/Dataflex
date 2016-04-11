@@ -1,0 +1,202 @@
+// FUNC.PKG
+// New global DataFlex functions
+// Doug Goldner  2/25/91
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+function get_month global string our_date$ returns integer
+   function_return (left(our_date$,2))
+end_function
+
+function get_day global string our_date$ returns integer
+   function_return (mid(our_date$,2,4))
+end_function
+
+function get_year global string our_date$ returns integer
+   function_return (mid(our_date$,4,7))
+end_function
+
+function get_current_hour global returns string
+   local date tdate$
+   local string our_hour$
+   
+   sysdate tdate$ our_hour$
+   if our_hour$ lt 10 insert "0" in our_hour$ at 0
+   function_return our_hour$
+end_function
+
+function get_current_minute global returns string
+   local date tdate$
+   local string our_hour$ our_minute$
+   
+   sysdate tdate$ our_hour$ our_minute$
+   if our_minute$ lt 10 insert "0" in our_minute$ at 0
+   function_return our_minute$
+end_function
+
+function get_current_second global returns string
+   local date tdate$
+   local string our_hour$ our_minute$ our_second$
+   
+   sysdate tdate$ our_hour$ our_minute$ our_second$
+   if our_second$ lt 10 insert "0" in our_second$ at 0
+   function_return our_second$
+end_function
+
+function get_hour global string our_time$ returns string
+   function_return (left(our_time$,2))
+end_function
+
+function get_minute global string our_time$ returns string
+   function_return (mid(our_time$,2,4))
+end_function
+
+function get_second global string our_time$ returns string
+   function_return (mid(our_time$,2,7))
+end_function
+
+function get_time global string hr$ string min$ string sec$ integer am_pm_wanted$ returns string
+   local string am_pm$ time_string$
+   
+   move "AM" to am_pm$
+   
+   if hr$ gt 11 move "PM" to am_pm$
+   if hr$ lt 1 begin
+      move 12 to hr$
+      move "AM" to am_pm$
+   end
+   if am_pm_wanted$ eq 1 if hr$ gt 12 move (hr$ - 12) to hr$
+   if hr$ lt 10 insert "0" in hr$ at 0
+   if min$ lt 10 insert "0" in min$ at 0
+   if sec$ lt 10 insert "0" in sec$ at 0
+   move hr$ to time_string$
+   append time_string$ ":" min$ ":" sec$
+   if am_pm_wanted$ eq 1 append time_string$ " " am_pm$
+   function_return time_string$
+end_function
+
+function get_time_no_sec global string hr$ string min$ integer am_pm_wanted$ returns string
+   local string am_pm$ time_string$
+   
+   move "AM" to am_pm$
+   
+   if hr$ gt 11 move "PM" to am_pm$
+   if hr$ lt 1 begin
+      move 12 to hr$
+      move "AM" to am_pm$
+   end
+   if am_pm_wanted$ eq 1 if hr$ gt 12 move (hr$ - 12) to hr$
+   if hr$ lt 10 insert "0" in hr$ at 0
+   if min$ lt 10 insert "0" in min$ at 0
+   move hr$ to time_string$
+   append time_string$ ":" min$
+   if am_pm_wanted$ eq 1 append time_string$ " " am_pm$
+   function_return time_string$
+end_function
+
+function get_current_time global integer am_pm_wanted$ returns string
+   local date tdate$
+   local string hr$ min$ sec$
+   
+   sysdate tdate$ hr$ min$ sec$
+   function_return (get_time(hr$,min$,sec$,am_pm_wanted$))
+end_function
+
+
+
+function get_current_time_no_sec global integer am_pm_wanted$ returns string
+   local date tdate$
+   local string hr$ min$
+   
+   sysdate tdate$ hr$ min$ 
+   function_return (get_time_no_sec(hr$,min$,am_pm_wanted$))
+end_function
+
+function get_word_date global string our_date$ returns string
+   local integer month$
+   local string month_name$
+   local string total_date$
+   local string our_year$
+   move (get_month(our_date$)) to month$
+   if month$ eq 1 move "January" to month_name$
+   if month$ eq 2 move "February" to month_name$
+   if month$ eq 3 move "March" to month_name$
+   if month$ eq 4 move "April" to month_name$
+   if month$ eq 5 move "May" to month_name$
+   if month$ eq 6 move "June" to month_name$
+   if month$ eq 7 move "July" to month_name$
+   if month$ eq 8 move "August" to month_name$
+   if month$ eq 9 move "September" to month_name$
+   if month$ eq 10 move "October" to month_name$
+   if month$ eq 11 move "November" to month_name$
+   if month$ eq 12 move "December" to month_name$
+   move month_name$ to total_date$
+   append total_date$ " " (get_day(our_date$)) ", "
+   move (get_year(our_date$)) to our_year$
+   if (length(our_year$)) lt 2 insert "0" in our_year$ at 0
+   if (length(our_year$)) lt 4 insert "19" in our_year$ at 0
+   append total_date$ our_year$
+   function_return total_date$   
+
+end_function
+
+function get_title global string our_word$ returns string
+   local integer lvar$
+   local string title_word$
+   local integer upper_next$
+   local string our_letter$
+   
+   move 1 to upper_next$
+   move "" to title_word$
+   
+   for lvar$ from 1 to (length(our_word$))
+      mid our_word$ to our_letter$ 1 lvar$
+      if our_letter$ eq " " begin
+         append title_word$ " "
+         move 1 to upper_next$
+      end
+      else begin
+         if upper_next$ eq 1 append title_word$ (uppercase(our_letter$))
+         else append title_word$ our_letter$
+         move 0 to upper_next$
+      end
+   loop
+   function_return title_word$
+end_function
+
+function get_file_exists global string filename$ returns integer
+   local integer exists$
+   direct_input channel 9 filename$
+   [seqeof] move 0 to exists$
+   [not seqeof] move 1 to exists$
+   close_input channel 9
+   function_return exists$
+end_function
+
+function get_time_difference_no_sec global integer hr1$ integer min1$ integer hr2$ integer min2$ ;
+                                    returns string
+   
+   function_return (get_time_no_sec(abs(hr1$ - hr2$),abs(min1$ - min2$),0))   
+end_function
+
+function get_time_difference global integer hr1$ integer min1$ integer sec1$ integer hr2$ integer min2$ integer sec2$ returns string
+
+   function_return (get_time(abs(hr1$ - hr2$),abs(min1$ - min2$),abs(sec1$ - sec2$),0))   
+end_function
+
+//  Set date to current window if the window is blank
+procedure default_date for DESKTOP integer item#
+  local string dte
+  if ( (not(item_changed_state(current_object,item#)) and ;
+       value(current_object,item#)=0)) begin
+     sysdate dte
+     set value item item# to dte
+     set item_changed_state item item# to true
+  end
+end_procedure
+
+
+
+

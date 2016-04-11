@@ -1,0 +1,47 @@
+use ui
+
+class Filelist_Server_Mixin is a Message
+    procedure Define_Filelist_Server
+        property integer Flist_Server PUBLIC 0
+        property integer Display_Object_State PUBLIC 0
+    end_procedure
+
+    procedure set Filelist_Server integer Svr
+        local integer Obj
+
+        set Flist_Server to Svr
+        if ((Svr = 0) or not(Display_Object_State(Current_Object))) ;
+            procedure_return
+
+        move Current_Object to Obj
+        send Register_Display_Object to Svr Obj
+    end_procedure
+
+    function Filelist_Server returns integer
+        local integer Svr
+
+        get Flist_Server to Svr
+
+        if Svr EQ 0 begin
+            delegate get Filelist_Server to Svr
+            set Filelist_Server to Svr
+        end
+
+        function_return Svr
+    end_function
+
+    procedure Disconnect_Filelist_Server
+        local integer Svr Obj
+
+        get Flist_Server to Svr
+        if ((Svr = 0) or not(Display_Object_State(Current_Object))) ;
+            procedure_return
+
+        move Current_Object to Obj
+        send Deregister_Display_Object to Svr Obj
+    end_procedure
+
+    procedure Filelist_Server_Destroyed
+        set Filelist_Server to 0
+    end_procedure
+end_class

@@ -1,0 +1,60 @@
+// key_btn.pkg
+// April 17, 1991
+// LS
+//
+// package for Key_Button class: moves to focus of key_button's parent's scope,
+// then sends message
+//
+// example:
+//          use key_btn
+//          ...
+//
+//          sub_page keys_img from client_img 6 7 8 9
+//          
+//          object keys is a key_button keys_img
+//              set location to 5 10 relative
+//
+//              item_list
+//                  on_item "<F4=Prompt>"   send prompt
+//                  on_item "<F5=Clear>"    send clear
+//                  on_item "<Alt+F9=Zoom>" send zoom
+//                  on_item "<Alt+R=Read>"  send read_file to file_object
+//              end_item_list
+//          end_object
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use UI
+
+class Key_Button is a Button
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        set Focus_Mode  to Pointer_Only
+        set Scope_State to True
+
+        on_key kEnter send Redirect_Message // redirect msg for kEnter (mouse_up)
+    end_procedure
+
+    procedure Redirect_Message returns integer
+        local integer Msg Ret_Val Obj Sco
+
+        if (Shadow_State( Current_Object, Current )) procedure_return 0
+                                        // ignore shadowed buttons
+        get Message to Msg
+        get Aux_Value to Obj
+
+        move 0 to Ret_Val
+
+        get Find_Scope of (Parent(Current_Object)) to Sco
+
+        if Sco EQ 0 move Desktop to Sco
+
+        if (Focus( Desktop )) NE (Scope_Focus( Sco )) ;
+          set Current_Scope to Sco
+
+        if Obj EQ 0 get Focus of Desktop to Obj
+        get Msg of Obj to Ret_Val
+        procedure_return Ret_Val
+    end_procedure
+end_class

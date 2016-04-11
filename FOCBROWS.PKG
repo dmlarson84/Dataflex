@@ -1,0 +1,107 @@
+
+
+// **********************************************************************
+// * System: DataFlex 3.0 System Utilities                              *
+// *Program: FOCBROWS.PKG                                               *
+// * Author: James Ricci 8/1/90                                         *
+// *Purpose: To allow browsing of the focus tree in a program.          *
+// **********************************************************************
+
+
+
+USE UI
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+/Null_Img
+/Focus_List_Img
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                               Prior Level                                   บ
+บ                  _____________________________________                      บ
+บ                              Current Object                                 บ
+บ                  _____________________________________                      บ
+บ               Prior Focus                          Next Focus               บ
+บ _____________________________________ _____________________________________ บ
+บ                               Next Level                                    บ
+บ                  _____________________________________                      บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+
+
+
+// Popup that will display objects for creation of context records.
+OBJECT Focus_Client IS A CLIENT Null_Img RING  
+  
+  SET SCOPE_STATE       TO TRUE
+  SET BLOCK_MOUSE_STATE TO TRUE
+  
+  ON_KEY KCANCEL SEND Exit_Object    
+  ON_KEY KEY_CTRL+KEY_F10 SEND MSG_NONE
+  ON_KEY KEY_ALT+KEY_F10  SEND MSG_NONE
+    
+  OBJECT Focus_List IS A Button Focus_List_Img
+    
+    SET LOCATION          TO 15 0 ABSOLUTE
+    
+    ITEM_LIST
+      ON_ITEM "" SEND Select_Focus
+      ON_ITEM "" SEND MSG_NONE
+      ON_ITEM "" SEND Select_Focus
+      ON_ITEM "" SEND Select_Focus
+      ON_ITEM "" SEND Select_Focus
+    END_ITEM_LIST
+    
+    SET CENTER_STATE ITEM 0 TO TRUE
+    SET CENTER_STATE ITEM 1 TO TRUE
+    SET CENTER_STATE ITEM 2 TO TRUE
+    SET CENTER_STATE ITEM 3 TO TRUE
+    SET CENTER_STATE ITEM 4 TO TRUE
+    
+    PROCEDURE Display_Focus_Nodes INTEGER @ID
+      IF @ID NE 0 BEGIN
+        SEND Store_ID (Prior_Level(@ID)) 0
+        SEND Store_ID @ID                1
+        SEND Store_ID (Prior_Focus(@ID)) 2
+        SEND Store_ID (Next_Focus(@ID))  3
+        SEND Store_ID (Next_Level(@ID))  4
+      END  
+    END_PROCEDURE
+    
+    
+    PROCEDURE Store_ID INTEGER @ID INTEGER @Item#
+      IF @ID NE 0 BEGIN
+        SET VALUE ITEM @Item# TO (NAME(@ID))
+        SET AUX_VALUE ITEM @Item#  TO @ID
+      END
+      ELSE BEGIN
+        SET VALUE ITEM  @Item#     TO "NULL"
+        SET AUX_VALUE ITEM  @Item# TO 0
+      END
+    END_PROCEDURE
+    
+    
+    PROCEDURE Select_Focus
+      SEND Display_Focus_Nodes (AUX_VALUE(CURRENT_OBJECT,CURRENT))
+      SET CURRENT_ITEM TO 1
+    END_PROCEDURE
+    
+    
+    
+  END_OBJECT
+
+  
+  PROCEDURE Exit_Object
+    SET CURRENT_SCOPE TO (PRIOR_SCOPE(DESKTOP))
+    SEND DEACTIVATE 
+  END_PROCEDURE
+  
+  
+END_OBJECT  
+  
+
+PROCEDURE Browse_Focus
+  SEND DISPLAY_FOCUS_NODES TO (Focus_List(Focus_Client(DESKTOP))) CURRENT_OBJECT
+  SEND ACTIVATE TO Focus_Client
+END_PROCEDURE
+
+ON_KEY KEY_ALT+KEY_F10 SEND Browse_Focus

@@ -1,0 +1,4871 @@
+/REST1         resident                                  hotrest.frm
+                          WORTHLESS CHECK SYSTEM
+                    Restitution/Disbursement Entry Screen
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ID No: [_____.] Defendant Name: [______________________________] Last,First,MI
+Address: ______________________________ Address: ______________________________
+City: __________________________ St: __ Zip: _________
+Identification: Physical (Y/N) _ Driver's License _________  Soc Sec _________
+Description: Sex _   Race _  DOB __/__/____   Height _'__"   Weight ___ lbs.
+Other ______________________________________________________________________
+      ______________________________________________________________________
+Previous Credit: ______.__        Total Outstanding Active Offenses: ______.__
+
+Restitution Receipt No: [_____.-______.]      Date Received: __/__/____
+Amount: _____.__  Method of Payment: <_> M=Money Order  C=Cash   X= Credit Card
+                                         R=Cashier's Check   J=Journal Entry 
+
+Payable/Disbursement Sequence No: [_____.-__.]       Date Disbursed: __/__/____
+   Merchant Name: ______________________________     Check Amt: _____.__
+   Merchant Fee: _____.__    Type of Disb.: _        Check No: ______.
+   Prosecutor Fee: ___.__    Payable/Disbursement Amt: _____.__
+   Check No: ______.         Active: _               Active Date: __/__/____
+   Prosecutor's Total: _____.__
+Last Receipt No: _____.         Amt. Remaining to be disbursed (A/P): ______.__
+
+
+/HELP1          
+
+                       HELP SCREEN - FUNCTION KEYS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+                         F1  =  Help Screens
+                         F2  =  Back One Field
+                         F3  =  Print Current Receipt
+                         F4  =  Print Current Screen
+                         F5  =  Not presently used
+                         F6  =  Delete Current Record
+                         F7  =  Not presently used
+                         F8  =  Go Back a Section
+                         F9  =  Clear Current Record
+                         F10 =  Save Restitution Record
+
+
+         RIGHT/LEFT/UP/DOWN ARROWS  =  Controls Cursor Movement
+                         PG DN KEY  =  Next Record in Index Order
+                         PG UP KEY  =  Previous Record in Index Order
+                      INS(ERT) KEY  =  Inserts Space in Field
+                      DEL(ETE) KEY  =  Deletes Character in Field
+                      ESC(APE) KEY  =  Aborts Current Function
+
+/HELP2
+                       HELP SCREEN - FIELD DESCRIPTIONS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                  ID NO:  field containing a UNIQUE number for each defendant
+         DEFENDANT NAME:  must be input in LAST, FIRST MI order
+PHYSICAL IDENTIFICATION:  whether or not the defendant can be recognized on
+                          sight
+   OTHER IDENTIFICATION:  field for any free form information wished to be 
+                          kept on the defendant
+                    SEX:  M = male      F = female      U = unknown
+                   RACE:  A = Asian  
+                          B = Black
+                          H = Hispanic
+                          I = Indian
+                          W = White
+                          X = Unknown
+ RESTITUTION RECEIPT NO:  must include defendant Id number and must be
+                          UNIQUE for every restitution on file
+
+    DISBURSEMENT SEQ NO:  must be UNIQUE for every disbursement and equal to
+                          the related offense
+           MANUAL CHECK:  C = Computer-generated Check
+                          M = Manual Check
+                          J = Journal Entry
+/HELP3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Offense numbers selected to pay:
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.   ____.
+
+
+
+
+
+
+
+/RCPT1
+
+
+            Please enter your initials: ___
+/RCPT2
+
+
+
+                          ____________________
+                          PROSECUTING ATTORNEY
+                          Hot Check Account
+
+
+
+Receipt No: _____-______                     Date: __/__/____
+
+        Received from: ______________________________
+
+Method of Payment: _______________          Amount: _____.__ 
+
+
+Received by: ___  ______________________________
+
+
+
+
+/QUES       resident
+ษออออ< ques >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ Options:  (1) Print rcpt & quit  (2) Print rcpt & enter New Def/rcpt        บ
+บ (3) Enter new rcpt same def      (4) No Print,New Defendant,New Receipt     บ
+บ (5) Quit                              Please Enter Your Choice........{ _   บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+
+/CHANGES
+                          WORTHLESS CHECK SYSTEM
+                        Record Changing Entry Screen
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+            Operator: ___                       Date: __/__/____
+
+            Changes: (What was changed and Why)
+
+            _______________________________________________________ |
+            _______________________________________________________ |
+            _______________________________________________________ |
+/DATE_SCRN
+__/__/____
+/NOSETUP
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+                             * * W A R N I N G * *
+
+         There is no record in the HOTCHECK SETUP TABLE for ____ !!
+
+
+    You MUST add a record to the Setup Table (option 7 on the Master Menu)
+    and/or check that the system date is correct.
+
+
+
+
+
+                          Press any key to continue _
+
+
+/SCRVOID          RESIDENT
+ออออออออออ< Void,Edit Disbursement >อออออออออออออออออออออออออออออออออออออออออออ
+Current Disbursement Info:
+Defendant Id..{ _____. ______________________________
+Receipt #..{ _____.  Offense #..{ _____.  Merchant Check #..{ _____.
+Disburse Date.{ __/__/____   Merchant ID..{ _____. _____________________________
+Prosecutors Check #..{ _____.  Hot Check Amt..{ _____.__  Mfees.{ _____.__
+Pfees..{ _____.__   
+อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
+Your options are:
+                  T)ransfer this disbursement record to another Merchant.
+                  D)elete this disbursement record.                   
+                  V)oid Merchant Check
+                  Q)uit 
+
+Either option will update files and create reversing journal entries,after
+which you must VOID the merchant check.
+
+      Please enter your selection...( T,D,V or Q )..........{ _
+
+       If Transfer Selected Please Enter new Merchant ID#...{ _____.
+
+
+
+/VID
+ษอออออออ< vid >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                             บ
+บ      There are ___. missing check numbers between the last check            บ
+บ                                                                             บ
+บ      number of _______. and your starting batch Number of ______.           บ
+บ                                                                             บ
+บ      Will these  ___. checks be voided (Y/N)..........{ _                   บ
+บ                                                                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/VID2
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                             บ
+บ              Please Standby Now Voiding Check #..{ ______.                  บ
+บ                                                                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/TSCR
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   You have selected to Transfer a disbursement record issued to merchant    บ
+บ   _____. ______________________________                                     บ
+บ   To new merchant  ______. ______________________________                   บ
+บ   If a check has not been issued,the new merchant will replace the old      บ
+บ   merchant with no resulting journal entries.                               บ
+บ   If a check has been issued,the merchant check must be voided and          บ
+บ   and journal entries made.                                                 บ
+บ                                                                             บ
+บ   Are you sure this is what you wish to do ??...............{ _             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/DSCR
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   You have selected to DELETE a disbursement record !!!                     บ
+บ   If a check has been issued and has not cleared the bank,or the merchant   บ
+บ   has returned the check before cashing then that check will be voided,     บ
+บ   the disbursement record deleted and journal entries made.                 บ
+บ                                                                             บ
+บ                                                                             บ
+บ   Are you sure this is what you wish to do ??...............{ _             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/VSCR
+ษอออ< vscr >ออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   You have selected to ____ Check ______. dated __/__/____ and issued to    บ
+บ   merchant _____. ______________________________                            บ
+บ                                                                             บ
+บ   Be aware that if you void the _____ check,  your data  will be            บ
+บ   out of balance and will require the assistance of PCO to repair.          บ
+บ   Please remember that if a check has _______ the bank it ______ be voided. บ
+บ                                                                             บ
+บ   Are you sure that this is the correct check ? (Y/N).......[ _ ]           บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/QSCR
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   The amount available to apply against offenses is..{ ______.__            บ
+บ              The total amount of the offense is......{ ______.__            บ
+บ                                                        ----------           บ
+บ              For a difference of ....................{ ______.__            บ
+บ   Options:                                                                  บ
+บ     (1) Accept - Defendant is paying for more than one offense              บ
+บ     (2) Accept - Offense PFEE or MFEE will be adjusted                      บ
+บ     (3) Accept - Excess Payment Will Be Credited To Defendant               บ
+บ     (4) Accept - Defendant Credit/Receipt Being Used To Pay Offense(s)      บ
+บ     (5) Accept - Replaceing a previously deleted disbursement               บ
+บ     (7) Reject - Clear and restart selection process                        บ
+บ                  _____________________________  _                           บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/DSCR2
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   Are you sure you wish to delete this disbursement record ? (Y/N)..{ _     บ
+บ                                                                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/SCRDEL
+ออออออออ< Delete Receipt >ออออออออออออออออออออออออออออออออออออออออออออออออออออ
+
+  You have selected to delete Receipt # ______. in the amount of ______.__
+
+
+
+        Please select one of the following:
+
+        __________________________________________________________
+        __________________________________________________________  _
+
+
+
+
+/SCRDEL2
+ออออออออ< Delete Receipt >ออออออออออออออออออออออออออออออออออออออออออออออออออออ
+
+   You have selected to delete Receipt # ______. in the amount of ______.__
+
+     This receipt has a disbursement record related to it:
+
+     Disburse record:
+             Defendant ID #..................{ ______.
+             Receipt #.......................{ ______.
+             Offense #.......................{ ______.
+                Disburse Date................{ __/__/____
+                Disbursed to merchant........{ ______.__
+                Disbursed to Prosecutor......{ ______.__
+                Merchant Check #.............{ ______.
+                Prosecutor check #...........{ ______.
+
+    Before this receipt can be deleted the checks must be voided
+    and the disbursement deleted.
+
+                       < PRESS ANY KEY TO CONTINUE >
+/STANDBY                  resident
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+
+
+
+
+
+
+                     Please Standby ............
+
+
+
+
+
+
+
+
+/EXIT            RESIDENT
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+
+
+
+
+
+
+              Please Standby, Closing Files and returning to the Menu
+
+
+
+
+
+/DEF RESIDENT
+ีออออออออ< Defendent's Listing In Alpha order >ออออออออออออออออออออออออออธ
+ณ                                                                        ณ
+ณ  ID #     Name                          Drivers Lic  Sex    SSN        ณ
+ณ                                                                        ณ
+ณ ______. ______________________________   __________   _   ___________  ณ
+ณ ______. ______________________________   __________   _   ___________  ณ
+ณ ______. ______________________________   __________   _   ___________  ณ
+ณ ______. ______________________________   __________   _   ___________  ณ
+ณ ______. ______________________________   __________   _   ___________  ณ
+ณ ______. ______________________________   __________   _   ___________  ณ
+ณ ______. ______________________________   __________   _   ___________  ณ
+ณ ______. ______________________________   __________   _   ___________  ณ
+ณ                                                                        ณ
+ณ   Highlight The Defendant You Wish To Review and Press <RETURN>        ณ
+ณ   Use Up & Down Arrow Keys To Scroll Defendants                        ณ
+ิออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออพ
+
+/STAR
+ีออออออออ< Enter Defendant's Last Name..... >ออออออออออออออออออออออออออออธ
+ณ                                                                        ณ
+ณ  Please Enter The last name of defendant to be found .......!          ณ
+ณ                                                                        ณ
+ณ                                                                        ณ
+ณ                   < _________________________ >                        ณ
+ณ                           ( last Name)                                 ณ
+ณ                                                                        ณ
+ณ        Or,press <ENTER> to list the defendant's in Alpha order         ณ
+ณ        starting with "A"                                               ณ
+ิออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออพ
+/STAND
+____________________
+/OFF
+ษอออออ< Defendant's Offenses >อออออออออออออออออออออออออออออออป
+บ   ID/Ctrl #  STAT    MFEE     PFEE     CHECK     TOTAL     บ
+บ  ______. __.  _  ______.__ ______.__ ______.__ ______.__   บ
+บ  ______. __.  _  ______.__ ______.__ ______.__ ______.__   บ
+บ  ______. __.  _  ______.__ ______.__ ______.__ ______.__   บ
+บ  ______. __.  _  ______.__ ______.__ ______.__ ______.__   บ
+บ  ______. __.  _  ______.__ ______.__ ______.__ ______.__   บ
+บ  ______. __.  _  ______.__ ______.__ ______.__ ______.__   บ
+บ  Use Arrow Keys to highlight Offense  <RETURN> to Select   บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/VOID
+อออออออออ< Void Check Routine >ออออออออออออออออออออออออออออออออออออออออออออออออ
+
+Bank..{ __ - ______________________________     Next Check Number..{ ______.
+อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
+    Please enter all of the information below:
+                  Date check to be voided was disbursed....{ __/__/____
+                  Number of Check Issued To Merchant.......{ ______.
+                  Merchant ID Number.......................{ ______.
+
+    Will you issue a manual Check ?  Y)es   N)o   Q)uit....{ _
+                    If you do not issue a manual check then
+                    the computer will issue a check to the 
+                    merchant the next time checks are printed.
+                  
+                  What will the manual check number be.....{ ______.
+
+
+/NOMER
+ษอออออ< nomer >ออออออออออออออออออออออออออออออออออออป
+บ Cannot find a merchant with the ID # of ______.  บ
+บ Please check for correct entry.                  บ
+บ                                                  บ
+บ         <PRESS ANY KEY TO CONTINUE>              บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/WARN1
+ษออออออ< warn1 >ออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   Your receipt in the amount of ______.__ does not equal the total of the   บ
+บ   offense ! ______.__                                                       บ
+บ                                                                             บ
+บ   Please check the receipt amount,correct any mistakes and then reenter.    บ
+บ                                                                             บ
+บ              *****  Press Space Bar To Continue  *****                      บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/WARN2
+ษออออออ< warn2 >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ  You have an undistributed balance of ______.__ , Which does not equal the บ
+บ  selected offense total. Please Edit an offense MFEE or PFEE to adjust     บ
+บ  offense total to equal the undistributed balance, or update defendant CR. บ
+บ                                                                            บ
+บ    Options:    _)ive defendant credit for overage                          บ
+บ                _)eturn to the select/edit process                          บ
+บ             Please Enter your selection............{ _                     บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/WARN3
+ษอออออ< warn3 >ออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ  There is a balance of ______.__ left to distribute.                       บ
+บ  If you exit without distributing this balance then all selections will    บ
+บ  be cleared and you will have to start the process over again.             บ
+บ                                                                            บ
+บ  Options:  A)ccept - Balance will apply to defendant credit                บ
+บ            R)eturn to selection/edit process                               บ
+บ            C)lear selections and quit                                      บ
+บ            Please Enter Your Selection............{ _                      บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/WARN4
+ษอออออ< warn4 >ออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                            บ
+บ  Please enter the following information:                                   บ
+บ                                                                            บ
+บ                      Prosecutor check #..........{ ______.                 บ
+บ                      Check Date..................{ __/__/____              บ
+บ                      Amount of Check.............{ ______.__               บ
+บ                                                                            บ
+บ        _)ontinue,  _)dit Check Info,  _)uit to selection screen ..{ _      บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/warn5
+ษอออออ< warn5 >อออออออออออออออออออออออออป
+บ                                       บ
+บ Is this correct ?..............[ _ ]  บ
+ศอออออออออออออออออออออออออออออออออออออออผ
+/WARN6
+ษอออออ< warn6 >ออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                            บ
+บ  The Amount Remaining to be disbursed of _____.__ does not Equal the       บ
+บ  selected offense total (Ckamt + mfee + pfee) of ______.__ .               บ
+บ                                                                            บ
+บ  Options:   _)ontinue,to give defendant credit or allow manual check       บ
+บ             _)edo to enter adjustments                                     บ
+บ                                                                            บ
+บ        Please enter your choice..........................[ _ ]             บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/WARN7
+ษอออออ< warn7 >ออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                            บ
+บ  You are attempting to change a receipt Number of an existing receipt.     บ
+บ                                                                            บ
+บ                                                                            บ
+บ    Are you sure this is what you wish to do ? (Y/N)...........[ _ ]        บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/WARN8
+ษอออออ< warn8 >ออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ  This offense has been paid off, but no check has been issued.             บ
+บ  Defendant has a credit balance of _____.__ , which may be used to adjust  บ
+บ  the disburse record.                                                      บ
+บ                                                                            บ
+บ  Options:  C)ontinue - Disburse record will be edited                      บ
+บ            R)eturn to Restitution / Disburse screen                        บ
+บ            Q)uit to menu                                                   บ
+บ            Please Enter Your Selection............{ _                      บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/WARN9
+ษอออ< warn9 >ออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                        บ
+บ     You Cannot Access This Program Until Year End Has Been Processed   บ
+บ                                                                        บ
+บ      Ref Year ___.          Ayear ___.     Today __/__/____            บ
+บ                                                                        บ
+บ                     Press <SPACE> To Continue                          บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/adjust
+ษอออออ< adjust >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ Defendant credit..: ______.__    Receipt #..: _______.   Amt...: ______.__ บ
+บ Offense:                                                                   บ
+บ Check Amt..: ______.__  Mfee..: ___.__  Pfee..: ___.__  Total..: ______.__ บ
+บ Disburse Record:                                                           บ
+บ Merchant Amt..: ______.__  Prosecutor Amt..:______.__   Total..: ______.__ บ
+บ                                                                            บ
+บ                                                                            บ
+บ _________________________________________________  _                       บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/newnum
+ษอออออ< newnum >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                            บ
+บ     Now changing disburse record _____.-___.                               บ
+บ                                                                            บ
+บ               Do not interrupt program........                             บ
+บ                                                                            บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/PAYSCR
+ษออออออ< payscr >ออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                            บ
+บ  You have selected a total of ___. offenses to pay off. Please select one  บ
+บ  of the below listed options.                                              บ
+บ                                                                            บ
+บ  Options:    A)utopay all selected offenses without user action            บ
+บ              M)anually pay each offense selected                           บ
+บ              C)lear all selected offenses and quit                         บ
+บ                    Please enter your selection ...{ _                      บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/MANL
+อออออออ< manl >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
+
+  Merchant  ______. ______________________________ Should now be issued a
+
+  manual check in the amount of ______.__  with a check number of ______.
+
+
+  Please verify the above amount before responding  Y)es to the question.
+
+  NOTE: Normally if you only void a merchant check without deleting , 
+        transfering or otherwise altering a disbursement record, the manual
+        amount and the original amount should be the same.
+
+        If disbursement records are deleted,transferred or altered then the 
+        manual check would be the original amount less the total of the
+        deleted or transferred records.
+
+  Is the proposed manual check amount correct ?................{ _
+
+
+/NVALID
+อออออออ< nvalid >ออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
+
+  Check ______. Paid to ______________________________ is already on file.
+
+
+  Your setup file shows a last check number of ______.
+
+  Your Bank __ _____________________________ shows a next number as ______.
+
+
+                      <PRESS ANY KEY TO CONTINUE>
+
+
+/VOID2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+
+
+
+
+
+
+
+       Please Standby Voiding Disbursement Record Number < _______. >
+
+
+
+
+
+                   DO NOT INTERRUPT WHILE VOIDING CHECKS
+
+
+
+
+/MCHKA
+ษอออออออ< mchka >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   You have elected to issue a manual check for the following offense .      บ
+บ     Offense # [ ______.-______. ] in the amount of [ ______.__ ]            บ
+บ     for a hotcheck amt. of  [ ______.__ ] Mfee of [ ______.__ ] and a       บ
+บ     Pfee of [ ______.__ ]                                                   บ
+บ                                                                             บ
+บ     To be issued to merchant [ _____. ______________________________ ]      บ 
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ       Are you sure this is what you wish to do ? .........(Y/N)..[ _ ]      บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/MCHKB
+ษอออออออ< mchkb >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ     Is this transaction to replace a previously deleted disbursement ?      บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ    Options:  R)eplace,  N)o replacement,    Q)uit.........[ _ ]             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/MCHKC
+ษอออออออ< mchkc >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ            Were checks issued for the deleted disbursement ?                บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ               Options: Y)es,  N)o,   Q)uit...........[ _ ]                  บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/MCHKC2
+ษออออออออ< mchkc2 >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ            Will a manual check be issued to the prosecutor ?                บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ               Options: Y)es,  N)o,   Q)uit...........[ _ ]                  บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/MCHKC3                       info on merchant manual check only
+ษออออออออ< mchkc3 >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   Enter the original:  Check # issued to the prosecutor......{ _______.     บ
+บ                        Amount of the prosecutor's check......{ ______.__    บ
+บ                        Date check was issued.................{ __/__/____   บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ   Enter the New:       Merchant check number.................{ ______.      บ
+บ                        Amount of check.......................{ ______.__    บ
+บ                        Date of check.........................{ __/__/____   บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ                Options:  A)ccept,   E)dit,   Q)uit...[ _ ]                  บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/MCHKD                           info on both checks to be issued
+ษออออออ< mchkd >ออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   Manual check number to be issued to merchant...............{ _______.     บ
+บ   Amount of check to be issued to merchant...................{ ______.__    บ
+บ   Manual check number to be issued to prosecutor.............{ _______.     บ
+บ   Amount of check to be issued to prosecutor.................{ ______.__    บ
+บ   Date check is to be issued.................................{ __/__/____   บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ               Options:  A)ccept,  E)dit,  Q)uit......[ _ ]                  บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/PCHKA
+ษอออออออ< pchka >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ Do you need to void prosecutor check # ______. in the amount of ______.__   บ
+บฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤบ
+บ               Options:  Y)es,   N)o  Q)uit..........[ _ ]                   บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/PCHKB
+ษอออออออ< pchkb >อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ  A manual check for _______.__ less any deleted or voided disbursements     บ
+บ  will have to be issued to the prosecutor to replace the voided check.      บ
+บ                                                                             บ
+บ  Number of the manual check to be issued....................{ _______.      บ
+บ                                                                             บ
+บ  Amount of the check to be issued (original amt - voids) ...{ _______.__    บ
+บ                                                                             บ
+บ  Date of check to be issued.................................{ __/__/____    บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ Options:  A)ccept,  E)dit,  Q)uit the void prosecutor check routine..[ _ ]  บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/NOTICE
+ษออออออออออออออออออออออออออออออออออออออออออออออป
+บ   ________________________________________   บ
+ศออออออออออออออออออออออออออออออออออออออออออออออผ
+/RECS
+________.  __.  __.  __.  __.  __.  __.
+________.  __.  __.  __.  __.  __.  __.
+________.  __.  __.  __.  __.  __.  __.
+________.  __.  __.  __.  __.  __.  __.
+________.  __.  __.  __.  __.  __.  __.
+________.  __.  __.  __.  __.  __.  __.
+
+/MULTI      resident
+อออออ< Receipt Distribution >ออออออออออออออออออออออออออออออออออออออออออออออออออ
+Receipt #[ ______. ]     Amount [ ______.__ ]    Defendant Credit [ ______.__ ]
+
+Balance available to Distribute [ ______.__ ]   (Total of new receipt & Credit)
+/MULTI2     resident
+ฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤ
+Ln  ID/CTRL  MFEE   PFEE    CHECK     TOTAL          MERCHANT               PMT
+ฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤ
+A _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+B _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+C _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+D _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+E _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+F _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+G _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+H _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+I _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+J _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+K _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+L _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+M _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+N _____. ___. ___.__ ___.__ ______.__ ______.__ _____________________________ _
+ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
+ณ  E)dit Offense       M)ark/unmark for payment       ESC) when finished     ณ
+ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
+/INTS
+  THIS SCREEN IS FOR INTEGER,NUMBER & DATE ASSIGNMENTS AND WILL NEVER DISPLAY.
+  FLEX VERSION ONLY ALLOWS 40 USER ASSIGNED INTEGERS, THESE FIELDS WILL
+  HOLD THE EXTRA INTEGERS
+
+______.                       ______.                         _______.
+  DISBURSE ID #             DISBURSE SEQUENCE #          DISBURSE RECNUM
+
+__/__/____              _______.           ______.
+DISBURSE DATE       OLD PROS CHECK #     current image #
+
+/info
+
+change made 03/01/91 by gary grooms
+       corrected the press space bar message to not display when a "J"
+       entry has been made on a single receipt \ disb
+
+change made 03/08/91 by Gary Grooms
+       Changed commands to update the checks.seq_num when creating a manual
+       with the month so that the chk register may be sorted by month
+
+change made 03/18/91 by gary grooms
+       Extended length of numeric field for number of offenses
+
+change made 03/29/91 by gary grooms
+       when selecting (3) enter new receipt same def the screen would not
+       display the def record -- added an entdisplay command after the find
+       in subroutine ques_3
+
+       when editing offense records in the multi select payoff routine
+       program would not allow an escape after an edit selected
+
+       added line to scrl macro to stop the display  of (0) in unused
+       windows
+
+change made 04/02/91 by gary grooms
+       provided for 3 numeric digets in offense number, fixed scroll routine
+       in multi2 to not display (0) when screen was not filled, fixed
+       stack overflow when key.delete pressed and program was in the
+       find_disb: subroutine. added indicator "in_find_disb" to track
+       location of routines and provide for proper return's when in the
+       "find_disb:" routine.
+
+change made 04/19/91 by gary grooms
+       if a merchant transfer routine is initiated by the operator, offense
+       active and active date was being set to ''. This was corrected this
+       date to keep active set to 'N' and the same active date.
+
+change made 06/06/91 by gary grooms
+       When new receipt was entered and rmethod not eq "J" the amt of
+       cash received was not being updated to bank balance
+
+change made 07/28/91 by gary grooms
+       added line to subroutine "record_change: " to allow the saving
+       of the first description line of the record changes screen
+       to the record changes file.
+       added line in key.any subroutine to kill all but the key.field key
+
+change made 08/14/91 by gary grooms
+       added an indicator to stop a chain to the void check routine if
+       no check has been issued for current disburse record
+
+Change made 03/17/95 By Gary Grooms
+       Removed the F8 Prompt at the receipt # FIELD
+
+Change made 08-10-95 By Gary Grooms
+       Added a "{CHECK=0,20.00}" to entry field "OFFENSE.MFEE" to set
+       max allowed by state law // Law effective 07/28/95
+  
+Change made 11-05-95 By Gary Grooms
+       Added a warning screen that will not allow access until yearend
+       processing has been completed
+
+Change made 10-8-97 by Gary Grooms/Herta Jesse
+        In MULTI2 added a space to CTRL took a space from MERCHANT so that
+        offenses over 99, but under 999, could be paid off.  Will send out
+       to all hotcheck coordinators within the month.
+
+Change Made On 01-28-1999 By Gary Grooms
+        Modified program to comply with y2k - 4 digit years and changed
+        save routines to comply with v3.1d re-read, save, unlock etc.
+        edited the sysdate command to sysdate4 command (new V3.1d)
+
+Change Made on 10-05-1999 By Jeff March
+        Added Direct_Output to LPT1 for printing of receipts.
+
+Change made on 11-08-1999 By Jeff March
+        Changed all Save Journals to SaveRecord Journals.
+
+Change made on 11-29-1999 by Jeff March
+        Corrected Rereads on GL_Jrnls Sub-Routine.
+        Changed Save Transit to SaveRecord Transit.
+
+Change made on 12-07-1999 by Jeff March
+        Changed logic in ENTER.SAVE to move DIS_MFEE to OFFENSE.MFEE
+        and DIS_CKAMT to OFFENSE.CKAMT when a change is made.  The OFFENSE
+        file was being reread in GL_JRNLS.
+        Added MOVE MULTI2.5& TO OFFENSE.CKAMT in EDIT_OFF ROUTINE
+        Commented CLEAR OFFENSE in EDIT_OFF sub-routine for updating correct  
+        rechange record in multiple offense editing.
+        Added CLEAR RECHANGE and MOVE OFFENSE.CTRLNO to RECHANGE.CONTROL_NUMBER
+        in building of multiple offense edits in Record Change sub-routine.
+
+Change made on 12-13-1999 by Jeff March
+        Moved GOSUB RECORD_CHANGE in CHANGE_DISBURSE_RECORD to after the new 
+        values were moved to the offense record.
+        Added reread to CHANGE_DISBURSE_RECORD.
+
+Recompiled 01-19-2000 by Jeff March
+        Recognize new backspace command in calcdate.inc
+          
+
+Change made on 02-01-2000 by Jeff March
+        Correcting journal entries for deleting JE disbursements/receipts.
+
+Change made on 03-21-2000 by Jeff March
+        Added JE for editing payable disbursements after they been saved in     
+        Edit_Jr_Off.
+        
+Change made on 9-28-2005 by Jeff March
+	Added "X" for Credit Card payments (Saline Co - web based app)
+
+/*
+Use y2k.pkg
+Read_dfini "df23ini.cfg"
+
+//----------------- Cannot Run Program From Command Line (DOS)
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+integer disb_recnum disb_delete
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+
+#include calcdate.inc
+#include macs.frm
+
+
+DATE_MACRO_INIT
+
+
+
+#COMMAND KEYFLUSH .
+   [] REPEAT
+   KEYCHECK LOOP
+#ENDCOMMAND
+
+//=======> Scroll Macro <========================================================
+
+#COMMAND SCRL R R R R R R R R R 
+        KEYPROC OFF                                    
+#IFDEF SCRL$ANS
+#ELSE
+        STRING SCRL$ANS 1                     
+        INTEGER SCRL$ROW$NUM SCRL$EXTRA SCRL$TR$1 SCRL$TR$2
+        INTEGER SCRL$T$COUNT SCRL$L$COUNT
+        INDICATOR SCRL_INDICATOR GOAHEAD
+#ENDIF
+        BLANKFORM !1            
+        MOVE 0 TO SCRL$T$COUNT
+        MOVE 1 TO SCRL$L$COUNT
+        SCRL$FORWARD$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9 
+        IF SCRL$T$COUNT NE 0 ;
+            BEGIN
+                SCRL$HILITE$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+            END
+        PAGE !1                                               
+        keyflush
+        REPEAT
+                INKEY SCRL$ANS
+                UPPERCASE SCRL$ANS
+                IF SCRL$ANS EQ 'M' BEGIN
+                 MOVE (( SCRL$L$COUNT - 1 ) * !3) TO WINDOWINDEX
+                 GOSUB MARK_OFF
+                END
+                IF SCRL$ANS EQ 'E' BEGIN
+                 MOVE (( SCRL$L$COUNT - 1 ) * !3) TO WINDOWINDEX
+                 GOSUB EDIT_OFF
+                END
+                [KEY.UP] IF SCRL$T$COUNT NE 0 ;
+                    BEGIN
+                        SCRL$UP$ROUTINE   !1 !2 !3 !4 !5 !6 !7 !8 !9
+                    END
+
+                [KEY.DOWN] IF SCRL$T$COUNT NE 0 ;
+                    BEGIN
+                        SCRL$DOWN$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+                    END
+
+                [KEY.PREVIOUS]  ;
+                    BEGIN
+                        SCRL$BACKWARD$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9         // Determine & act
+                    END
+
+                [KEY.NEXT] ;
+                    BEGIN
+                        SCRL$FORWARD$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+                    END
+
+                MOVE '' TO SCRL$ANS
+                INDICATE SCRL$VALID AS [KEY.ESCAPE]    
+                [NOT SCRL$VALID] LOOP 
+        [key.escape] scrl$unhilite$routine !1 !2 !3 !4 !5 !6 !7 !8 !9
+        [KEY.ESCAPE] MOVE 0 TO SCRL$L$COUNT // So we know escape was pressed
+        SCRL$UNHILITE$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+        MOVE SCRL$L$COUNT TO WINDOWINDEX
+        SCREENMODE 1 OFF
+
+        KEYPROC ON                                      // Restore keyprocs
+#ENDCOMMAND                                            // Scroll Macro
+
+//=====> Scroll Forward Routine <==============================================
+
+
+#COMMAND SCRL$FORWARD$ROUTINE R R R R R R R R R
+        INDICATE SCRL.FOUND.STATUS AS [FOUND]
+
+        MOVE 0 TO SCRL$T$COUNT
+
+        SCRL$UNHILITE$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+        MOVE 1 TO SCRL$L$COUNT
+
+        CLEAR !4
+        GOSUB !8
+        MOVE 1 TO SCRL$ROW$NUM
+        REPEAT
+                [SET_FIRST] FIND GE !4 BY !5
+                [~ SET_FIRST] FIND GT !4 BY !5
+                        [FOUND] GOSUB !9
+                        [found][SCRL_INDICATOR] BEGIN
+                                INCREMENT SCRL$T$COUNT
+                                MOVE ((SCRL$ROW$NUM - 1) * !3) TO WINDOWINDEX
+                                GOSUB !6
+                                INCREMENT SCRL$ROW$NUM
+                            END
+                [found] IF OFFENSE.IDNO EQ ;
+                               DEFENDNT.IDNO IF SCRL$ROW$NUM LE !2 LOOP
+                            SCRL$CLEAR$ROW !1 !2 !3 !4 !5 !6 !7 !8 !9
+
+        SCRL$HILITE$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+        INDICATE FOUND AS [SCRL.FOUND.STATUS]
+#ENDCOMMAND
+
+//=====> Scroll Backward Routine <=============================================
+
+#COMMAND SCRL$BACKWARD$ROUTINE
+        INDICATE SCRL.FOUND.STATUS AS [FOUND]
+        MOVE 0 TO SCRL$T$COUNT
+
+        SCRL$UNHILITE$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+        MOVE 1 TO SCRL$L$COUNT
+
+        CLEAR !4
+        GOSUB !7
+
+        MOVE !2 TO SCRL$ROW$NUM
+
+        REPEAT
+                FIND LT !4 BY !5
+                        [FOUND] GOSUB !9
+                        [FOUND] [SCRL_INDICATOR] ;
+                            BEGIN
+                                INCREMENT SCRL$T$COUNT
+                                MOVE ((SCRL$ROW$NUM - 1) * !3) TO WINDOWINDEX
+                                GOSUB !6
+                                MOVE (SCRL$ROW$NUM - 1) TO SCRL$ROW$NUM
+                            END
+                        [FOUND] IF OFFENSE.IDNO EQ DEFENDNT.IDNO ;
+                                               IF SCRL$ROW$NUM GE 1 LOOP
+                         IF OFFENSE.IDNO NE DEFENDNT.IDNO INDICATE FOUND FALSE
+                      [FINDERR] ;
+                        BEGIN
+                            SCRL$CLEAR$BOTTOM !1 !2 !3 !4 !5 !6 !7 !8 !9
+                            SCRL$FORWARD$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+                        END
+
+        SCRL$HILITE$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+        INDICATE FOUND AS [SCRL.FOUND.STATUS]
+#ENDCOMMAND
+
+//=====> Scroll Clear Row <====================================================
+
+#COMMAND SCRL$CLEAR$ROW
+        FOR SCRL$ROW$NUM FROM SCRL$ROW$NUM TO !2
+                MOVE ((SCRL$ROW$NUM - 1) * !3) TO WINDOWINDEX
+
+                MOVE 0 TO SCRL$EXTRA
+                WHILE SCRL$EXTRA LT !3
+                        BLANKFORM !1.1&
+                        INCREMENT SCRL$EXTRA
+                        INCREMENT WINDOWINDEX
+                END
+        LOOP
+#ENDCOMMAND
+
+//=====> Scroll Clear Bottom <=================================================
+
+#COMMAND SCRL$CLEAR$BOTTOM
+        MOVE ((!3 * !2) - !3) TO WINDOWINDEX
+
+        WHILE WINDOWINDEX LT (!2 * !3)
+                BLANKFORM !1.1&
+                INCREMENT WINDOWINDEX
+        END
+#ENDCOMMAND
+
+//=====> Scroll Hilite Routine <===============================================
+
+#COMMAND SCRL$HILITE$ROUTINE
+    MOVE ((SCRL$L$COUNT - 1) * !3) TO WINDOWINDEX
+
+    SCREENMODE 112 ON
+
+    WHILE WINDOWINDEX LT (SCRL$L$COUNT * !3)
+     DISPLAY !1.1& TO !1.1&
+        INCREMENT WINDOWINDEX
+    END
+    
+    SCREENMODE 112 OFF
+#ENDCOMMAND
+
+//=====> Scroll Unhilite Routine <=============================================
+
+#COMMAND SCRL$UNHILITE$ROUTINE
+    MOVE ((SCRL$L$COUNT - 1) * !3) TO WINDOWINDEX
+
+    SCREENMODE 1 ON
+
+    WHILE WINDOWINDEX LT (SCRL$L$COUNT * !3)
+     DISPLAY !1.1& TO !1.1&
+        INCREMENT WINDOWINDEX
+    END
+    
+    SCREENMODE 1 OFF 
+#ENDCOMMAND
+
+//=====> Up Routine <==========================================================
+
+#COMMAND SCRL$UP$ROUTINE
+    REPEAT
+        SCRL$UNHILITE$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+    
+        MOVE (SCRL$L$COUNT - 1) TO SCRL$L$COUNT
+    
+        IF SCRL$L$COUNT LT 1 ;
+            MOVE 1 TO SCRL$L$COUNT
+    
+        MOVE ((SCRL$L$COUNT - 1) * !3) TO WINDOWINDEX
+
+        IF !1.1& EQ '' ;
+            IF SCRL$L$COUNT GE 1 ;
+                LOOP
+
+    IF SCRL$L$COUNT LT 1 ;
+        MOVE 1 TO SCRL$L$COUNT
+
+    SCRL$HILITE$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+//=====> Down Routine <========================================================
+
+#COMMAND SCRL$DOWN$ROUTINE
+    REPEAT
+        SCRL$UNHILITE$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+        MOVE (SCRL$L$COUNT + 1) TO SCRL$L$COUNT
+        IF SCRL$L$COUNT GT !2 MOVE 1 TO SCRL$L$COUNT
+        MOVE ((SCRL$L$COUNT - 1) * !3) TO WINDOWINDEX
+        if !1.1& eq '' move (!2 + 1) to scrl$l$count  // added to stop (0) display
+        IF !1.1& EQ ''iF SCRL$L$COUNT LE !2 LOOP
+    IF SCRL$L$COUNT GT !2 MOVE 1 TO SCRL$L$COUNT
+    SCRL$HILITE$ROUTINE !1 !2 !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+
+//=====> Scroll Macro End <====================================================
+
+
+
+MULTI$ OPEN SETUP DEFENDNT RESTITUT DISBURSE OFFENSE RECHANGE TRANSACT
+MULTI$ OPEN LEDGER JOURNALS REF MERCHANT BANK CHECKS RECON DISTRIB
+
+
+INDICATOR INSCROLL TOPP BOT TRANSFER START$ START$B OK_SCROLL jay
+INDICATOR NO_DEFENDANT INDEF INOFF in_find_disb PAY_OFF NO_CHK
+INDICATOR INFWD INBACK SCROLL_VALID SET_FIRST INDISB INREST
+INDICATOR OK_QUES VOIDED MAN OK_RECON MUST_VOID INBANK REFUND DELREC
+INDICATOR DISB_EDIT REST_EDIT NEW NEWJR CHK_ONLY AUTOPAY MANUAL_PAY
+INDICATOR INCHANGE REVERSED NOGOOD CHANGEMADE INVOID INMCHK PROS_CHK
+INDICATOR REDOMC IN_MULTI CREDITS XOFF CTRL_MATCH REDO_OFF IND_C IND_D
+indicator notsame _changes in_chng_rcpt ADJUSTMENT 
+
+INTEGER  USER_ACCESS MONTH DISP_MONTH STOP_NUM FIRST_REC LAST_REC
+INTEGER  ROW_NUM SCAN$ROW$NUM SCAN$EXTRA AKEY MER_NUM MISSING UHC
+INTEGER  DEF_NUM TOP_DEF1 TOP_DEF2 ADAY AMONTH AYEAR COUNT
+INTEGER  OFF_NUM DO_SUB CHECK_NUM RECEIPT_NUM HIGH_CTRLNO
+INTEGER  BDAY BMONTH BYEAR  OLD_DEX NEW_DEX MAX_ROWS NUM_FLDS
+
+STRING USER 30  SCAN$ANS 1 MER_NAME 30 dis_chkno 6
+STRING INITIAL_1 1 INITIAL_2 1  xchar 1
+STRING ANSW 1 YEAR 4 YR 2 MANUAL_ID 1 yr$ 4
+
+NUMBER PREVIOUS_AMT OLD_REST ORIG_CKAMT ORIG_MFEE ORIG_PFEE
+NUMBER MFEES PFEES AMT TOT OFF_TOT ORIG_TOT ORIG_CREDIT
+NUMBER TOFF TDEF TOT_PROS TOT_MANUAL  CHKDISB VOID_AMT
+NUMBER ACCUM_CK ACCUM_PFEE ACCUM_MFEE ACCUM_DISB PLACE
+NUMBER PFEE_OFF_TOT PFEE_ORIG_TOT MFEE_OFF_TOT MFEE_ORIG_TOT
+NUMBER CKAMT_OFF_TOT CKAMT_ORIG_TOT
+
+MOVE '' TO USER
+MOVE 0 TO USER_ACCESS
+MOVE '' TO MER_NAME
+move '' to dis_chkno
+
+PAGE SET DEF AT 6 5 COLORS 79 79
+PAGE SET STAND AT 18 30
+PAGE SET STAR AT 10 5 COLORS 79 79
+PAGE SET OFF AT 14 17 COLORS 79 79 
+PAGE SET QUES AT 18 0
+PAGE SET TSCR AT 14 0
+PAGE SET DSCR AT 15 0
+PAGE SET VSCR AT 15 0
+PAGE SET QSCR AT 4 0
+PAGE SET DSCR2 AT 10 0
+PAGE SET NOMER AT 15 0
+PAGE SET WARN1 AT 15 0
+PAGE SET WARN2 AT 15 0
+PAGE SET WARN3 AT 14 0
+page set warn4 at 14 0
+page set warn5 at 14 8
+page set warn6 at 14 0
+page set warn7 at 14 0
+page set warn8 at 14 0
+page set warn9 at 14 4
+page set adjust at 14 0
+page set newnum at 14 0
+PAGE SET MCHKA AT 10 0
+PAGE SET MCHKB AT 10 0
+PAGE SET MCHKC AT 10 0
+PAGE SET MCHKC2 AT 10 0
+PAGE SET MCHKC3 AT 10 0
+PAGE SET MCHKD AT 10 0
+PAGE SET NOTICE AT 7 14
+PAGE SET MULTI2 AT 5 0
+PAGE SET PAYSCR AT 14 0
+PAGE SET VID AT 10 0
+PAGE SET VID2 AT 10 0
+PAGE SET PCHKA AT 10 0
+PAGE SET PCHKB AT 10 0
+
+
+DATE TODAY DIS_DATE
+SYSDATE4 TODAY
+sysdate4 dis_date
+//MOVE '' TO YEAR
+//MOVE '19' TO YEAR
+
+
+
+DECOMPOSE_DATE dis_date TO ADAY AMONTH AYEAR
+
+
+//APPEND YEAR AYEAR
+INDICATE OK_RECON AS REF.RECON EQ 'Y'
+
+
+if ref.current_yr ne AYEAR begin
+   display ref.current_yr to warn9.1
+   display ayear to warn9.2
+   display today to warn9.3
+   page warn9
+   inkey answ
+   abort
+end
+
+
+
+
+FORMAT REST1.40 {RETAIN}
+//
+
+AUTOPAGE REST1 1
+NAME ID DNAME DADDR1 DADDR2 DCITY DST DZIP DPHYS DL DSSN DSEX DRACE
+//   1   2      3      4       5   6   7     8    9  10   11    12
+NAME DDOB DFT DIN DWT DOTHER DOTHER2 DCREDIT DBAL
+//    13   14  15  16   17     18      19     20
+NAME RID RSEQNO RDT RAMT RMETHOD
+//    21   22   23   24     25
+NAME DIS_ID DIS_# DIS_DT DIS_MNAME DIS_CKAMT DIS_MFEE DIS_TYPE 
+//     26    27     28      29        30        31       32  
+NAME DIS_CKNO DIS_PFEE DIS_MAMT DIS_PCKNO DIS_ACTIVE DIS_ACTIVE_DT
+//     33        34      35       36         37            38
+NAME DIS_PTOT 
+//      39
+NAME LST_RCT REMAINING
+//      40     41
+
+AUTOPAGE REST1 1
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.USER_NUMB
+FIND EQ USERX BY INDEX.1
+MOVE USERX.USER_NAME TO USER
+MOVE USERX.ACCS_LEVL TO USER_ACCESS
+MOVE USERX.HC_LEVEL TO UHC
+
+
+
+//---------------------------------------------------
+
+GOSUB CLR_INDS
+character (7) to xchar
+CLEAR SETUP
+MOVE AYEAR TO SETUP.YEAR
+FIND EQ SETUP BY INDEX.1
+[FINDERR] GOSUB NOSETUP
+IF SETUP.LSTREC LE 0 GOSUB NOSETUP
+IF SETUP.LAST_CHECK LE 0 GOSUB NOSETUP
+
+CLEAR BANK
+MOVE 'HC' TO BANK.CODE
+FIND EQ BANK BY INDEX.1
+
+
+  ENTER DISBURSE RESTITUT OFFENSE DEFENDNT
+start_top:
+  CLEARFORM REMAINING
+   IF WINDOWINDEX GT 200 BEGIN
+     INDICATE PAY_OFF FALSE
+     INDICATE MANUAL_PAY FALSE
+     INDICATE AUTOPAY FALSE
+     MOVE 0 TO WINDOWINDEX
+   END
+
+   [~ KEY.FIELD][OK_QUES][~ PAY_OFF] BEGIN
+          PAGE REST1
+          PAGE QUES
+            REPEAT
+              IF REF.RCPT_DEFAULT NE (0) MOVE REF.RCPT_DEFAULT TO QUES.1
+              KEYFLUSH
+              ACCEPT QUES.1
+              IF ~ QUES.1 IN '123456' LOOP
+              MOVE QUES.1 TO DO_SUB
+              ON DO_SUB GOSUB QUES_1 QUES_2 QUES_3 QUES_4 QUES_5                
+              INDICATE OK_QUES FALSE
+      END
+
+   [PAY_OFF] GOSUB READY_OFF
+
+   CLEAR RECHANGE
+    CLEARXY 24 0
+    SCREENMODE 1
+    DISPLAY SETUP.LSTREC TO LST_RCT
+    IF ID LE '' BEGIN
+     CLEARXY 24 0
+     GOTOXY 24 0
+     SHOW "Use Key <F8> To Scroll (Search for) Defendants"
+    END
+
+
+DEFENDANT:
+    INDICATE CHANGEMADE FALSE
+    INDICATE DELETER FALSE
+    INDICATE INREST FALSE
+    INDICATE INDISB FALSE
+    indicate pfee false
+
+    ENTRY DEFENDNT.IDNO                   {AUTOFIND,RETAIN}
+    [FOUND] MOVE DEFENDNT.IDNO TO DEF_NUM
+     CLEARXY 24 0
+    ENTRY DEFENDNT.NAME                   {AUTOFIND,RETAIN}
+    [FINDERR] GOSUB ERRMESG
+    ENTRY DEFENDNT.ADDR                   {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.ADDR2                  {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.CITY                   {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.ST                     {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.ZIP                    {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.PHYS                   {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.LIC                    {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.SOCSEC                 {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.SEX                    {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.RACE                   {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.AGE                    {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.FT                     {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.IN                     {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.LBS                    {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.OTHER                  {SKIPFOUND,RETAIN}
+    ENTRY DEFENDNT.OTHER2                 {SKIPFOUND,RETAIN}
+    MOVE DCREDIT TO RECHANGE.OLD_CREDIT
+    ENTRY DEFENDNT.CREDIT                 {SKIPFOUND,RETAIN,NOENTER}
+    ENTRY DEFENDNT.BAL                    {SKIPFOUND,RETAIN,NOENTER}
+    MOVE DCREDIT TO ORIG_CREDIT
+    INDICATE CREDITS AS DEFENDNT.CREDIT GT (0)
+
+RESTITUTION:
+
+    IF ~ STATUS RESTITUT CLEARFORM REMAINING
+    INDICATE INREST TRUE
+    INDICATE INDISB FALSE
+    MOVE ID TO RID
+    ENTRY RESTITUT.IDNO                  {NOENTER,RETAIN}
+    ENTRY RESTITUT.SEQNO                 {AUTOFIND,RETAIN}
+       [FOUND] MOVE RESTITUT.SEQNO TO RECEIPT_NUM
+       indicate new as [finderr]
+       IF STATUS RESTITUT INDICATE NEWJR FALSE
+         ELSE INDICATE NEWJR TRUE
+         if status restitut if rseqno ne receipt_num if uhc gt 2 begin
+           clearxy 24 0
+           gotoxy 24 0
+           page warn7
+           keyproc off
+             repeat
+             clearform warn7.1
+              [~ key.field][~ key.up] accept warn7.1
+                if ~ warn7.1 in "YyNn" loop
+                 if warn7.1 in "Yy" gosub change_receipt_num
+                 if warn7.1 in "Nn"  move receipt_num to rseqno
+             keyproc on
+             page rest1
+         end
+
+       [NEW] IF UHC LT 2 BEGIN
+          CLEARXY 24 0
+          GOTOXY 24 0
+          SHOW 'Not authorized to add new records, Press any key to continue ' USER_NUMB
+          INKEY ANSW
+          CLEAR DEFENDNT RESTITUT DISBURSE
+          CLEARFORM
+          GOTO START_TOP
+       END
+
+       [NEW] BEGIN
+         GOTOXY 24 10
+         SHOW 'Receipt number is not assigned until record is saved'
+       END
+
+    IF RDT EQ '' MOVE TODAY TO RDT
+    ENTRY RESTITUT.RECDT       {RETAIN}
+    LEFT RDT TO MONTH 2
+    MOVE MONTH TO RESTITUT.MONTH
+    IF STATUS RESTITUT  MOVE RAMT TO OLD_REST    
+    [NEW] CLEARXY 24 0
+    ENTRY RESTITUT.RESAMT      {RETAIN,SKIPFOUND,RANGE=0.01,99999.99,REQUIRED}
+    ENTRY RESTITUT.TYPE       {CAPSLOCK,CHECK='MRCJX',RETAIN,SKIPFOUND,REQUIRED}
+      indicate jay as rmethod eq 'J'
+
+//**********
+    IF STATUS RESTITUT CALC (DCREDIT) TO REMAINING
+    IF ~ STATUS RESTITUT BEGIN
+         calc (dcredit + ramt) to remaining
+         GOTOXY 24 10
+        SHOW 'Press F4 to print receipt AFTER restitution has been saved'
+    END
+    [NEWJR] MOVE 'HR' TO RESTITUT.JR  // indicates where the receipt was created
+    [NEWJR] MOVE 'A' TO RESTITUT.UPDATE
+    
+
+DISBURSEMENT:
+  indicate in_find_disb false
+  if rmethod eq 'J' move 'J' to dis_type
+  IF STATUS RESTITUT INDICATE NEWJR FALSE
+  ELSE INDICATE NEWJR TRUE
+  INDICATE PAYALL GROUP ANY [AUTOPAY MANUAL_PAY]
+
+  [PAYALL] BEGIN
+     REPEAT
+      IF HELP3.1& NE 0 BEGIN
+        MOVE ID TO DIS_ID
+        MOVE HELP3.1& TO DIS_#
+        MOVE 0 TO HELP3.1&
+        IF WINDOWINDEX EQ 200 INDICATE PAYALL FALSE
+        INCREMENT WINDOWINDEX
+       GOTO BREAKOUT
+      END
+    INCREMENT WINDOWINDEX
+     UNTIL WINDOWINDEX GT 200
+     IF WINDOWINDEX GE 200 BEGIN
+       INDICATE MANUAL_PAY FALSE
+       INDICATE AUTOPAY FALSE
+       INDICATE PAYALL FALSE
+       INDICATE OK_QUES FALSE
+       CLEAR OFFENSE DEFENDNT RESTITUT
+       CLEARFORM ID THRU RMETHOD
+       INDICATE OK_QUES TRUE
+       GOTO START_TOP
+     END
+  END
+BREAKOUT:
+  INDICATE INDISB TRUE
+  INDICATE INREST FALSE
+  INDICATE NEWDIS FALSE
+  INDICATE INMCHK FALSE
+  MOVE ID TO DIS_ID
+  ENTRY OFFENSE.IDNO                             {NOENTER}
+  [~ AUTOPAY]  ENTRY OFFENSE.CTRLNO              {AUTOFIND}
+  [AUTOPAY] BEGIN
+     CLEAR OFFENSE
+     MOVE ID TO OFFENSE.IDNO
+     MOVE DIS_# TO OFFENSE.CTRLNO
+      FIND EQ OFFENSE BY INDEX.1
+      [FOUND] ENTDISPLAY OFFENSE
+   END
+  
+  [FOUND] MOVE OFFENSE.CTRLNO TO OFF_NUM
+  [FOUND] MOVE OFFENSE.TOTAL TO ORIG_TOT
+
+  CLEARXY 24 0
+  [FINDERR] GOSUB ERRMSG2
+  GOSUB FIND_DISB
+  IF ~ STATUS DISBURSE begin
+     move offense.pfee to dis_pfee
+     move dis_ckamt to orig_ckamt
+     move dis_mfee to orig_mfee
+     move dis_pfee to orig_pfee
+     indicate newdis true
+  end
+
+  [NEWDIS] IF UHC LT 2 BEGIN
+    CLEARXY 24 0
+    GOTOXY 24 0
+    SHOW 'Not authorized to add new records, Press any key to continue'
+    INKEY ANSW
+    CLEARFORM
+    page exit
+    ABORT
+   END
+indicate notsame as offense.total ne remaining
+[NEWDIS][~ PAY_OFF] IF REMAINING gt OFFENSE.TOTAL BEGIN
+  keyproc off
+      show xchar
+      repeat
+      clearxy 24 0
+      gotoxy 24 0
+      screenmode 112 on
+      show ;
+"           Are you applying receipt to more than one offense ? (Y/N)          "
+      gotoxy 24 75
+      screenmode 1 on
+      inkey answ
+      clearxy 24 0
+      keyproc on
+      if ~ answ in "YyNn" loop
+      if answ in "Nn" goto do_qs
+gosub qs1
+do_qs:
+END
+
+
+pass_qscr:
+
+CONTINUE_PAY:
+  AUTOPAGE REST1 29
+  ENTRY OFFENSE.NAME                     {NOENTER}
+  IF RID NE DIS_ID GOSUB WRONG_IDNO
+  
+  [~ AUTOPAY] ENTRY OFFENSE.CKAMT
+  [~ AUTOPAY] ENTRY OFFENSE.MFEE                    
+  IF DIS_TYPE EQ '' IF RMETHOD EQ 'J' MOVE 'J' TO DIS_TYPE
+  IF DIS_TYPE EQ '' MOVE 'C' TO DIS_TYPE
+DO_MANUAL:
+  [~ AUTOPAY] ENTRY DISBURSE.MANUAL                  {CAPSLOCK,CHECK = "CMJ"}
+  if rmethod eq 'J' if dis_type ne rmethod move rmethod to dis_type
+  IF DIS_TYPE NE 'C' BEGIN
+     IF DIS_TYPE EQ 'M' IF DIS_DT EQ '' MOVE TODAY TO DIS_DT
+     IF DIS_TYPE EQ 'J' IF DIS_DT EQ '' MOVE RDT TO DIS_DT
+     [~ AUTOPAY] ENTRY DISBURSE.DISPDT DIS_DT
+  END
+
+
+AUTOPAGE REST1 33
+        [~ AUTOPAY][~ jay] IF DIS_TYPE NE 'C' ENTRY DISBURSE.CHKNO
+        [~ AUTOPAY] ENTRY DISBURSE.PROSAMT
+       INDICATE PROS_CHK FALSE
+       ifchange dis_ckamt indicate _changes true
+       ifchange dis_mfee indicate _changes true
+       ifchange dis_pfee indicate _changes true
+         [~ pay_off][notsame][~ _changes] begin
+            keyproc off
+            screenmode 112 on
+            display remaining to warn6.1
+            display offense.total to warn6.2
+            screenmode 1 on
+            display "C" to warn6.3
+            display "R" to warn6.4
+              repeat
+              clearform warn6.5
+              accept warn6.5
+                if ~ warn6.5 in "CcRr" loop
+                page rest1
+                keyproc on
+                 if warn6.5 in "Rr" goto continue_pay
+          end
+
+
+  IF DIS_MAMT NE (DIS_CKAMT + DIS_MFEE) MOVE (DIS_CKAMT + DIS_MFEE) TO DIS_MAMT
+    ENTRY DISBURSE.DISPAMT                 {NOENTER}
+  IF DIS_TYPE EQ 'M' BEGIN
+   [~ AUTOPAY] IF DIS_TYPE eq 'M' ENTRY DISBURSE.PCKNO
+  END
+
+
+
+  ENTRY OFFENSE.ACTIVE                   {NOENTER}
+  ENTRY OFFENSE.ACTIVE_DATE              {NOENTER}
+    IF DIS_TYPE EQ 'M' IF DIS_PFEE GT 0 BEGIN
+       DISPLAY DIS_PFEE TO DIS_PTOT
+       ENTRY DISBURSE.PROS_TOTAL
+    END
+
+       [NEWDIS] IF DIS_TYPE EQ 'M' gosub man_ck
+       INDICATE INMCHK FALSE
+
+  ENTRY SETUP.LSTREC                     {NOENTER}
+
+  [NEWDIS] IF DIS_TYPE NE 'J' BEGIN
+    if dis_pckno eq (0) IF (DIS_PFEE + DIS_MAMT) GT REMAINING GOSUB ERRMSG3
+  END
+
+  IF STATUS OFFENSE MOVE (DIS_CKAMT + DIS_MFEE + DIS_PFEE) TO OFF_TOT
+
+   [~ AUTOPAY][NEWDIS] BEGIN
+       IF DIS_TYPE EQ 'J' IF OFF_TOT NE RAMT BEGIN
+       PRINT RAMT TO WARN1.1
+       PRINT OFF_TOT TO WARN1.2
+       PAGE WARN1
+       INKEY ANSW
+       CLEAR OFFENSE DISBURSE RESTITUT
+       CLEARFORM RID THRU REMAINING
+       GOTO RESTITUTION
+    END
+ END
+
+   SCREENMODE 240 ON
+   DISPLAY '  Saving Receipt/Disbursement Record   ' TO NOTICE.1
+   SCREENMODE 1 ON
+
+  [~ NEWDIS] BEGIN
+
+     IFCHANGE RAMT INDICATE CHANGEMADE TRUE
+     IFCHANGE RDT INDICATE CHANGEMADE TRUE
+     IFCHANGE RMETHOD INDICATE CHANGEMADE TRUE
+     IFCHANGE DIS_DT INDICATE CHANGEMADE TRUE
+     IFCHANGE DIS_CKAMT INDICATE CHANGEMADE TRUE
+     IFCHANGE DIS_MFEE INDICATE CHANGEMADE TRUE
+     IFCHANGE DIS_PFEE INDICATE CHANGEMADE TRUE
+     IFCHANGE DIS_TYPE INDICATE CHANGEMADE TRUE
+     IFCHANGE DIS_CKNO INDICATE CHANGEMADE TRUE
+     IFCHANGE DIS_CKNO INDICATE CHANGEMADE TRUE
+     IFCHANGE DIS_PCKNO INDICATE CHANGEMADE TRUE
+  END
+  
+  RETURN
+
+ENTER.DELETE:
+    IF UHC LT 4 ABORT
+    INDICATE DELETER TRUE
+RETURN
+
+ENTER.EDIT:
+
+
+  IF UHC LT 3 ABORT
+  
+  MOVE OFFENSE.CKAMT TO RECHANGE.OLD_CKAMT
+  [~DELETER] MOVE DIS_CKAMT TO RECHANGE.NEW_CKAMT
+  
+  MOVE OFFENSE.MFEE TO RECHANGE.OLD_MFEE
+  [~DELETER] MOVE DIS_MFEE TO RECHANGE.NEW_MFEE
+  
+  MOVE DISBURSE.PROSAMT TO RECHANGE.OLD_PFEE
+  [~DELETER] MOVE DIS_PFEE TO RECHANGE.NEW_PFEE
+  
+  MOVE DISBURSE.DISPAMT TO RECHANGE.OLD_DISPAMT
+  [~DELETER] MOVE DIS_MAMT TO RECHANGE.NEW_DISPAMT
+
+  IF DIS_MAMT NE DISBURSE.DISPAMT INDICATE CHNG_DISB TRUE
+  MOVE DEFENDNT.CREDIT TO RECHANGE.OLD_CREDIT
+//J  [CHANGEMADE] IF DISBURSE.MANUAL NE 'J' BEGIN
+//J    CALC (DEFENDNT.CREDIT + DISBURSE.DISPAMT + DISBURSE.PROSAMT) TO ;
+//J                                                             DEFENDNT.CREDIT
+//J  END
+  [CHANGEMADE] CALC (DEFENDNT.CREDIT + DISBURSE.DISPAMT + DISBURSE.PROSAMT) TO ;
+                                                             DEFENDNT.CREDIT
+  
+  
+  MOVE DEFENDNT.CREDIT TO REMAINING
+  [~DELETER] MOVE REMAINING TO RECHANGE.NEW_CREDIT
+  ENTDISPLAY DEFENDNT
+
+  [CHANGEMADE] GOSUB RECORD_CHANGE
+RETURN
+
+
+
+		   
+		   
+		   
+		   
+ENTER.SAVE:
+  IF UHC LT 2 ABORT
+    BLANKFORM NOTICE
+    PAGE NOTICE
+  IF ORIG_TOT NE OFF_TOT GOSUB EDIT_JR_OFF
+  [  NEW] GOSUB NEW_RECEIPT
+  [~ NEW] IF RSEQNO EQ '' IF RAMT NE '' GOSUB NEW_RECEIPT
+  [ NEW] MOVE RSEQNO TO RESTITUT.SEQNO
+  INDICATE NEW FALSE
+  [NEWJR] GOSUB NEW_JR_RECEIPT
+//J  [NEWDIS] IF RMETHOD NE 'J' GOSUB PARTIAL
+  [NEWDIS] GOSUB PARTIAL
+  [NEWDIS] GOSUB NEW_JR_DISB
+  [NEWDIS][~ pros_chk] MOVE ( DEFENDNT.BAL - OFF_TOT ) TO DEFENDNT.BAL
+  [newdis][pros_chk] move (defendnt.bal - (off_tot - dis_pfee)) to defendnt.bal
+  INDICATE OFFCH FALSE
+  MOVE 'N' TO OFFENSE.ACTIVE
+  IF DISBURSE.DISPDT GT '' MOVE DISBURSE.DISPDT TO OFFENSE.ACTIVE_DATE
+  ELSE MOVE TODAY TO OFFENSE.ACTIVE_DATE
+//J  IF DISBURSE.MANUAL NE 'J' BEGIN
+   [~ PROS_CHK] ;
+    CALC (REMAINING - DISBURSE.DISPAMT - DISBURSE.PROSAMT) TO DEFENDNT.CREDIT
+   [PROS_CHK] CALC (REMAINING - DISBURSE.DISPAMT) TO DEFENDNT.CREDIT
+//J  END
+
+  IF DISBURSE.DISPDT GT '' LEFT DISBURSE.DISPDT TO DISBURSE.MONTH 2
+  IF ORIG_PFEE NE DISBURSE.PROSAMT BEGIN
+  
+  	 
+    INDICATE OFFCH TRUE
+    
+    
+    
+    
+    MOVE DISBURSE.PROSAMT TO OFFENSE.PFEE
+  END
+
+  MOVE DEFENDNT.CREDIT TO REMAINING
+  
+  IF DIS_CKAMT NE ORIG_CKAMT BEGIN 
+        INDICATE OFFCH TRUE
+        MOVE DIS_CKAMT TO OFFENSE.CKAMT
+  END
+
+  IF DIS_MFEE NE ORIG_MFEE BEGIN 
+        INDICATE OFFCH TRUE
+        MOVE DIS_MFEE TO OFFENSE.MFEE
+  END
+  
+  
+  MOVE (OFFENSE.MFEE+OFFENSE.CKAMT+OFFENSE.PFEE) TO OFFENSE.TOTAL    
+  
+  
+  SAVERECORD OFFENSE
+
+  [NEWDIS OFFCH] GOSUB RECORD_CHANGE
+  
+  INDICATE OK_QUES TRUE
+  MOVE DEFENDNT.CREDIT TO DCREDIT
+  MOVE DEFENDNT.BAL TO DBAL
+  INDICATE NEWJR FALSE
+  INDICATE NEWDIS FALSE
+  ENTDISPLAY DEFENDNT
+RETURN
+
+ENTEREND
+
+ABORT
+//=============================================================================
+//=============================== SUBROUTINES =================================
+
+change_receipt_num:
+  indicate in_chng_rcpt true
+  keyproc off
+  clear disburse
+    move id to disburse.id_no
+    move receipt_num to disburse.seq_no
+    move id to disburse.idno
+     find ge disburse by index.1
+       while disburse.seq_no eq receipt_num
+          page newnum
+          display disburse.seq_no to newnum.1
+          display disburse.seqno to newnum.2
+          move rseqno to disburse.seq_no
+           saverecord disburse
+            clear disburse
+            move receipt_num to disburse.seq_no
+            move id to disburse.id_no
+            move id to disburse.idno
+            find ge disburse by index.1
+            [finderr] clear disburse
+        end
+
+    clear disburse
+    move rseqno to restitut.seqno
+    move rseqno to receipt_num
+    saverecord restitut
+      move id to disburse.id_no
+      move receipt_num to disburse.seq_no
+      move id to disburse.idno
+        find ge disburse by index.1
+        indicate found as disburse.seq_no eq receipt_num
+        [found] entdisplay disburse
+        [found] indicate ent$query true
+keyproc on
+
+      gosub record_change
+     indicate in_chng_rcpt false
+return
+
+
+
+
+MAN_CK:
+       KEYPROC OFF
+       INDICATE INMCHK TRUE
+       indicate pros_chk false
+       GOSUB BLANKEM
+       SCREENMODE 112 ON
+        DISPLAY DIS_ID TO MCHKA.1
+        DISPLAY DIS_# TO MCHKA.2
+        DISPLAY (DIS_CKAMT + DIS_MFEE + DIS_PFEE ) TO MCHKA.3
+        DISPLAY DIS_CKAMT TO MCHKA.4
+        DISPLAY DIS_MFEE TO MCHKA.5
+        DISPLAY DIS_PFEE TO MCHKA.6
+        DISPLAY MERCHANT.IDNO TO MCHKA.7
+        DISPLAY MERCHANT.NAME TO MCHKA.8
+        SCREENMODE 1 ON
+
+        REPEAT
+          CLEARFORM MCHKA.9
+          ACCEPT MCHKA.9                  {REQUIRED}
+          UPPERCASE MCHKA.9
+           IF ~ MCHKA.9 IN 'YN' LOOP
+             PAGE REST1
+           IF MCHKA.9 EQ 'N' GOSUB QUIT_MCHK
+
+              REPEAT
+              CLEARFORM MCHKB
+              keyflush
+              ACCEPT MCHKB.1
+              UPPERCASE MCHKB.1
+                IF ~ MCHKB.1 IN 'RNQ' LOOP
+
+                  IF MCHKB.1 EQ 'Q' GOSUB QUIT_MCHK
+
+                  IF MCHKB.1 EQ 'N' GOTO DO_MCHKD
+
+              REPEAT
+              CLEARFORM MCHKC
+              ACCEPT MCHKC.1
+              UPPERCASE MCHKC.1
+                IF ~ MCHKC.1 IN 'YNQ' LOOP
+
+                  IF MCHKC.1 EQ 'Q' GOSUB QUIT_MCHK
+
+                  IF MCHKC.1 EQ 'N' GOTO DO_MCHKD
+
+              REPEAT
+              CLEARFORM MCHKC2
+              ACCEPT MCHKC2.1
+              UPPERCASE MCHKC2.1
+                IF ~ MCHKC2.1 IN 'YNQ' LOOP
+
+                   IF MCHKC2.1 EQ 'Q' GOSUB QUIT_MCHK
+
+                   IF MCHKC2.1 EQ 'Y' GOTO DO_MCHKD
+
+
+           REPEAT
+              CLEARFORM MCHKC3
+
+              ACCEPT MCHKC3.1                     {REQUIRED}
+              ACCEPT MCHKC3.2                     {REQUIRED}
+              ACCEPT MCHKC3.3                     {REQUIRED}
+                 INDICATE PROS_CHK TRUE  //a prosecutor check was issued for
+                                         //this disburse record
+                 // SUBROUTINE TO VALIDATE OLD PROS CHECK DATE,NUMBER & AMT
+                 // FIND A DISBURSEMENT WITH THE ABOVE DATE AND COMPARE DATA
+                 DISPLAY BANK.NEXT_CHECK_NUM TO MCHKC3.4
+            REPEAT
+              ACCEPT MCHKC3.4                     {REQUIRED}
+              IF MCHKC3.4 LT BANK.NEXT_CHECK_NUM BEGIN
+                 SCREENMODE 112 ON
+                 ACCEPT MCHKC3.4 TO MCHKC3.4
+                 SCREENMODE 1 ON
+                 CLEARXY 24 0
+                 GOTOXY 24 0
+                 SHOW "NUMBER MUST BE LARGER THAN LAST CHECK USED !"
+                 INKEY AKEY
+                 CLEARXY 24 0
+                 CLEARFORM MCHKC3.4
+                 DISPLAY BANK.NEXT_CHECK_NUM TO MCHKC3.4
+                 LOOP
+               END
+
+                 CALC ( OFFENSE.CKAMT + OFFENSE.MFEE) TO MCHKC3.5
+                 MOVE TODAY TO MCHKC3.6
+              ACCEPT MCHKC3.6                     {REQUIRED}
+
+                REPEAT
+                CLEARFORM MCHKC3.7
+                ACCEPT MCHKC3.7
+                UPPERCASE MCHKC3.7
+                  IF ~ MCHKC3.7 IN 'AEQ' LOOP
+
+                IF MCHKC3.7 EQ 'Q' GOSUB QUIT_MCHK
+
+                IF MCHKC3.7 EQ 'A' BEGIN
+                    MOVE MCHKC3.1 TO DIS_PCKNO
+                    MOVE MCHKC3.2 TO DIS_PTOT
+                    MOVE MCHKC3.4 TO DIS_CKNO
+                    MOVE MCHKC3.5 TO DIS_MAMT
+                    MOVE MCHKC3.6 TO DIS_DT
+                    GOTO PASSPAMT
+                END
+
+                IF MCHKC3.7 EQ 'E' loop
+
+
+
+DO_MCHKD:
+
+           REPEAT
+           CLEARFORM MCHKD
+               DISPLAY BANK.NEXT_CHECK_NUM TO MCHKD.1
+         REPEAT
+           ACCEPT MCHKD.1                         {REQUIRED}
+             IF MCHKD.1 LT BANK.NEXT_CHECK_NUM BEGIN
+                SCREENMODE 112 ON
+                ACCEPT MCHKD.1 TO MCHKD.1
+                SCREENMODE 1 ON
+                CLEARXY 24 0
+                GOTOXY 24 0
+                SHOW " NUMBER MUST BE LARGER THAN LAST CHECK USED!"
+                INKEY AKEY
+                CLEARXY 24 0
+                DISPLAY BANK.NEXT_CHECK_NUM TO MCHKD.1
+                UNTIL MCHKD.1 GE BANK.NEXT_CHECK_NUM
+              END
+               CALC ( OFFENSE.CKAMT + OFFENSE.MFEE ) TO MCHKD.2
+               CALC ( MCHKD.1 + 1 ) TO MCHKD.3
+           ACCEPT MCHKD.3                         {REQUIRED}
+               DISPLAY OFFENSE.PFEE TO MCHKD.4
+           ACCEPT MCHKD.4                         {REQUIRED}
+               DISPLAY TODAY TO MCHKD.5
+           ACCEPT MCHKD.5                         {REQUIRED}
+
+             REPEAT
+             CLEARFORM MCHKD.6
+             ACCEPT MCHKD.6
+             UPPERCASE MCHKD.6
+               IF ~ MCHKD.6 IN 'AEQ' LOOP
+
+               IF MCHKD.6 EQ 'Q' GOSUB QUIT_MCHK
+
+               IF MCHKD.6 EQ 'A' BEGIN
+                  MOVE MCHKD.1 TO DIS_CKNO
+                  MOVE MCHKD.2 TO DIS_MAMT
+                  MOVE MCHKD.3 TO DIS_PCKNO
+                  MOVE MCHKD.4 TO DIS_PTOT
+                  MOVE MCHKD.5 TO DIS_DT
+               END
+
+               IF MCHKD.6 EQ 'E' LOOP
+
+
+PASSPAMT:
+  KEYPROC ON
+// >>>>>>>>>> SETUP TO VOID ANY SKIPPED CHECK NUMBERS <<<<<<<<<<<<<<<<<
+// ONLY CALCULATED IF CHECK NUMBERS ARE IN WINDOWS
+IF DIS_TYPE EQ 'M' BEGIN
+  INDICATE IND_C AS MCHKC3.4 NE (0)
+  INDICATE IND_D AS MCHKD.1 NE (0)
+
+    [IND_C] MOVE (( MCHKC3.4 - 1) - SETUP.LAST_CHECK) TO MISSING
+    [IND_D] BEGIN
+       IF MCHKD.1 LT MCHKD.3 CALC ((MCHKD.1 - 1) - SETUP.LAST_CHECK) TO MISSING
+       ELSE CALC ((MCHKD.3 -1) - SETUP.LAST_CHECK) TO MISSING
+    END
+    IF MISSING GE (1) GOSUB SHOW_VOID
+END
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+return
+
+
+
+QUIT_MCHK:
+  GOSUB BLANKEM
+  CLEAR DISBURSE OFFENSE
+  INDICATE NEWDIS FALSE
+  indicate pros_chk false
+  CLEARFORM DIS_DT THRU DIS_PTOT
+RETURN return DISBURSEMENT
+
+BLANKEM:
+  CLEARFORM MCHKA
+  CLEARFORM MCHKB
+  CLEARFORM MCHKC
+  CLEARFORM MCHKC2
+  CLEARFORM MCHKC3
+  CLEARFORM MCHKD
+RETURN
+
+
+QS1:
+
+  SCREENMODE 1 ON
+  [NEWJR] DISPLAY LST_RCT TO MULTI.1
+  [~ NEWJR] DISPLAY RSEQNO TO MULTI.1
+  DISPLAY RAMT TO MULTI.2
+  DISPLAY DCREDIT TO MULTI.3
+  [NEWJR] MOVE (MULTI.2 + MULTI.3) TO MULTI.4
+  [~ NEWJR] MOVE MULTI.3 TO MULTI.4
+  PAGE MULTI
+  CLEARFORM MULTI2
+  INDICATE SET_FIRST TRUE
+  INDICATE FIRST_MARK TRUE
+  MOVE 0 TO COUNT
+  MOVE 0 TO OLD_DEX
+  MOVE 1 TO NEW_DEX
+  MOVE 0 TO HIGH_CTRLNO
+  CLEARFORM HELP3
+REPEAT
+  clearform multi2
+  SCRL MULTI2 14 8 OFFENSE INDEX.1 DISPOFF FINDLTOFF FINDGTOFF TESTOFF
+    [KEY.ESCAPE] BEGIN
+       keyproc off
+       indicate redo_off false
+       IF MULTI.4 NE 0 BEGIN
+                     DISPLAY MULTI.4 TO WARN3.1
+                     PAGE WARN3
+                   REPEAT
+                     CLEARFORM WARN3.2
+                     ACCEPT WARN3.2
+                     UPPERCASE WARN3.2
+                      IF ~ WARN3.2 IN 'ARC' LOOP
+                        IF WARN3.2 EQ 'C' BEGIN
+                          page exit
+                          CLEARFORM HELP3
+                          CLEARFORM MULTI
+                          CLEARFORM MULTI2
+                          CLEARFORM REST1
+                          CLEAR OFFENSE DISBURSE DEFENDNT RESTITUT
+                          indicate ent$query false
+                          keyproc on
+                          return entrysec
+                        END
+                        IF WARN3.2 EQ 'R' INDICATE REDO_OFF TRUE
+
+        END
+                 [~ redo_off] BEGIN
+                  INDICATE REDO_OFF FALSE
+                  DISPLAY COUNT TO PAYSCR.1
+                  PAGE PAYSCR
+                   REPEAT
+                   CLEARFORM PAYSCR.2
+                   ACCEPT PAYSCR.2
+                   UPPERCASE PAYSCR.2
+                     IF ~ PAYSCR.2 IN 'AMC' LOOP
+                       IF PAYSCR.2 EQ 'A' INDICATE AUTOPAY TRUE
+                       IF PAYSCR.2 EQ 'M' BEGIN
+                          INDICATE AUTOPAY FALSE
+                          INDICATE MANUAL_PAY TRUE
+                          INDICATE PAY_OFF TRUE
+                          CLEARFORM DIS_ID THRU DIS_PTOT
+                          CLEAR OFFENSE DISBURSE
+                          indicate ent$query false
+                          keyproc on
+                          PAGE REST1
+                          RETURN DISBURSEMENT
+                      END
+                       IF PAYSCR.2 EQ 'C' BEGIN
+                         CLEARFORM HELP3
+                         CLEARFORM MULTI
+                         CLEARFORM MULTI2
+                         CLEARFORM ID THRU DIS_PTOT
+                         CLEARFORM REMAINING
+                         PAGE REST1
+                         INDICATE AUTOPAY FALSE
+                         INDICATE PAY_OFF FALSE
+                         indicate ent$query false
+                         keyproc on
+                           RETURN ENTRYSEC
+                       END
+                  PAGE REST1
+                  INDICATE PAY_OFF TRUE
+                  MOVE 0 TO WINDOWINDEX
+                  keyproc on
+                  RETURN DISBURSEMENT
+           END
+    END
+
+    [REDO_OFF] LOOP
+  keyproc on
+RETURN
+
+QS2:
+  CLEARFORM QSCR
+  INDICATE IN_MULTI FALSE
+  PAGE REST1
+RETURN CONTINUE_PAY
+
+QS3:
+  CLEARFORM QSCR
+  INDICATE IN_MULTI FALSE
+  PAGE REST1
+RETURN CONTINUE_PAY
+
+qs4:
+
+return do_qs
+
+qs5:
+
+return  do_qs
+
+
+QS6:
+  CLEARFORM QSCR
+  INDICATE IN_MULTI FALSE
+    MOVE (0) TO RESTITUT.RECNUM
+    MOVE (0) TO OFFENSE.RECNUM
+    MOVE (0) TO DISBURSE.RECNUM
+   CLEARFORM RSEQNO THRU DIS_PTOT
+  PAGE REST1
+
+RETURN RESTITUTION
+
+
+qs7:
+
+return do_qs
+
+
+qs8:
+
+return do_qs
+
+DISPOFF:
+   [~ REDO_OFF] IF OFFENSE.CTRLNO GT HIGH_CTRLNO  IF OFFENSE.MARK NE '' BEGIN
+     REREAD OFFENSE
+     MOVE '' TO OFFENSE.MARK
+     SAVERECORD OFFENSE
+     UNLOCK
+   END
+   MOVENUM OFFENSE.IDNO TO MULTI2.1&
+   MOVENUM OFFENSE.CTRLNO TO MULTI2.2&
+
+   IF OFFENSE.CTRLNO GT HIGH_CTRLNO MOVE OFFENSE.CTRLNO TO HIGH_CTRLNO
+                                         // TRACKS HIGHEST OFFENSE # FOR 
+                                         // CLEARING ANY MARKED OFFENSE THAT
+                                         // MAY BE LOADED FOR THE FIRST TIME
+   MOVENUM OFFENSE.MFEE TO MULTI2.3&
+   MOVENUM OFFENSE.PFEE TO MULTI2.4&
+   MOVENUM OFFENSE.CKAMT TO MULTI2.5&
+   MOVENUM OFFENSE.TOTAL TO MULTI2.6&
+   MOVESTR OFFENSE.NAME TO MULTI2.7&
+   MOVESTR OFFENSE.MARK TO MULTI2.8&
+RETURN
+
+
+FINDLTOFF:
+   MOVE DEFENDNT.IDNO TO OFFENSE.IDNO
+   MOVE MULTI2.2 TO OFFENSE.CTRLNO
+RETURN
+
+
+FINDGTOFF:
+   [SET_FIRST] BEGIN
+   CLEAR OFFENSE
+   MOVE DEFENDNT.IDNO TO OFFENSE.IDNO
+   MOVE (1) TO OFFENSE.CTRLNO
+   END
+   [~ SET_FIRST] BEGIN
+    MOVE DEFENDNT.IDNO TO OFFENSE.IDNO
+    MOVE MULTI2.106 TO OFFENSE.CTRLNO
+   END
+RETURN
+
+
+
+TESTOFF:
+   INDICATE SET_FIRST FALSE 
+   INDICATE SCRL_INDICATOR AS OFFENSE.IDNO EQ ID
+   [SCRL_INDICATOR] INDICATE SCRL_INDICATOR AS OFFENSE.ACTIVE NE "I"
+   [SCRL_INDICATOR] INDICATE SCRL_INDICATOR AS OFFENSE.ACTIVE NE "N"
+RETURN
+
+testdef:
+
+return
+
+
+
+MARK_OFF:
+   IF MULTI2.8& EQ '' BEGIN
+   IF MULTI.4 NE (0.00) IF MULTI.4 GE MULTI2.6& BEGIN
+     MOVE '*' TO MULTI2.8&
+     SETPAGE MULTI
+     CALC ( MULTI.4 - MULTI2.6& ) TO MULTI.4
+     SETPAGE MULTI2
+     CLEAR OFFENSE
+     MOVE MULTI2.1& TO OFFENSE.IDNO
+     MOVE MULTI2.2& TO OFFENSE.CTRLNO
+       
+       FIND EQ OFFENSE BY INDEX.1
+         reread offense
+         MOVE MULTI2.8& TO OFFENSE.MARK
+         SAVERECORD OFFENSE
+         unlock
+            MOVE WINDOWINDEX TO OLD_DEX
+            MOVE  ( NEW_DEX - 1 ) TO WINDOWINDEX
+              MOVE OFFENSE.CTRLNO TO HELP3.1&
+              INCREMENT NEW_DEX
+            MOVE OLD_DEX TO WINDOWINDEX
+         CLEAR OFFENSE
+     INCREMENT COUNT
+     GOTO PASS_MARK_OFF
+    END
+    IF MULTI.4 NE (0.00) IF MULTI.4 LT MULTI2.6& BEGIN
+      clearform warn2
+      DISPLAY MULTI.4 TO WARN2.1
+      screenmode 1 on
+      display 'G' to warn2.2
+      display 'R' to warn2.3
+      repeat
+       clearform warn2.4
+       accept warn2.4
+       uppercase warn2.4
+       if ~ warn2.4 in 'GR' loop
+      CLEARFORM WARN2
+      PAGE MULTI2
+    END
+   END
+
+   IF MULTI2.8& EQ '*' BEGIN
+     MOVE '' TO MULTI2.8&
+     SETPAGE MULTI
+     CALC ( MULTI.4 + MULTI2.6& ) TO MULTI.4
+     SETPAGE MULTI2
+     CLEAR OFFENSE
+     MOVE MULTI2.1& TO OFFENSE.IDNO
+     MOVE MULTI2.2& TO OFFENSE.CTRLNO
+       FIND EQ OFFENSE BY INDEX.1
+         reread offense
+         MOVE MULTI2.8& TO OFFENSE.MARK
+         SAVERECORD OFFENSE
+         unlock
+         INDICATE CTRL_MATCH FALSE
+         MOVE 0 TO WINDOWINDEX
+         WHILE [~ CTRL_MATCH]
+           IF HELP3.1& EQ OFFENSE.CTRLNO BEGIN
+             CLEARFORM HELP3.1&
+             INDICATE CTRL_MATCH TRUE
+           END
+         INCREMENT WINDOWINDEX
+         UNTIL WINDOWINDEX EQ 100
+         CLEAR OFFENSE
+         IF COUNT GT 0 MOVE (COUNT - 1 ) TO COUNT
+   END
+PASS_MARK_OFF:
+RETURN
+
+EDIT_OFF:
+   MOVE MULTI2.3& TO ORIG_MFEE
+   MOVE MULTI2.4& TO ORIG_PFEE
+   MOVE MULTI2.5& TO ORIG_CKAMT
+   MOVE MULTI2.6& TO ORIG_TOT
+stop_keyfield:
+   screenmode 112 on
+   ACCEPT MULTI2.3&
+    IF MULTI2.3& NE ORIG_MFEE INDICATE CHANGEMADE TRUE
+   ACCEPT MULTI2.4&
+    IF MULTI2.4& NE ORIG_PFEE INDICATE CHANGEMADE TRUE
+  accept multi2.5&
+    if multi2.5& ne orig_ckamt indicate changemade true
+    screenmode 112 on
+   CALC (MULTI2.3& + MULTI2.4& + MULTI2.5& ) TO MULTI2.6&
+    screenmode 1 on
+[CHANGEMADE] BEGIN
+   page warn5
+   repeat
+     clearform warn5
+     accept warn5.1
+       uppercase warn5.1
+       if ~ warn5.1 in "YN" loop
+       if warn5.1 eq "N" begin
+          page multi2
+          goto bypass_multi
+       end
+    page multi2
+   screenmode 1 on
+   IF MULTI2.8& EQ '*' BEGIN
+    SETPAGE MULTI
+    IF ORIG_TOT GT MULTI2.6& MOVE (MULTI.4 + (ORIG_TOT - MULTI2.6&)) TO MULTI.4
+    IF ORIG_TOT LT MULTI2.6& MOVE (MULTI.4 - (MULTI2.6& - ORIG_TOT)) TO MULTI.4
+    SETPAGE MULTI2
+  END
+    
+    CLEAR OFFENSE
+    MOVE MULTI2.1& TO OFFENSE.IDNO
+    MOVE MULTI2.2& TO OFFENSE.CTRLNO
+      
+      FIND EQ OFFENSE BY INDEX.1
+      reread offense
+      MOVE MULTI2.3& TO OFFENSE.MFEE
+      MOVE MULTI2.4& TO OFFENSE.PFEE
+      MOVE MULTI2.5& TO OFFENSE.CKAMT
+      MOVE MULTI2.6& TO OFFENSE.TOTAL
+      MOVE MULTI2.6& TO OFF_TOT
+        SAVERECORD OFFENSE
+        UNLOCK
+ //       clear offense
+    INDICATE NEWDIS TRUE
+    INDICATE DELETER FALSE
+    INDICATE TRANSFER FALSE
+    INDICATE INREST FALSE
+    SCREENMODE 1 ON
+    [changemade] begin
+      PAGE NOTICE
+      GOSUB EDIT_JR_OFF
+
+      GOSUB RECORD_CHANGE
+      PAGE MULTI2
+    end
+END
+bypass_multi:
+    SCREENMODE 1 ON
+    INDICATE NEWDIS FALSE
+    PAGE MULTI
+    PAGE MULTI2
+    keyproc off // turn keyproc off again because it was turned on at the
+                // end of the "gosub record_change" above
+RETURN
+
+// อออออออออออออออออออออออออออออออออออ Scroll Routine
+
+
+SCROLL_ROUTINE:
+        INDICATE START$B FALSE
+        [INDEF] BEGIN
+            BLANKFORM DEF
+            MOVE (8) TO MAX_ROWS
+            MOVE (5) TO NUM_FLDS
+        END
+        [INOFF] BEGIN
+            BLANKFORM OFF
+            BLANKFORM RECS
+            MOVE (7) TO NUM_FLDS
+            MOVE (6) TO MAX_ROWS
+        END
+        INDICATE SET_FIRST TRUE
+        GOSUB SCAN$FORWARD$ROUTINE
+        INDICATE SET_FIRST FALSE
+        [INDEF] BLANKFORM STAR
+        INDICATE START$_NAME FALSE
+        MOVE 0 TO WINDOWINDEX
+
+        REPEAT   
+                [INDEF] BEGIN
+                    MOVE (8) TO MAX_ROWS
+                    MOVE (5) TO NUM_FLDS
+                    MOVE ((ROW_NUM - 1 ) * 5 ) TO WINDOWINDEX
+                END
+                [INOFF] BEGIN
+                    MOVE (7) TO NUM_FLDS
+                    MOVE (6) TO MAX_ROWS
+                    MOVE ((ROW_NUM - 1 ) * 7 ) TO WINDOWINDEX
+                END
+            DO_ANS:
+                INKEY SCAN$ANS    
+                [KEY.UP TOPP][~ INOFF] GOSUB SCAN$BACKWARD$ROUTINE
+
+                [KEY.UP TOPP][INOFF] BEGIN
+                         IF RECS.1& EQ FIRST_REC GOTO DO_ANS
+                         INDICATE START$B TRUE
+                         GOSUB SCAN$FORWARD$ROUTINE
+                END
+
+                [KEY.UP][NOT TOPP] GOSUB REDRAW_UP
+                [key.down bot] gosub scan$forward$routine
+                [KEY.DOWN][NOT BOT] GOSUB REDRAW_DOWN
+                [KEY.NEXT] GOSUB SCAN$FORWARD$ROUTINE
+                [KEY.NEXT][~ INOFF] GOTO DO_ANS
+                [KEY.PREVIOUS] GOSUB SCAN$BACKWARD$ROUTINE
+                [KEY.PREVIOUS][~INOFF] GOTO DO_ANS
+                MOVE '' TO SCAN$ANS
+                INDICATE SCAN$VALID GROUP ANY [KEY.ESCAPE KEY.RETURN] 
+                [NOT SCAN$VALID] LOOP
+
+                [KEY.ESCAPE][SCAN$VALID] RETURN                 
+                [KEY.RETURN][SCAN$VALID] RETURN          
+
+        KEYPROC ON    
+
+//=====> Scroll Forward Routine <==============================================
+
+SCAN$FORWARD$ROUTINE:
+        INDICATE INFWD TRUE
+        CLEARWARNING
+               [INDEF] IF DEF.1& EQ LAST_REC  GOSUB ERR_MSG_42
+               [INOFF] IF RECS.1& EQ LAST_REC GOSUB ERR_MSG_42
+        INDICATE SCAN.FOUND.STATUS AS [FOUND]
+        [INDEF] CLEAR DEFENDNT
+        [INOFF][~ START$B] CLEAR OFFENSE
+        [KEY.NEXT] GOSUB LOAD_POINTS_GT
+        [KEY.DOWN] GOSUB LOAD_POINTS_LT
+
+        MOVE 1 TO SCAN$ROW$NUM
+        
+        [INDEF]  BEGIN 
+                 REPEAT
+           [START$_NAME] MOVE STAR.1 TO DEFENDNT.NAME
+                       FIND GT DEFENDNT BY INDEX.2
+                          [FOUND] INDICATE START$_NAME FALSE
+                          [FOUND] GOSUB TEST_RECORD
+                          [FOUND] MOVE ((SCAN$ROW$NUM - 1) * 5) TO WINDOWINDEX
+                          [FOUND] GOSUB DISPLAY_RECORD
+                          [FOUND] INCREMENT SCAN$ROW$NUM
+                          [FOUND] IF SCAN$ROW$NUM LE 8 LOOP
+                 END 
+
+         [INOFF]  BEGIN
+                  REPEAT
+                     [START$] BEGIN
+                              CLEAR OFFENSE
+                              MOVE DEFENDNT.IDNO TO OFFENSE.IDNO
+                              MOVE 1 TO OFFENSE.CTRLNO
+                              FIND GE OFFENSE BY INDEX.1
+                            END
+                     [START$B] BEGIN
+                              CLEAR OFFENSE
+                              MOVE OFF.1& TO OFFENSE.IDNO
+                              MOVE OFF.2& TO OFFENSE.CTRLNO
+                              FIND LT OFFENSE BY INDEX.1
+                            END
+                        [~ START$][~ START$B] FIND GT OFFENSE BY INDEX.1
+                        INDICATE KEY.PREVIOUS FALSE 
+                        IF OFFENSE.IDNO NE DEFENDNT.IDNO INDICATE FOUND FALSE
+                        [FOUND] INDICATE START$ FALSE
+                        [FOUND] INDICATE START$B FALSE
+                        [FOUND] GOSUB TEST_RECORD
+                        [FOUND] MOVE ((SCAN$ROW$NUM - 1) * 7) TO WINDOWINDEX
+                        [FOUND] GOSUB DISPLAY_RECORD
+                        [FOUND] INCREMENT SCAN$ROW$NUM
+              PASS_FWD:
+                        [FOUND] IF SCAN$ROW$NUM LE 6 LOOP
+                    END
+                  GOSUB SCAN$CLEAR$ROW
+                  INDICATE FOUND AS [SCAN.FOUND.STATUS]
+                  INDICATE INFWD FALSE
+RETURN
+
+//=====> SCAN Backward Routine <=============================================
+
+SCAN$BACKWARD$ROUTINE:
+            INDICATE INBACK TRUE
+            [INDEF] IF DEF.1 EQ FIRST_REC GOSUB ERR_MSG_41
+            [INOFF] IF RECS.1 EQ FIRST_REC GOSUB ERR_MSG_41
+        INDICATE SCAN.FOUND.STATUS AS [FOUND]
+        [INDEF] CLEAR DEFENDNT
+        [INOFF] CLEAR OFFENSE
+        [KEY.PREVIOUS][~ INOFF] GOSUB LOAD_POINTS_LT
+              [KEY.UP] GOSUB LOAD_POINTS_GT
+
+        [INDEF] MOVE 8 TO SCAN$ROW$NUM
+        [INOFF] MOVE 6 TO SCAN$ROW$NUM
+
+        REPEAT
+                [INDEF] FIND LT DEFENDNT BY INDEX.2
+                [INOFF] FIND LT OFFENSE  BY INDEX.1
+                [INOFF] IF OFFENSE.IDNO NE DEFENDNT.IDNO INDICATE FOUND FALSE
+                        [FOUND] GOSUB TEST_RECORD
+                        [FOUND] MOVE ((SCAN$ROW$NUM - 1) * 5) TO WINDOWINDEX
+                        [FOUND] GOSUB DISPLAY_RECORD
+                        [FOUND] MOVE (SCAN$ROW$NUM - 1) TO SCAN$ROW$NUM
+                PASS_BACK:
+                        [FOUND] IF SCAN$ROW$NUM GE 1 LOOP
+                      [FINDERR] GOSUB SCAN$CLEAR$BOTTOM
+                      [FINDERR] GOSUB SCAN$FORWARD$ROUTINE
+
+        INDICATE FOUND AS [SCAN.FOUND.STATUS]
+        INDICATE INBACK FALSE
+RETURN
+
+//=====> Scroll Clear Row <====================================================
+
+SCAN$CLEAR$ROW:
+                FOR SCAN$ROW$NUM FROM SCAN$ROW$NUM TO MAX_ROWS
+                MOVE ((SCAN$ROW$NUM - 1) * NUM_FLDS ) TO WINDOWINDEX
+                MOVE 0 TO SCAN$EXTRA
+                   WHILE SCAN$EXTRA LT NUM_FLDS
+                   [INDEF] BLANKFORM DEF.1&
+                   [INOFF] BLANKFORM OFF.1&
+                   INCREMENT SCAN$EXTRA
+                   INCREMENT WINDOWINDEX
+                 END     
+         LOOP
+
+
+[SET_FIRST]  GOSUB SET_HIGHLIGHT
+RETURN
+
+//=====> Scroll Clear Bottom <=================================================
+
+SCAN$CLEAR$BOTTOM:
+              MOVE ((NUM_FLDS  * MAX_ROWS ) - NUM_FLDS ) TO WINDOWINDEX
+              WHILE WINDOWINDEX LT (MAX_ROWS  * NUM_FLDS )
+                 [INDEF] BLANKFORM DEF.1&
+                 [INOFF] BLANKFORM OFF.1&
+                 [INOFF] BLANKFORM RECS.1&
+                 INCREMENT WINDOWINDEX
+               END //LOOP
+
+   GOSUB SET_HIGHLIGHT
+RETURN
+
+REDRAW_DOWN:
+     CLEARWARNING
+      [INDEF] IF DEF.1& EQ LAST_REC GOSUB ERR_MSG_41
+      [INOFF] IF RECS.1& EQ LAST_REC GOSUB ERR_MSG_41
+     IF ROW_NUM LT MAX_ROWS BEGIN
+       MOVE ROW_NUM TO STOP_NUM
+       FOR ROW_NUM FROM ROW_NUM TO STOP_NUM
+         MOVE ((ROW_NUM - 1 ) * NUM_FLDS ) TO WINDOWINDEX
+         SCREENMODE 79 ON
+         GOSUB DISPLAY_HIGHLIGHT
+         SCREENMODE 112 ON
+         MOVE (WINDOWINDEX + NUM_FLDS ) TO WINDOWINDEX
+         GOSUB DISPLAY_HIGHLIGHT
+         SCREENMODE 112 OFF
+    LOOP
+  END
+    GOSUB TOPP_BOT
+
+
+
+RETURN
+
+
+
+REDRAW_UP:
+     CLEARWARNING
+     IF ROW_NUM LE MAX_ROWS BEGIN
+       MOVE ROW_NUM TO STOP_NUM
+       FOR ROW_NUM FROM ROW_NUM TO STOP_NUM
+         MOVE ((ROW_NUM - 1 ) * NUM_FLDS ) TO WINDOWINDEX
+         SCREENMODE 79 ON
+         GOSUB DISPLAY_HIGHLIGHT
+         SCREENMODE 112 ON
+         MOVE (WINDOWINDEX - NUM_FLDS ) TO WINDOWINDEX
+         GOSUB DISPLAY_HIGHLIGHT
+         SCREENMODE 112 OFF
+         MOVE (ROW_NUM - 2 ) TO ROW_NUM
+         MOVE 0 TO STOP_NUM
+    LOOP
+  END
+    GOSUB TOPP_BOT
+return
+
+
+TOPP_BOT:
+    IF ROW_NUM EQ MAX_ROWS INDICATE BOT TRUE
+    IF ROW_NUM LT MAX_ROWS INDICATE BOT FALSE
+    IF ROW_NUM GT 1 INDICATE TOPP FALSE
+    IF ROW_NUM EQ 1 INDICATE TOPP TRUE
+
+RETURN
+
+ERR_MSG_42:
+    SCREENMODE 79 ON
+    ERROR 42
+    SCREENMODE 79 OFF
+    [ERR] RETURN RETURN
+RETURN
+
+ERR_MSG_41:
+    SCREENMODE 79 ON
+    ERROR 41
+    SCREENMODE 79 OFF
+    [ERR] RETURN RETURN
+RETURN
+
+
+
+
+
+RETURN
+// =< END OF SCROLL ROUTINE >============================================
+
+
+
+
+DISPLAY_RECORD:
+        [INDEF] BEGIN
+          DISPLAY DEFENDNT.IDNO TO DEF.1&
+          DISPLAY DEFENDNT.NAME TO DEF.2&
+          DISPLAY DEFENDNT.LIC TO DEF.3&
+          DISPLAY DEFENDNT.SEX TO DEF.4&
+          DISPLAY DEFENDNT.SOCSEC TO DEF.5&
+        END 
+        [INOFF] BEGIN
+          DISPLAY OFFENSE.IDNO TO OFF.1&
+          DISPLAY OFFENSE.CTRLNO TO OFF.2&
+          DISPLAY OFFENSE.ACTIVE TO OFF.3&
+          DISPLAY OFFENSE.MFEE TO OFF.4&
+          DISPLAY OFFENSE.PFEE TO OFF.5&
+          DISPLAY OFFENSE.CKAMT TO OFF.6&
+          DISPLAY OFFENSE.TOTAL TO OFF.7&
+          MOVE OFFENSE.RECNUM TO RECS.1&
+        END
+
+  RETURN
+
+
+LOAD_POINTS_LT:
+
+       [INDEF] BEGIN
+          MOVE DEF.7 TO DEFENDNT.NAME
+        END
+       [INOFF] BEGIN
+          MOVE OFF.1& TO OFFENSE.IDNO
+          MOVE OFF.2& TO OFFENSE.CTRLNO
+        END
+
+  RETURN
+
+
+LOAD_POINTS_GT:
+        [INDEF] BEGIN
+          MOVE DEF.37 TO DEFENDNT.NAME
+        END
+
+        [INOFF] BEGIN
+         //INDICATE START$B TRUE
+
+         IF OFF.36 EQ 0 begin
+            move defendnt.idno to offense.idno
+            move (1) to offense.ctrlno
+         end
+         IF OFF.36 NE 0 BEGIN
+            MOVE OFF.36& TO OFFENSE.IDNO
+            MOVE OFF.37& TO OFFENSE.CTRLNO
+           END
+        END
+
+  RETURN
+
+
+
+TEST_RECORD: 
+     INDICATE SCROLL_VALID TRUE
+     [INOFF] IF OFFENSE.ACTIVE IN 'IN' INDICATE SCROLL_VALID FALSE
+     [INFWD][INOFF][~ SCROLL_VALID] RETURN PASS_FWD
+     [INBACK][INOFF][~ SCROLL_VALID] RETURN PASS_BACK
+  RETURN
+
+
+
+SET_HIGHLIGHT:
+[INDEF] PAGE DEF
+[INOFF] PAGE OFF
+       MOVE MAX_ROWS  TO STOP_NUM
+       MOVE MAX_ROWS  TO ROW_NUM
+         FOR ROW_NUM FROM ROW_NUM TO STOP_NUM
+             MOVE ((ROW_NUM - 1) * NUM_FLDS ) TO WINDOWINDEX
+             SCREENMODE 79 ON
+             GOSUB DISPLAY_HIGHLIGHT
+             SCREENMODE 79 OFF
+             MOVE (ROW_NUM - 2) TO ROW_NUM
+              IF ROW_NUM  LE 0 MOVE 0 TO STOP_NUM
+         LOOP
+            SCREENMODE 112 ON
+             MOVE 0 TO WINDOWINDEX
+             GOSUB DISPLAY_HIGHLIGHT
+             SCREENMODE 112 OFF
+             INDICATE TOPP TRUE
+             INDICATE BOT FALSE
+             MOVE 1 TO ROW_NUM
+
+  RETURN
+
+DISPLAY_HIGHLIGHT:
+    [INDEF] BEGIN
+     DISPLAY DEF.1& TO DEF.1&
+     DISPLAY DEF.2& TO DEF.2&
+     DISPLAY DEF.3& TO DEF.3&
+     DISPLAY DEF.4& TO DEF.4&
+     DISPLAY DEF.5& TO DEF.5&
+    END
+    [INOFF] BEGIN
+     DISPLAY OFF.1& TO OFF.1&
+     DISPLAY OFF.2& TO OFF.2&
+     DISPLAY OFF.3& TO OFF.3&
+     DISPLAY OFF.4& TO OFF.4&
+     DISPLAY OFF.5& TO OFF.5&
+     DISPLAY OFF.6& TO OFF.6&
+     DISPLAY OFF.7& TO OFF.7&
+    END 
+ RETURN
+
+
+CLR_INDS:
+  INDICATE PAY_OFF FALSE
+  INDICATE AUTOPAY FALSE
+  INDICATE MANUAL_PAY FALSE
+  INDICATE PAYALL FALSE
+RETURN
+
+
+
+ERRMESG:
+  CLEARXY 24 1
+  GOTOXY 24 1
+  SHOW "Defendant record not found - Try again (Y/N)? " 
+  INKEY ANSW
+  CLEARXY 24 1
+  IF ANSW IN "Yy" RETURN DEFENDANT
+  page exit
+  ELSE ABORT
+
+ERRMSG2:
+  GOTOXY 24 1
+  SHOW "Offense record not found - Try again (Y/N)? " 
+  INKEY ANSW
+  CLEARXY 24 0
+  SCREENMODE 1
+  if answ in "Yy" indicate ent$query false
+  if answ in "Yy" blankform dis_#
+  IF ANSW IN "Yy" RETURN DISBURSEMENT
+  ELSE BEGIN
+         CLEARFORM REST1
+         RETURN ENTRYSEC
+        END
+
+ERRMSG3:
+  GOTOXY 24 0
+  screenmode 112 on
+  SHOW ;
+"     There is not enough money for this disbursement.  Try again (Y/N)?      "
+  screenmode 1 on
+  INKEY ANSW
+  CLEARXY 24 0
+  SCREENMODE 1
+  IF ANSW IN "Yy" BEGIN
+       CLEAR OFFENSE DISBURSE RESTITUT
+       CLEARFORM RID THRU REMAINING
+       RETURN RESTITUTION
+  END
+  ELSE BEGIN
+         CLEARFORM REST1
+         CLEAR DISBURSE OFFENSE RESTITUT DEFENDNT
+         RETURN entrysec
+       END
+
+
+errmsg4:
+   clearform warn6
+   keyproc off
+   move remaining to warn6.1
+   move (dis_pfee + dis_mamt) to warn6.2
+   Move "C" to warn6.3
+   Move "R" to warn6.4
+    repeat
+      clearform warn6.5
+      accept warn6.5
+      uppercase warn6.5
+        if ~ warn6.5 in "BR" loop
+        if warn6.5 eq "R" begin
+           page rest1
+           keyproc on
+           return disbursement
+        end
+  keyproc on
+  page rest1
+return
+//ออออออออออ> F I N D ___ D I S B : <ออออออออออออออออออออออออออออออออออออออออ
+
+FIND_DISB:
+  indicate in_find_disb true
+  CLEAR DISBURSE
+  MOVE DIS_ID TO DISBURSE.IDNO
+  MOVE DIS_# TO DISBURSE.SEQNO
+  FIND EQ DISBURSE BY INDEX.5
+  [FOUND] BEGIN
+
+        MOVE OFFENSE.PFEE TO DIS_PFEE
+        MOVE offense.ckamt TO ORIG_CKAMT
+        MOVE offense.mfee TO ORIG_MFEE
+        MOVE DIS_PFEE     TO ORIG_PFEE
+      if disburse.chkno eq (0) if defendnt.credit gt (0) begin
+          keyproc off
+          display remaining to warn8.1
+          page warn8
+           repeat
+             clearform warn8.2
+             [~ key.field][~ key.up] accept warn8.2
+             if ~ warn8.2 in "CcRr" loop
+             if warn8.2 in "Cc" gosub change_disburse_record
+             keyproc on
+             if warn8.2 in "Qq" begin
+               page exit
+               abort
+             end
+             goto bypass_find_disb
+       end
+
+          ENTDISPLAY DISBURSE
+          INDICATE NEWDIS FALSE
+          GOTOXY 24 1
+          SHOW "This OFFENSE has already been paid ' off "
+          INKEY ANSW
+bypass_find_disb:
+
+            MOVE 0 TO DISBURSE.RECNUM
+            MOVE 0 TO RESTITUT.RECNUM
+            CLEAR DISBURSE RESTITUT
+          CLEARFORM RID THRU REMAINING
+          CLEARXY 24 0
+          indicate in_find_disb false
+          keyproc on
+          RETURN RESTITUTION
+        END
+[finderr] keyproc on
+[FINDERR] RETURN
+
+
+//อออออออออออออออออ< R E C O R D  ___ C H A N G E : >อออออออออออออออออออออออออ
+
+RECORD_CHANGE:
+
+
+       indicate inchange true
+       keyproc off
+       CLEARFORM CHANGES
+       PAGE CHANGES
+       [~NEWDIS] MOVE 'DISBURSE' TO RECHANGE.FILE
+       [NEWDIS] BEGIN
+            MOVE 'OFFENSE' TO RECHANGE.FILE       
+            GOTOXY 24 10
+            SHOW 'CHANGES HAVE BEEN MADE THAT AFFECT THE OFFENSE FILE'
+        END
+      [~ in_chng_rcpt] begin
+
+         MOVE ORIG_CKAMT     TO RECHANGE.OLD_CKAMT
+         MOVE OFFENSE.CKAMT  TO RECHANGE.NEW_CKAMT
+         MOVE ORIG_MFEE      TO RECHANGE.OLD_MFEE
+         MOVE OFFENSE.MFEE   TO RECHANGE.NEW_MFEE
+         MOVE ORIG_PFEE      TO RECHANGE.OLD_PFEE
+         MOVE OFFENSE.PFEE   TO RECHANGE.NEW_PFEE
+         MOVE 0              TO RECHANGE.OLD_CREDIT
+       end
+
+
+       MOVE USER_NUMB TO CHANGES.1
+       MOVE CHANGES.1 TO RECHANGE.OPERATOR
+       MOVE TODAY       TO CHANGES.2
+       MOVE CHANGES.2 TO RECHANGE.DATE
+       [DELETER] DISPLAY 'RECORD DELETED' TO CHANGES.3
+       [TRANSFER] DISPLAY 'MERCHANT TRANSFER' TO CHANGES.3
+       [DELETER] MOVE 'RECORD DELETED' TO RECHANGE.DESC1
+       [TRANSFER] MOVE 'MERCHANT TRANSFER' TO RECHANGE.DESC1
+     do_desc1_:
+         clearxy 24 0
+         [~ deleter] clearform changes.3
+         clearform changes.4 thru changes.5
+         repeat
+            [~ DELETER] ACCEPT CHANGES.3 to rechange.desc1
+            if changes.3 eq '' begin
+              clearxy 24 0
+              gotoxy 24 0
+              screenmode 112 on
+              show ;
+" An entry is required to explain the changes made.- Press Space to continue   "
+             screenmode 1 on
+             gotoxy 24 78
+                inkey answ
+                goto do_desc1_
+            end
+          clearxy 24 0
+        ACCEPT CHANGES.4 TO RECHANGE.DESC2
+        ACCEPT CHANGES.5 TO RECHANGE.DESC3
+         gotoxy 24 0
+         screenmode 112 on
+ show ;
+"              Are your comments the way you want them ? (Y/N)                 "
+         screenmode 1 on
+         repeat
+           inkey answ
+             if ~ answ in "YyNn" loop
+             clearxy 24 0
+         if answ in "Nn" loop
+
+       MOVE DIS_ID      TO RECHANGE.ID_NUMBER
+       move offense.ctrlno to rechange.control_number
+//       MOVE DIS_#       TO RECHANGE.CONTROL_NUMBER
+       
+       
+       GOSUB RECORD_TRANSACT
+   
+       
+       SAVERECORD RECHANGE
+       clear rechange
+       CLEARXY 24 0
+       indicate inchange false
+       keyproc on
+  
+RETURN
+
+
+//อออออออออออออออออ< R E C O R D ___ T R A N S A C T : >อออออออออออออออออออออ
+
+RECORD_TRANSACT:
+       CLEAR TRANSACT
+       MOVE TODAY TO TRANSACT.DATE
+       MOVE DEFENDNT.NAME TO TRANSACT.DEF_NAME
+       MOVE DIS_ID TO TRANSACT.IDNO
+       MOVE DIS_#  TO TRANSACT.CTRL_SEQ_NO
+       MOVE RECHANGE.FILE TO TRANSACT.FILE
+       [DELETER] BEGIN
+           MOVE (OFFENSE.MFEE *(-1)) TO TRANSACT.MFEE
+           MOVE (OFFENSE.CKAMT * (-1)) TO TRANSACT.CKAMT
+           MOVE (OFFENSE.PFEE * (-1)) TO TRANSACT.PFEE
+         END
+       [~ DELETER] BEGIN
+         IF RECHANGE.OLD_CKAMT LT RECHANGE.NEW_CKAMT ;
+           MOVE (RECHANGE.NEW_CKAMT - RECHANGE.OLD_CKAMT) TO TRANSACT.CKAMT
+         IF RECHANGE.OLD_CKAMT GT RECHANGE.NEW_CKAMT ;
+           MOVE (RECHANGE.OLD_CKAMT - RECHANGE.NEW_CKAMT) TO TRANSACT.CKAMT
+     
+         IF RECHANGE.OLD_MFEE LT RECHANGE.NEW_MFEE ;
+           MOVE (RECHANGE.NEW_MFEE - RECHANGE.OLD_MFEE) TO TRANSACT.MFEE
+         IF RECHANGE.OLD_MFEE GT RECHANGE.NEW_MFEE ;
+           MOVE (RECHANGE.OLD_MFEE - RECHANGE.NEW_MFEE) TO TRANSACT.MFEE
+
+         IF RECHANGE.OLD_PFEE LT RECHANGE.NEW_PFEE ;
+           MOVE (RECHANGE.NEW_PFEE - RECHANGE.OLD_PFEE) TO TRANSACT.PFEE
+         IF RECHANGE.OLD_PFEE GT RECHANGE.NEW_PFEE ;
+           MOVE (RECHANGE.OLD_PFEE - RECHANGE.NEW_PFEE) TO TRANSACT.PFEE
+        END
+       [~ DELETER][INREST] BEGIN
+           MOVE ( RAMT - RESTITUT.RESAMT) TO TRANSACT.RESAMT
+        END
+       [DELETER][INREST] MOVE (RESTITUT.RESAMT * (-1)) TO TRANSACT.RESAMT
+       MOVE USER_NUMB TO TRANSACT.OPERATOR
+       MOVE RECHANGE.DESC1 TO TRANSACT.DESC1
+       MOVE RECHANGE.DESC2 TO TRANSACT.DESC2
+       MOVE RECHANGE.DESC3 TO TRANSACT.DESC3
+       SAVERECORD TRANSACT
+       
+
+RETURN
+
+
+
+NEW_RECEIPT:
+          CLEAR SETUP
+          MOVE AYEAR TO SETUP.YEAR
+          FIND EQ SETUP BY INDEX.1
+          reread setup
+          MOVE (SETUP.LSTREC + 1) TO RSEQNO
+          MOVE RSEQNO TO SETUP.LSTREC
+          MOVE RSEQNO TO RECEIPT_NUM
+          SAVERECORD SETUP
+          unlock
+       RETURN
+
+WRONG_IDNO:
+   GOTOXY 24 9
+   SHOW "Disbursement and Restitution ID No's don't match.  Try again."
+   INKEY ANSW
+   CLEARXY 24 0
+   SCREENMODE 1
+ RETURN DISBURSEMENT
+
+NOSETUP:
+      MOVE YEAR TO NOSETUP.1
+      ACCEPT NOSETUP.2
+      ABORT
+RETURN
+
+//อออออออออ< SUBROUTINES >ออออออออออออออออออออออออออออออออออออออออออออออออออออ
+
+change_disburse_record:
+   indicate disb_edit true
+   display defendnt.credit to adjust.1
+   display restitut.seqno to adjust.2
+   display restitut.resamt to adjust.3
+   display offense.ckamt to adjust.4
+   display offense.mfee to adjust.5
+   display offense.pfee to adjust.6
+   display offense.total to adjust.7
+
+    [~ key.field][~ key.up] begin
+
+
+   MOVE OFFENSE.PFEE  TO PFEE_ORIG_TOT
+   MOVE OFFENSE.MFEE  TO MFEE_ORIG_TOT
+   MOVE OFFENSE.CKAMT TO CKAMT_ORIG_TOT
+
+
+repeat
+   clearform adjust.11 thru adjust.12
+      accept adjust.4
+        gosub update_total_offense
+      accept adjust.5
+        gosub update_total_offense
+      accept adjust.6
+        gosub update_total_offense
+    display "Is this Correct" to adjust.11
+     repeat
+       clearform adjust.12
+       accept adjust.12
+         if ~ adjust.12 in "YyNn" loop
+
+       if adjust.12 in "Nn" loop
+
+   end
+    
+  INDICATE ADJUSTMENT TRUE
+  MOVE ADJUST.6 TO PFEE_OFF_TOT
+  MOVE ADJUST.5 TO MFEE_OFF_TOT
+  MOVE ADJUST.4 TO CKAMT_OFF_TOT
+
+ page notice
+   
+//   gosub record_change
+
+
+
+
+
+   
+   reread
+   
+   move adjust.4 to offense.ckamt
+   move adjust.5 to offense.mfee
+   move adjust.6 to offense.pfee
+   move off_tot to offense.total
+    move (adjust.4 + adjust.5) to disburse.dispamt
+    move adjust.6 to disburse.prosamt
+      if off_tot gt orig_tot move (defendnt.credit -(off_tot - orig_tot));
+          to defendnt.credit
+      if off_tot lt orig_tot move (defendnt.credit + (orig_tot - off_tot));
+          to defendnt.credit
+
+   
+ gosub record_change   
+    saverecord offense disburse defendnt
+    
+   
+ unlock   
+    
+    entdisplay offense
+    entdisplay disburse
+    entdisplay defendnt
+ 
+ gosub edit_jr_off
+ 
+ INDICATE ADJUSTMENT FALSE
+ 
+ page rest1
+ indicate disb_edit false
+return disbursement
+
+
+
+update_total_offense:
+       calc ( adjust.4 + adjust.5 + adjust.6) to adjust.7
+       calc ( adjust.4 + adjust.5) to adjust.8
+       move adjust.6 to adjust.9
+       calc (adjust.8 + adjust.9 ) to adjust.10
+       move adjust.7 to off_tot
+return
+
+//อออออออออ< N E W   R E C E I P T    E N T R Y >อออออออออออออออออออออออออออออ
+
+NEW_JR_RECEIPT:
+  SCREENMODE 240 ON
+  DISPLAY '        Updating Receipt Journal        ' TO NOTICE.1
+  SCREENMODE 1 ON
+
+DECOMPOSE_DATE RDT TO ADAY AMONTH AYEAR
+
+//DEBIT ENTRY
+     MOVE 'HR' TO JOURNALS.JR
+     IF RMETHOD NE 'J' MOVE REF.DEPOSITS TO JOURNALS.GL
+     IF RMETHOD EQ 'J' MOVE REF.APPROCESS TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     MOVE RAMT TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+//CREDIT ENTRY
+     MOVE 'HR' TO JOURNALS.JR
+     IF RMETHOD NE 'J' MOVE REF.NEWOFF TO JOURNALS.GL
+     IF RMETHOD EQ 'J' MOVE REF.RJR TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+      IF RMETHOD NE 'J' BEGIN
+       IF RAMT LE OFF_TOT MOVE (RAMT *(-1)) TO JOURNALS.AMOUNT
+       IF RAMT GT OFF_TOT MOVE (OFF_TOT *(-1)) TO JOURNALS.AMOUNT
+      END
+//J      IF RMETHOD EQ 'J' MOVE (RAMT * (-1)) TO JOURNALS.AMOUNT
+     IF RMETHOD EQ 'J' BEGIN  
+       IF RAMT LE OFF_TOT MOVE (RAMT *(-1)) TO JOURNALS.AMOUNT
+       IF RAMT GT OFF_TOT MOVE (OFF_TOT *(-1)) TO JOURNALS.AMOUNT
+     END
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+IF RAMT GT (DIS_CKAMT + DIS_MFEE + DIS_PFEE) BEGIN
+//J  IF RMETHOD NE 'J' BEGIN
+//CREDIT ENTRY FOR PARTIAL RECEIPT WHEN DEFENDANT OVERPAYS
+
+     MOVE 'HR' TO JOURNALS.JR
+     MOVE (1215) TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     MOVE ((RAMT -(DIS_CKAMT+DIS_MFEE+DIS_PFEE)) * (-1)) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+//J  END
+END
+
+if rmethod ne "J" begin
+  move (ramt + bank.current_bal) to bank.current_bal
+  saverecord bank
+end
+
+RETURN
+
+
+//=======< N E W   D I S B U R S E M E N T >=================================
+
+NEW_JR_DISB:
+
+  SCREENMODE 240 ON
+  DISPLAY '     Updating Disbursement Journal      ' TO NOTICE.1
+  SCREENMODE 1 ON
+
+IF DIS_TYPE NE "C" DECOMPOSE_DATE DIS_DT TO ADAY AMONTH AYEAR
+[~ NEWJR] IF DIS_TYPE EQ "C" DECOMPOSE_DATE TODAY TO ADAY AMONTH AYEAR
+[NEWJR] IF DIS_TYPE EQ "C" DECOMPOSE_DATE RDT TO ADAY AMONTH AYEAR
+
+//DEBIT ENTRY
+     MOVE 'DS' TO JOURNALS.JR
+     IF RMETHOD NE 'J' MOVE REF.APPROCESS TO JOURNALS.GL
+     IF RMETHOD EQ 'J' MOVE REF.DJR TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     [~ PROS_CHK] MOVE (DIS_CKAMT + DIS_MFEE + DIS_PFEE) TO JOURNALS.AMOUNT
+     [PROS_CHK] MOVE (DIS_CKAMT + DIS_MFEE) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+//CREDIT ENTRY
+
+      MOVE 0 TO COUNT
+       REPEAT
+        IF COUNT EQ 0 IF DIS_CKAMT EQ 0 GOTO PASS_CR_ENTRY
+        IF COUNT EQ 1 IF DIS_MFEE EQ 0 GOTO PASS_CR_ENTRY
+        [PROS_CHK] IF COUNT EQ 2 GOTO PASS_CR_ENTRY  // BYPASS IF PROS CHECK PREV
+                                                     // VIOUSLY ISSUED
+        IF COUNT EQ 2 IF DIS_PFEE EQ 0 GOTO PASS_CR_ENTRY
+     MOVE 'DS' TO JOURNALS.JR
+     IF RMETHOD NE 'J' BEGIN
+       IF COUNT EQ 0 MOVE REF.RHC TO JOURNALS.GL
+       IF COUNT EQ 1 MOVE REF.RMFEES TO JOURNALS.GL
+       IF COUNT EQ 2 MOVE REF.RPFEES TO JOURNALS.GL
+      END
+      IF RMETHOD EQ 'J' BEGIN
+        MOVE REF.NEWOFF TO JOURNALS.GL
+        MOVE 3 TO COUNT
+      END
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF RMETHOD NE 'J' BEGIN
+       IF COUNT EQ 0 MOVE (DIS_CKAMT * (-1)) TO JOURNALS.AMOUNT
+       IF COUNT EQ 1 MOVE (DIS_MFEE * (-1)) TO JOURNALS.AMOUNT
+       IF COUNT EQ 2 MOVE (DIS_PFEE * (-1)) TO JOURNALS.AMOUNT
+     END 
+     IF RMETHOD EQ 'J' MOVE (OFF_TOT * (-1)) TO JOURNALS.AMOUNT
+
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+  
+PASS_CR_ENTRY:
+    INCREMENT COUNT
+ UNTIL COUNT GE 3
+
+
+IF RMETHOD NE 'J' BEGIN
+     MOVE 'DS' TO JOURNALS.JR
+     MOVE REF.APPROCESS TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     [~ PROS_CHK] MOVE (DIS_CKAMT + DIS_MFEE + DIS_PFEE) TO JOURNALS.AMOUNT
+     [PROS_CHK] MOVE (DIS_CKAMT + DIS_MFEE ) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+
+//CREDIT ENTRY
+
+      MOVE 0 TO COUNT
+       REPEAT
+       IF COUNT EQ 1 IF DIS_PFEE EQ 0 GOTO PASS_AP
+       [PROS_CHK] IF COUNT EQ (1) GOTO PASS_AP
+     MOVE 'DS' TO JOURNALS.JR
+       IF COUNT EQ 0 MOVE REF.APMER TO JOURNALS.GL
+       IF COUNT EQ 1 MOVE REF.APPFEES TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+       IF COUNT EQ 0 MOVE (DIS_CKAMT + DIS_MFEE * (-1)) TO JOURNALS.AMOUNT
+       IF COUNT EQ 1 MOVE (DIS_PFEE * (-1)) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+PASS_AP:
+    INCREMENT COUNT
+ UNTIL COUNT GE 2
+END
+
+
+//>>>>>>>>> UPDATE CHECK REGISTERS AND BANK RECORDS IF MANUAL CHECK <<<<<<<
+
+IF DIS_TYPE EQ 'M' BEGIN
+
+   GOSUB MER_JR
+      [~ PROS_CHK] GOSUB PROS_JR
+   GOSUB RECON_MER2
+      [~ PROS_CHK] GOSUB RECON_PROS
+
+  SCREENMODE 240 ON
+  DISPLAY '     Updating Bank and Setup Records    ' TO NOTICE.1
+  SCREENMODE 1 ON
+
+   [MULTIUSER] REREAD BANK
+
+MOVE AYEAR TO SETUP.YEAR
+FIND EQ SETUP BY INDEX.1
+       [IND_C] BEGIN
+          MOVE ( MCHKC3.4 + 1 ) TO BANK.NEXT_CHECK_NUM
+          MOVE MCHKC3.4 TO SETUP.LAST_CHECK
+       END
+       [IND_D] BEGIN
+          IF MCHKD.3 GT MCHKD.1 BEGIN
+              MOVE (MCHKD.3 + 1 ) TO BANK.NEXT_CHECK_NUM
+              MOVE MCHKD.3 TO SETUP.LAST_CHECK
+              END
+          ELSE BEGIN
+              MOVE ( MCHKD.1 + 1 ) TO BANK.NEXT_CHECK_NUM
+              MOVE MCHKD.1 TO SETUP.LAST_CHECK
+          END
+       END
+       SAVERECORD BANK SETUP
+   [MULTIUSER] UNLOCK
+
+END
+
+
+RETURN
+
+
+
+PARTIAL:
+[NEWJR] IF RAMT LT (DIS_CKAMT + DIS_MFEE + DIS_PFEE) ;
+      IF DEFENDNT.CREDIT GT (0) BEGIN
+  
+//DEBIT ENTRY TO TRANSFER ANY DEFENDATS CREDIT TO DISBURSE
+     MOVE 'DS' TO JOURNALS.JR
+     MOVE (1215) TO JOURNALS.GL
+     MOVE 'DEFENDANT CREDIT' TO JOURNALS.DESC
+     MOVE ((DIS_CKAMT + DIS_MFEE + DIS_PFEE) - RAMT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB
+      GOSUB GL_JRNLS
+
+
+//CREDIT ENTRY TO TRANSFER ANY DEFENDANTS CREDIT TO DISBURSE
+     MOVE 'DS' TO JOURNALS.JR
+     IF RMETHOD EQ 'J' MOVE REF.RJR TO JOURNALS.GL
+     IF RMETHOD NE 'J' MOVE REF.APPROCESS TO JOURNALS.GL
+     MOVE 'DEFENDNT CREDIT' TO JOURNALS.DESC
+     MOVE (((DIS_CKAMT + DIS_MFEE + DIS_PFEE) - RAMT) * (-1)) TO ;
+                                                            JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+  END
+
+
+[~ NEWJR] IF DEFENDNT.CREDIT GE (DIS_CKAMT + DIS_MFEE + DIS_PFEE) BEGIN
+  
+//DEBIT ENTRY TO TRANSFER ANY DEFENDATS CREDIT TO DISBURSE
+     MOVE 'DS' TO JOURNALS.JR
+     MOVE (1215) TO JOURNALS.GL
+     MOVE 'DEFENDANT CREDIT' TO JOURNALS.DESC
+     MOVE (DIS_CKAMT + DIS_MFEE + DIS_PFEE) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+
+//CREDIT ENTRY TO TRANSFER ANY DEFENDANTS CREDIT TO DISBURSE
+     MOVE 'DS' TO JOURNALS.JR
+     IF RMETHOD EQ 'J' MOVE REF.RJR TO JOURNALS.GL
+     IF RMETHOD NE 'J' MOVE REF.APPROCESS TO JOURNALS.GL
+//     MOVE REF.APPROCESS TO JOURNALS.GL
+     MOVE 'DEFENDANT CREDIT' TO JOURNALS.DESC
+     MOVE ((DIS_CKAMT + DIS_MFEE + DIS_PFEE) * (-1)) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+END
+
+ 
+RETURN
+
+//=========< EDIT OFFENSE AMOUNTS >=========================================
+
+EDIT_JR_OFF:
+
+     SCREENMODE 240 ON
+      DISPLAY '        Updating Offense Record        ' TO NOTICE.1
+     SCREENMODE 1 ON
+     MOVE 'CH' TO JOURNALS.JR
+     
+     IF ORIG_TOT LT OFF_TOT MOVE REF.NEWOFF TO JOURNALS.GL
+     IF ORIG_TOT GT OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF ORIG_TOT LT OFF_TOT ;
+         MOVE (OFF_TOT - ORIG_TOT) TO JOURNALS.AMOUNT
+     IF ORIG_TOT GT OFF_TOT ;
+         MOVE (ORIG_TOT - OFF_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+
+//CREDIT ENTRY
+     MOVE 'CH' TO JOURNALS.JR
+     IF ORIG_TOT LT OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     IF ORIG_TOT GT OFF_TOT MOVE REF.NEWOFF TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     
+     IF ORIG_TOT LT OFF_TOT MOVE (ORIG_TOT - OFF_TOT) TO JOURNALS.AMOUNT
+     IF ORIG_TOT GT OFF_TOT MOVE (OFF_TOT - ORIG_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+///  ******  [adjustment] -- change to pfee, mfee, or chk amt after *****
+///                          payable/disbursement has been saved.   *****
+
+[ADJUSTMENT] BEGIN
+
+
+     MOVE 'CH' TO JOURNALS.JR
+     
+     IF ORIG_TOT LT OFF_TOT MOVE (1215)     TO JOURNALS.GL
+     IF ORIG_TOT GT OFF_TOT MOVE REF.NEWOFF TO JOURNALS.GL
+     
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF ORIG_TOT LT OFF_TOT ;
+         MOVE (OFF_TOT - ORIG_TOT) TO JOURNALS.AMOUNT
+     IF ORIG_TOT GT OFF_TOT ;
+         MOVE (ORIG_TOT - OFF_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+
+//CREDIT ENTRY
+     MOVE 'CH' TO JOURNALS.JR
+     IF ORIG_TOT LT OFF_TOT MOVE REF.NEWOFF TO JOURNALS.GL
+     IF ORIG_TOT GT OFF_TOT MOVE (1215)     TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     
+     IF ORIG_TOT LT OFF_TOT MOVE (ORIG_TOT - OFF_TOT) TO JOURNALS.AMOUNT
+     IF ORIG_TOT GT OFF_TOT MOVE (OFF_TOT - ORIG_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+
+
+/// *******  The following is for edits to the pfee amount ******
+
+ IF PFEE_OFF_TOT  NE PFEE_ORIG_TOT BEGIN 
+  //debit entry    
+     MOVE 'CH' TO JOURNALS.JR
+
+     IF pfee_orIG_TOT GT pfee_OFF_TOT MOVE REF.APPFEES TO JOURNALS.GL
+     IF pfee_ORIG_TOT LT pfee_OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF PFEE_ORIG_TOT LT PFEE_OFF_TOT ;
+         MOVE (PFEE_OFF_TOT - PFEE_ORIG_TOT) TO JOURNALS.AMOUNT
+     IF PFEE_ORIG_TOT GT PFEE_OFF_TOT ;
+         MOVE (PFEE_ORIG_TOT - PFEE_OFF_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+
+  //CREDIT ENTRY
+     MOVE 'CH' TO JOURNALS.JR
+     IF PFEE_ORIG_TOT GT PFEE_OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     IF PFEE_ORIG_TOT LT PFEE_OFF_TOT MOVE REF.APPFEES TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+    
+     IF PFEE_ORIG_TOT LT PFEE_OFF_TOT ; 
+               MOVE (PFEE_ORIG_TOT - PFEE_OFF_TOT) TO JOURNALS.AMOUNT
+     IF PFEE_ORIG_TOT GT PFEE_OFF_TOT ;
+               MOVE (PFEE_OFF_TOT - PFEE_ORIG_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+    
+
+  //debit entry    
+     MOVE 'CH' TO JOURNALS.JR
+
+     IF pfee_orIG_TOT GT pfee_OFF_TOT MOVE REF.RPFEES TO JOURNALS.GL
+     IF pfee_ORIG_TOT LT pfee_OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF PFEE_ORIG_TOT LT PFEE_OFF_TOT ;
+         MOVE (PFEE_OFF_TOT - PFEE_ORIG_TOT) TO JOURNALS.AMOUNT
+     IF PFEE_ORIG_TOT GT PFEE_OFF_TOT ;
+         MOVE (PFEE_ORIG_TOT - PFEE_OFF_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+
+  //CREDIT ENTRY
+     MOVE 'CH' TO JOURNALS.JR
+     IF PFEE_ORIG_TOT GT PFEE_OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     IF PFEE_ORIG_TOT LT PFEE_OFF_TOT MOVE REF.RPFEES TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF PFEE_ORIG_TOT LT PFEE_OFF_TOT ; 
+               MOVE (PFEE_ORIG_TOT - PFEE_OFF_TOT) TO JOURNALS.AMOUNT
+     IF PFEE_ORIG_TOT GT PFEE_OFF_TOT ;
+               MOVE (PFEE_OFF_TOT - PFEE_ORIG_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+    
+   END    
+    
+/// *******  The following is for edits to the mfee amount ******
+
+ IF MFEE_OFF_TOT  NE MFEE_ORIG_TOT  BEGIN
+  //debit entry    
+     MOVE 'CH' TO JOURNALS.JR
+
+     IF Mfee_orIG_TOT GT Mfee_OFF_TOT MOVE REF.APMER TO JOURNALS.GL
+     IF MFee_ORIG_TOT LT Mfee_OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF MFEE_ORIG_TOT LT MFEE_OFF_TOT ;
+         MOVE (MFEE_OFF_TOT - MFEE_ORIG_TOT) TO JOURNALS.AMOUNT
+     IF MFEE_ORIG_TOT GT MFEE_OFF_TOT ;
+         MOVE (MFEE_ORIG_TOT - MFEE_OFF_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+
+  //CREDIT ENTRY
+     MOVE 'CH' TO JOURNALS.JR
+     IF MFEE_ORIG_TOT GT MFEE_OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     IF MFEE_ORIG_TOT LT MFEE_OFF_TOT MOVE REF.APMER TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+    
+     IF MFEE_ORIG_TOT LT MFEE_OFF_TOT ; 
+               MOVE (MFEE_ORIG_TOT - MFEE_OFF_TOT) TO JOURNALS.AMOUNT
+     IF MFEE_ORIG_TOT GT MFEE_OFF_TOT ;
+               MOVE (MFEE_OFF_TOT - MFEE_ORIG_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+    
+
+  //debit entry    
+     MOVE 'CH' TO JOURNALS.JR
+
+     IF Mfee_orIG_TOT GT Mfee_OFF_TOT MOVE REF.RMFEES TO JOURNALS.GL
+     IF Mfee_ORIG_TOT LT Mfee_OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF MFEE_ORIG_TOT LT MFEE_OFF_TOT ;
+         MOVE (MFEE_OFF_TOT - MFEE_ORIG_TOT) TO JOURNALS.AMOUNT
+     IF MFEE_ORIG_TOT GT MFEE_OFF_TOT ;
+         MOVE (MFEE_ORIG_TOT - MFEE_OFF_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+
+  //CREDIT ENTRY
+     MOVE 'CH' TO JOURNALS.JR
+     IF MFEE_ORIG_TOT GT MFEE_OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     IF MFEE_ORIG_TOT LT MFEE_OFF_TOT MOVE REF.RMFEES TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF MFEE_ORIG_TOT LT MFEE_OFF_TOT ; 
+               MOVE (MFEE_ORIG_TOT - MFEE_OFF_TOT) TO JOURNALS.AMOUNT
+     IF MFEE_ORIG_TOT GT MFEE_OFF_TOT ;
+               MOVE (MFEE_OFF_TOT - MFEE_ORIG_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+    
+  END    
+   
+/// *******  The following is for edits to the check amount ******
+
+
+ IF CKAMT_OFF_TOT  NE CKAMT_ORIG_TOT BEGIN
+  //debit entry    
+     MOVE 'CH' TO JOURNALS.JR
+
+     IF CKAMT_orIG_TOT GT CKAMT_OFF_TOT MOVE REF.APMER TO JOURNALS.GL
+     IF CKAMT_ORIG_TOT LT CKAMT_OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF CKAMT_ORIG_TOT LT CKAMT_OFF_TOT ;
+         MOVE (CKAMT_OFF_TOT - CKAMT_ORIG_TOT) TO JOURNALS.AMOUNT
+     IF CKAMT_ORIG_TOT GT CKAMT_OFF_TOT ;
+         MOVE (CKAMT_ORIG_TOT - CKAMT_OFF_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+
+  //CREDIT ENTRY
+     MOVE 'CH' TO JOURNALS.JR
+     IF CKAMT_ORIG_TOT GT CKAMT_OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     IF CKAMT_ORIG_TOT LT CKAMT_OFF_TOT MOVE REF.APMER TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+    
+     IF CKAMT_ORIG_TOT LT CKAMT_OFF_TOT ; 
+               MOVE (CKAMT_ORIG_TOT - CKAMT_OFF_TOT) TO JOURNALS.AMOUNT
+     IF CKAMT_ORIG_TOT GT CKAMT_OFF_TOT ;
+               MOVE (CKAMT_OFF_TOT - CKAMT_ORIG_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+    
+
+  //debit entry    
+     MOVE 'CH' TO JOURNALS.JR
+
+     IF CKAMT_orIG_TOT GT CKAMT_OFF_TOT MOVE REF.RHC TO JOURNALS.GL
+     IF CKAMT_ORIG_TOT LT CKAMT_OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF CKAMT_ORIG_TOT LT CKAMT_OFF_TOT ;
+         MOVE (CKAMT_OFF_TOT - CKAMT_ORIG_TOT) TO JOURNALS.AMOUNT
+     IF CKAMT_ORIG_TOT GT CKAMT_OFF_TOT ;
+         MOVE (CKAMT_ORIG_TOT - CKAMT_OFF_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+
+
+  //CREDIT ENTRY
+     MOVE 'CH' TO JOURNALS.JR
+     IF CKAMT_ORIG_TOT GT CKAMT_OFF_TOT MOVE REF.APPROCESS TO JOURNALS.GL
+     IF CKAMT_ORIG_TOT LT CKAMT_OFF_TOT MOVE REF.RHC TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF CKAMT_ORIG_TOT LT CKAMT_OFF_TOT ; 
+               MOVE (CKAMT_ORIG_TOT - CKAMT_OFF_TOT) TO JOURNALS.AMOUNT
+     IF CKAMT_ORIG_TOT GT CKAMT_OFF_TOT ;
+               MOVE (CKAMT_OFF_TOT - CKAMT_ORIG_TOT) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+      GOSUB GL_JRNLS
+    
+  END    
+END
+
+    [~ disb_edit] begin
+      reread defendnt
+    IF ORIG_TOT GT OFF_TOT MOVE ;
+        (DEFENDNT.BAL - (ORIG_TOT - OFF_TOT)) TO DEFENDNT.BAL
+    IF ORIG_TOT LT OFF_TOT MOVE ;
+        (DEFENDNT.BAL + (OFF_TOT - ORIG_TOT)) TO DEFENDNT.BAL
+       SAVERECORD DEFENDNT
+       Unlock
+       ENTDISPLAY DEFENDNT
+end
+RETURN
+
+
+
+CLEAR_ACCUMS:
+MOVE (0.00) TO ACCUM_CK
+MOVE (0.00) TO ACCUM_MFEE
+MOVE (0.00) TO ACCUM_PFEE
+MOVE (0.00) TO ACCUM_DISB
+RETURN
+
+
+
+
+
+
+
+FIND_GL:
+   MOVE JOURNALS.GL TO LEDGER.NUMBER
+   MOVE JOURNALS.BR TO LEDGER.DISTRICT
+   MOVE JOURNALS.DP TO LEDGER.DIVISION
+   
+   FIND EQ LEDGER BY INDEX.1
+
+RETURN
+
+UPDATE_GL:
+    MOVE (JOURNALS.MN - 1) TO FIELDINDEX
+    MOVE (LEDGER.TYJAN& + JOURNALS.AMOUNT) TO LEDGER.TYJAN&
+    MOVE (LEDGER.TYTOTAL + JOURNALS.AMOUNT) TO LEDGER.TYTOTAL
+RETURN 
+
+
+GL_JRNLS:
+Reread        
+    MOVE AYEAR TO JOURNALS.YR
+    MOVE AMONTH TO JOURNALS.MN
+    MOVE ADAY TO JOURNALS.DY
+
+    MOVE REF.DISTRICT TO JOURNALS.BR
+    MOVE '20' TO JOURNALS.DP
+    MOVE DEFENDNT.IDNO TO JOURNALS.EMPLY
+    MOVE USER_NUMB TO JOURNALS.OPERATOR
+    MOVE (REF.REF_NUM +1) TO JOURNALS.CHK
+    MOVE JOURNALS.CHK TO REF.REF_NUM
+    
+    GOSUB FIND_GL
+    GOSUB UPDATE_GL
+    
+    SAVE LEDGER
+    
+    SAVERECORD REF JOURNALS 
+    CLEAR JOURNALS LEDGER
+    UNLOCK
+
+RETURN
+
+
+BANK_BAL:
+    IF ~ STATUS BANK BEGIN
+       CLEAR BANK
+       MOVE "HC" TO BANK.CODE
+       FIND EQ BANK BY INDEX.1
+       [multiuser] reread bank
+       MOVE (BANK.CURRENT_BAL + CHKDISB) TO BANK.CURRENT_BAL
+    END
+    ELSE BEGIN
+       [MULTIUSER] REREAD BANK
+       MOVE (BANK.CURRENT_BAL + CHKDISB) TO BANK.CURRENT_BAL
+    END
+
+    SAVERECORD BANK
+    [MULTIUSER] UNLOCK
+RETURN
+
+
+
+DO_RECEIPT:
+ CLEARXY 24 0
+ IF RCPT1.1 EQ '' IF STATUS RESTITUT BEGIN
+     PAGE RCPT1
+     ACCEPT RCPT1.1
+  END
+  GOTOXY 24 8
+  SHOW "Please Wait ...... Printing Current Receipt           "
+  PRINT SETUP.PROSNAME TO RCPT2.1
+  PRINT RID TO RCPT2.2
+  PRINT RSEQNO TO RCPT2.3
+  PRINT RDT TO RCPT2.4
+  PRINT DNAME    TO RCPT2.5 
+  IF RMETHOD EQ "M" PRINT "Money Order    " TO RCPT2.6  
+  IF RMETHOD EQ "R" PRINT "Cashier's Check" TO RCPT2.6
+  IF RMETHOD EQ "J" PRINT "Journal Entry  " TO RCPT2.6
+  IF RMETHOD EQ "C" PRINT "Cash           " TO RCPT2.6
+  IF RMETHOD EQ "X" PRINT "Credit Card    " TO RCPT2.6
+  PRINT RAMT TO RCPT2.7
+  PRINT USER_NUMB TO RCPT2.8
+  PRINT RCPT1.1 TO RCPT2.9
+  DIRECT_OUTPUT "LPT1:"
+  OUTPUT RCPT2
+  [MULTIUSER] DESPOOL
+  CLEARXY 24 0
+RETURN
+
+
+TRANS_MER:
+
+// This Routine only transfers a disbursement record from one merchant
+// to another.
+// No journal entries are made unless a computer check has been issued
+// and then journals are reversed in the void check routine
+
+      PAGE STANDBY
+    // FIRST STORE DISBURSEMENT AMOUNTS                    
+       INDICATE DELETER FALSE
+       INDICATE TRANSFER TRUE
+
+       GOSUB STORE_DISB
+
+       MOVE DISBURSE.ID_NO TO DEF_NUM
+       MOVE DISBURSE.SEQ_NO TO RECEIPT_NUM
+       MOVE DISBURSE.SEQNO TO OFF_NUM
+       MOVE DISBURSE.PCKNO TO CHECK_NUM   
+       MOVE DISBURSE.PROS_TOTAL TO TOT_PROS
+       MOVE DISBURSE.PROSAMT TO PFEES
+	   
+       CLEAR DISBURSE
+         MOVE DEF_NUM TO DISBURSE.IDNO
+         MOVE OFF_NUM TO DISBURSE.SEQNO
+           FIND EQ DISBURSE BY INDEX.5
+           [FINDERR] BEGIN
+              CLEARXY 24 0
+              GOTOXY 24 0
+               SHOW ' ERROR - (Trans_Mer), Press any key to continue'
+              inkey answ
+              CLEARXY 24 0
+            END
+
+
+       [MULTIUSER] reread
+       DELETE DISBURSE
+       CLEAR DISBURSE
+
+        move mer_name to offense.name
+        move tscr.3 to offense.merchant
+        move def_num to disburse.id_no
+        move receipt_num to disburse.seq_no
+        move off_num to disburse.seqno
+        MOVE (AMT + MFEES) TO DISBURSE.DISPAMT
+        MOVE PFEES TO DISBURSE.PROSAMT
+        MOVE (0) TO DISBURSE.CHKNO
+        MOVE '' TO DISBURSE.DISPDT
+		MOVE TOT_PROS TO DISBURSE.PROS_TOTAL
+		MOVE CHECK_NUM TO DISBURSE.PCKNO
+        MOVE (0) TO DISBURSE.MONTH
+        MOVE 'C' TO DISBURSE.MANUAL
+    IF RAMT LT OFFENSE.TOTAL MOVE  (DEFENDNT.CREDIT + (OFFENSE.TOTAL - RAMT));
+                                      TO DEFENDNT.CREDIT
+        SAVERECORD  DEFENDNT  OFFENSE
+        save  DISBURSE
+        [MULTIUSER] UNLOCK
+
+        GOSUB RECORD_CHANGE
+
+        INDICATE TRANSFER FALSE
+ RETURN
+
+//=====> D E L ___ M E R : <===================================================
+
+
+DEL_MER:
+// This routine deletes a disbursement record and makes the reversing
+// journal entries
+// if a computer check has been issued,the void check routine will be
+// run 
+
+page standby
+      INDICATE DELREC TRUE
+
+    // FIRST STORE DISBURSEMENT AMOUNTS                    
+
+       GOSUB STORE_DISB
+
+       
+       MOVE DISBURSE.ID_NO TO DEF_NUM
+       MOVE DISBURSE.SEQ_NO TO RECEIPT_NUM
+       MOVE DISBURSE.SEQNO TO OFF_NUM
+       MOVE DISBURSE.PCKNO TO CHECK_NUM   
+       MOVE DISBURSE.PROS_TOTAL TO TOT_PROS
+
+
+// Defendant's record must be updated to reflect deleted/reversed disbursement
+
+
+[MULTIUSER] REREAD
+
+IF ~ STATUS OFFENSE BEGIN
+    CLEARXY 24 0
+    GOTOXY 24 0
+    SHOW " NO OFFENSE RECORD"
+    INKEY ANSW
+    CLEARXY 24 0
+    CLEAR RESTITUT OFFENSE DISBURSE DEFENDNT
+    RETURN RETURN DEFENDANT
+ END
+
+page standby
+  move (defendnt.credit + tot) to defendnt.credit
+  move (defendnt.bal + tot) to defendnt.bal
+
+   MOVE '' TO OFFENSE.ACTIVE
+    SAVErecord  DEFENDNT OFFENSE
+    ENTDISPLAY DEFENDNT
+ [MULTIUSER] UNLOCK
+
+         gosub reverse_rcpt   
+//J         if disburse.manual ne 'J' begin
+             GOSUB REVERSE_AP
+//J         end
+         INDICATE MUST_VOID FALSE
+         CLEAR DISBURSE
+         MOVE DEF_NUM TO DISBURSE.IDNO
+         MOVE OFF_NUM TO DISBURSE.SEQNO
+           FIND EQ DISBURSE BY INDEX.5
+           [found] relate disburse
+           [FINDERR] BEGIN
+              CLEARXY 24 0
+              GOTOXY 24 0
+               SHOW ' ERROR - (Del_Mer), Press any key to continue'
+              inkey answ
+              CLEARXY 24 0
+            END
+      KEYFLUSH
+
+        GOSUB RECORD_CHANGE
+        
+        DELETE DISBURSE
+
+         INDICATE DELREC FALSE
+         CLEAR DISBURSE  OFFENSE restitut
+         CLEARFORM DIS_# THRU DIS_PTOT
+      indicate ent$query false
+RETURN RETURN defendant    // Return to the beginning of the Receipt entry
+
+
+
+
+REVERSE_RCPT:
+    
+// routine to reverse receipted amount from accounts 3210,11,12 etc
+
+//CREDIT ENTRY
+     IF RMETHOD NE 'J' BEGIN
+     MOVE 'HX' TO JOURNALS.JR
+     MOVE REF.APPROCESS TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     MOVE (TOT * (-1)) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+//      [MULTIUSER] REREAD
+      GOSUB GL_JRNLS
+//      [MULTIUSER] UNLOCK
+     END
+
+//DEBIT ENTRY 
+
+      MOVE 0 TO COUNT
+       REPEAT
+        IF COUNT EQ 1 IF MFEES EQ 0 GOTO PASS_DR_ENTRY
+        IF COUNT EQ 2 IF PFEES EQ 0 GOTO PASS_DR_ENTRY
+     MOVE 'HX' TO JOURNALS.JR
+     IF RMETHOD NE 'J' BEGIN
+       IF COUNT EQ 0 MOVE REF.RHC TO JOURNALS.GL
+       IF COUNT EQ 1 MOVE REF.RMFEES TO JOURNALS.GL
+       IF COUNT EQ 2 MOVE REF.RPFEES TO JOURNALS.GL
+      END
+      IF RMETHOD EQ 'J' BEGIN
+        MOVE REF.DJR TO JOURNALS.GL
+        MOVE 3 TO COUNT
+      END
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF RMETHOD NE 'J' BEGIN
+       IF COUNT EQ 0 MOVE AMT TO JOURNALS.AMOUNT
+       IF COUNT EQ 1 MOVE MFEES TO JOURNALS.AMOUNT
+       IF COUNT EQ 2 MOVE PFEES TO JOURNALS.AMOUNT
+     END
+     IF RMETHOD EQ 'J' MOVE ((AMT + MFEES + PFEES) * (-1)) ; 
+                                                       TO JOURNALS.AMOUNT
+
+
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+
+//      [MULTIUSER] REREAD
+      GOSUB GL_JRNLS
+//      [MULTIUSER] UNLOCK
+PASS_DR_ENTRY:
+    INCREMENT COUNT
+ UNTIL COUNT GE 3
+
+
+// DEBIT ENTRY
+     MOVE 'HX' TO JOURNALS.JR
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     IF RMETHOD NE 'J' BEGIN
+       MOVE (2500) TO JOURNALS.GL        
+       MOVE (DIS_CKAMT+DIS_MFEE+DIS_PFEE) TO JOURNALS.AMOUNT
+     END
+     IF RMETHOD EQ 'J' BEGIN
+       MOVE (1250) TO JOURNALS.GL 
+       MOVE (DIS_CKAMT+DIS_MFEE+DIS_PFEE) TO JOURNALS.AMOUNT
+     END
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+//      [MULTIUSER] REREAD
+      GOSUB GL_JRNLS
+//      [MULTIUSER] UNLOCK
+
+// CREDIT ENTRY
+//     IF RMETHOD NE 'J' BEGIN
+       MOVE 'HX' TO JOURNALS.JR
+       MOVE (1215) TO JOURNALS.GL
+       MOVE DEFENDNT.NAME TO JOURNALS.DESC
+       MOVE ((DIS_CKAMT+DIS_MFEE+DIS_PFEE) * (-1)) TO JOURNALS.AMOUNT
+       MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+//        [MULTIUSER] REREAD
+       GOSUB GL_JRNLS
+//        [MULTIUSER] UNLOCK
+//     End
+RETURN
+
+
+REVERSE_AP:
+
+ // CREDIT ENTRY
+     IF RMETHOD NE 'J' BEGIN
+     MOVE 'HX' TO JOURNALS.JR
+     MOVE REF.APPROCESS TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+     MOVE (TOT * (-1)) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+//      [MULTIUSER] REREAD
+      GOSUB GL_JRNLS
+//      [MULTIUSER] UNLOCK
+     END
+
+//DEBIT ENTRY
+
+      MOVE 0 TO COUNT
+      IF RMETHOD EQ 'J' MOVE 3 TO COUNT  
+       REPEAT
+       IF COUNT EQ 1 IF PFEES EQ 0 GOTO PASS_PA
+     MOVE 'HX' TO JOURNALS.JR
+       IF COUNT EQ 0 MOVE REF.APMER TO JOURNALS.GL
+       IF COUNT EQ 1 MOVE REF.APPFEES TO JOURNALS.GL
+       IF COUNT EQ 3 MOVE REF.RJR TO JOURNALS.GL
+     MOVE DEFENDNT.NAME TO JOURNALS.DESC
+       IF COUNT EQ 0 MOVE (AMT + MFEES) TO JOURNALS.AMOUNT
+       IF COUNT EQ 1 MOVE PFEES TO JOURNALS.AMOUNT
+       IF COUNT EQ 3 MOVE ( AMT+ MFEES + PFEES ) TO JOURNALS.AMOUNT
+     MOVE OFFENSE.CTRLNO TO JOURNALS.JOB  
+//      [MULTIUSER] REREAD
+      GOSUB GL_JRNLS
+//      [MULTIUSER] UNLOCK
+PASS_PA:
+    INCREMENT COUNT
+ UNTIL COUNT GE 2
+RETURN
+
+
+
+QUES_1:
+   GOSUB DO_RECEIPT
+   page exit
+   CLEARFORM QUES
+   CLEAR DEFENDNT RESTITUT OFFENSE DISBURSE RECHANGE
+   DISPLAY SETUP.LSTREC TO LST_RCT
+   ABORT
+RETURN 
+
+
+QUES_2:
+   GOSUB DO_RECEIPT
+   CLEARFORM REST1
+   GOSUB CLEAR_RESTS
+   GOSUB RESET_INDICS
+RETURN 
+
+QUES_3:
+    GOSUB CLEAR_RESTS
+    MOVE DEF_NUM TO DEFENDNT.IDNO
+    FIND EQ DEFENDNT BY INDEX.1
+    [FOUND] BEGIN
+      entdisplay defendnt
+      GOSUB RESET_INDICS
+   RETURN RESTITUTION
+  END
+  [FINDERR] BEGIN
+   GOSUB CLEAR_RESTS
+   RETURN START_TOP
+  END
+RETURN            
+
+
+
+QUES_4:
+     CLEARFORM REST1.1 THRU REST1.40
+     CLEARFORM QUES
+     CLEAR DEFENDNT RESTITUT OFFENSE DISBURSE RECHANGE
+     CLEARFORM REST1
+     DISPLAY SETUP.LSTREC TO LST_RCT
+     MOVE DCREDIT TO REMAINING
+     INDICATE OK_QUES FALSE
+RETURN START_TOP 
+
+
+QUES_5:
+   page exit
+   CLEAR DEFENDNT RESTITUT OFFENSE DISBURSE RECHANGE
+   CLEARFORM QUES
+   CLEARFORM REST1
+   ABORT
+RETURN
+
+CLEAR_RESTS:
+   CLEARFORM REST1.21 THRU REST1.40
+   CLEARFORM QUES
+   CLEAR RESTITUT OFFENSE DISBURSE RECHANGE DEFENDNT
+   DISPLAY SETUP.LSTREC TO LST_RCT
+RETURN
+
+RESET_INDICS:
+   INDICATE OK_QUES FALSE
+   INDICATE INREST FALSE
+   INDICATE INDISB FALSE
+   INDICATE NEWDIS FALSE
+   INDICATE NEW FALSE
+RETURN
+
+
+
+
+READY_OFF:
+       CLEAR OFFENSE DISBURSE RECHANGE RESTITUT DEFENDNT
+       DISPLAY SETUP.LSTREC TO LST_RCT
+         MOVE DEF_NUM TO DEFENDNT.IDNO
+         PAGE REST1
+          FIND EQ DEFENDNT BY INDEX.1
+          [FOUND] ENTDISPLAY DEFENDNT
+
+          [FINDERR] BEGIN
+            CLEAR DEFENDNT
+            GOSUB CLR_INDS
+            RETURN START_TOP
+          END
+
+         MOVE DEF_NUM TO RESTITUT.IDNO
+         MOVE RECEIPT_NUM TO RESTITUT.SEQNO
+          FIND EQ RESTITUT BY INDEX.1  
+          [FOUND] ENTDISPLAY RESTITUT
+
+          [FINDERR] BEGIN
+           CLEAR RESTITUT
+            GOSUB CLR_INDS
+            RETURN START_TOP
+          END
+
+         MOVE DCREDIT TO REMAINING
+         INDICATE NEWJR FALSE
+         INDICATE NEW FALSE
+ RETURN  DISBURSEMENT
+
+
+
+
+STORE_DISB:
+
+         CLEAR DISBURSE
+         MOVE DEFENDNT.IDNO TO DISBURSE.IDNO
+         MOVE OFFENSE.CTRLNO TO DISBURSE.SEQNO
+           FIND EQ DISBURSE BY INDEX.5
+           [found] relate disburse
+           [FINDERR] BEGIN
+              CLEARXY 24 0
+              GOTOXY 24 0
+               SHOW ' ERROR - (Del_Mer), Press any key to continue'
+              inkey answ
+              CLEARXY 24 0
+            END
+
+     MOVE (DISBURSE.DISPAMT + DISBURSE.PROSAMT) TO TOT // Gives us total amt   
+                                                      // disbursed
+     
+     MOVE OFFENSE.CKAMT TO AMT    // Assumes offense check amount (hot check)
+                                  // is correct at all times
+
+     MOVE DISBURSE.PROSAMT TO PFEES // Actual amount disbursed for prosecutor
+                                    // fees in disburse record
+
+     MOVE (TOT - AMT - PFEES) TO MFEES // Total of disburse record less assumed
+                                       // offense check amount less actual
+                                       // prosecutor fees disbursed equals
+                                       // merchant fees disbursed
+
+RETURN
+
+
+VALIDATE_MER:
+   MOVE DISBURSE.IDNO TO INTS.1
+   MOVE DISBURSE.SEQNO TO INTS.2
+   CLEAR MERCHANT
+     MOVE SCRVOID.14 TO MERCHANT.IDNO
+      FIND EQ MERCHANT BY INDEX.1
+      [FOUND] MOVE MERCHANT.NAME TO MER_NAME
+      [FINDERR] BEGIN
+        PAGE NOMER
+        DISPLAY SCRVOID.14 TO NOMER.1
+        INKEY ANSW
+        CLEAR MERCHANT
+        MOVE INTS.1 TO DISBURSE.IDNO
+        MOVE INTS.2 TO DISBURSE.SEQNO
+        FIND EQ DISBURSE BY INDEX.5
+        [FOUND] RELATE DISBURSE
+        [FOUND] ENTDISPLAY DISBURSE
+        CLEARFORM SCRVOID.14
+        RETURN DO_QUES
+      END
+
+RETURN
+
+
+//ฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤ< Show Void >
+
+SHOW_VOID:
+   PAGE VID
+   SCREENMODE 112 ON
+   DISPLAY MISSING TO VID.1
+   DISPLAY SETUP.LAST_CHECK TO VID.2
+   [~ IND_C][~ IND_D] DISPLAY VOID.8 TO VID.3
+   [IND_C] DISPLAY MCHKC3.4 TO VID.3
+   [IND_D] BEGIN
+      IF MCHKD.1 LT MCHKD.3 DISPLAY MCHKD.1 TO VID.3
+        ELSE DISPLAY MCHKD.3 TO VID.3
+   END
+   DISPLAY PCHKB.2 TO VID.3
+   DISPLAY MISSING TO VID.4
+   SCREENMODE 112 OFF
+   SCREENMODE 1 ON
+    REPEAT
+     ACCEPT VID.5               {CAPSLOCK}
+      IF ~ VID.5 IN 'YN' LOOP
+      IF VID.5 IN 'Y' GOSUB DO_VOIDS
+      IF VID.5 IN 'N' BEGIN
+         CLEARFORM VID
+         CLEARFORM VID2
+         RETURN          
+      END
+RETURN
+
+
+
+DO_VOIDS:
+   PAGE VID2
+   MOVE 0 TO COUNT
+   [MULTIUSER] REREAD
+     FOR COUNT FROM (1) TO MISSING 
+       MOVE (BANK.NEXT_CHECK_NUM + 1 ) TO BANK.NEXT_CHECK_NUM
+       MOVE (SETUP.LAST_CHECK + 1) TO CHECKS.CHECK_NUM
+       MOVE (SETUP.LAST_CHECK + 1) TO SETUP.LAST_CHECK
+       DISPLAY SETUP.LAST_CHECK TO VID2.1
+       MOVE TODAY TO CHECKS.JR_DATE
+       MOVE BANK.CODE TO CHECKS.BANK_CODE
+       MOVE (0.00) TO CHECKS.CHK_AMT
+       MOVE '*** VOID ***' TO CHECKS.REFERENCE
+       MOVE '*** Voided Check ***' TO CHECKS.PAYEE
+       MOVE TODAY TO CHECKS.CK_DATE
+       MOVE USER_NUMB TO CHECKS.OPER
+         decompose_date today to bday bmonth byear
+       MOVE bmonth TO CHECKS.SEQ_NUM
+       MOVE 'X' TO CHECKS.UPDATE
+       MOVE 'C' TO CHECKS.STATUS
+       MOVE (0.00) TO CHECKS.MFEE
+       MOVE (0.00) TO CHECKS.PFEE
+       MOVE (0.00) TO CHECKS.HC_AMT
+
+// DISTRIBUTION RECORD
+       MOVE TODAY TO DISTRIB.JR_DATE
+       MOVE BANK.CODE TO DISTRIB.BANK_CODE
+       MOVE CHECKS.CHECK_NUM TO DISTRIB.CHECK_NUMB
+       MOVE (0) TO DISTRIB.SEQUENCE
+       MOVE 9999 TO DISTRIB.ACCOUNT
+       MOVE REF.DISTRICT TO DISTRIB.DISTRICT
+       MOVE BANK.GL_DIV TO DISTRIB.DIVISION
+       MOVE (0.00) TO DISTRIB.AMOUNT
+       MOVE 'X' TO DISTRIB.UPDATE
+       MOVE '***VOID***' TO DISTRIB.DESCRIPTION
+       MOVE USER_NUMB TO DISTRIB.OPER
+       [OK_RECON] GOSUB RECON_VOID
+       SAVERECORD SETUP BANK CHECKS RECON DISTRIB
+       CLEAR CHECKS RECON DISTRIB
+     LOOP
+  [MULTIUSER] UNLOCK
+RETURN
+         
+   
+RECON_VOID:
+  CLEAR RECON
+  MOVE 'HC' TO RECON.BANK_CODE
+  MOVE CHECKS.CHECK_NUM TO RECON.CHECK_NUMBER
+  MOVE TODAY TO RECON.TRANS_DATE
+  MOVE '** Void **'  TO RECON.PAYOR
+  MOVE (0.00) TO RECON.AMOUNT
+  MOVE 'Y' TO RECON.STATUS
+  MOVE TODAY TO RECON.POSTING_DATE
+  MOVE 'Computer Check' TO RECON.REFERENCE
+  MOVE 'C' TO RECON.TYPE
+RETURN
+    
+
+
+MER_JR:
+
+
+  SCREENMODE 240 ON
+  DISPLAY ' Creating Manual Check Journal Entry    ' TO NOTICE.1
+  SCREENMODE 1 ON
+
+   DECOMPOSE_DATE DIS_DT TO BDAY BMONTH BYEAR
+   [MULTIUSER] REREAD
+//DEBIT ENTRY
+  MOVE (0) TO COUNT
+   REPEAT
+     MOVE 'MC' TO JOURNALS.JR
+     MOVE BYEAR TO JOURNALS.YR
+     MOVE BMONTH TO JOURNALS.MN
+     MOVE BDAY TO JOURNALS.DY
+       IF COUNT EQ (0) MOVE REF.DREST TO JOURNALS.GL
+       IF COUNT EQ (1) MOVE REF.DMFEES TO JOURNALS.GL
+//     IF COUNT EQ (2) MOVE ref.apmer TO JOURNALS.GL
+       [pros_chk] if count eq (2) goto pass_pros_chk_amt
+       if count eq (2) move (1215) to journals.gl
+     MOVE REF.DISTRICT TO JOURNALS.BR
+     MOVE '20' TO JOURNALS.DP
+     MOVE MERCHANT.NAME TO JOURNALS.DESC
+       IF COUNT EQ (0) MOVE MCHKA.4 TO JOURNALS.AMOUNT
+       IF COUNT EQ (1) MOVE MCHKA.5 TO JOURNALS.AMOUNT
+//     IF COUNT EQ (2) MOVE (DIS_MAMT + dis_mamt) TO JOURNALS.AMOUNT
+       if count eq (2) move dis_mamt to journals.amount
+     MOVE DIS_CKNO TO JOURNALS.EMPLY
+     MOVE '' TO JOURNALS.JOB
+     MOVE (REF.REF_NUM + 1) TO JOURNALS.CHK
+     MOVE (REF.REF_NUM + 1) TO REF.REF_NUM
+       SAVERECORD REF
+     GOSUB FIND_GL
+     GOSUB UPDATE_GL
+     SAVE LEDGER
+     SAVERECORD JOURNALS
+     CLEAR LEDGER JOURNALS
+pass_pros_chk_amt:
+     INCREMENT COUNT
+ UNTIL COUNT GE (3)
+
+//CREDIT ENTRY
+    MOVE (0) TO COUNT
+   REPEAT
+    MOVE 'MC' TO JOURNALS.JR
+    MOVE BYEAR TO JOURNALS.YR
+    MOVE BMONTH TO JOURNALS.MN
+    MOVE BDAY TO JOURNALS.DY
+    IF COUNT EQ (0) MOVE REF.CASH TO JOURNALS.GL
+    IF COUNT EQ (1) MOVE REF.APPROCESS TO JOURNALS.GL
+//  [pros_chk] if count eq (2) goto pass_pros2_chk_amt
+//  if count eq (2) move ref.approcess to journals.gl
+    MOVE (( MCHKA.4 + MCHKA.5) * (-1)) TO CHKDISB
+    if count ne (2) MOVE CHKDISB TO JOURNALS.AMOUNT
+    if count eq (2) move (chkdisb + chkdisb) to journals.amount
+    IF COUNT EQ (0) GOSUB BANK_BAL
+    MOVE REF.DISTRICT TO JOURNALS.BR
+    MOVE '20' TO JOURNALS.DP
+    MOVE MERCHANT.NAME TO JOURNALS.DESC
+    MOVE DIS_CKNO TO JOURNALS.EMPLY
+    MOVE '' TO JOURNALS.JOB
+    MOVE (REF.REF_NUM + 1) TO JOURNALS.CHK
+    MOVE (REF.REF_NUM + 1) TO REF.REF_NUM
+      SAVERECORD REF
+    GOSUB FIND_GL
+    GOSUB UPDATE_GL
+    SAVERECORD JOURNALS
+    SAVE LEDGER
+    CLEAR JOURNALS LEDGER
+pass_pros2_chk_amt:
+    INCREMENT COUNT
+  UNTIL COUNT GE (2)
+
+[MULTIUSER] UNLOCK
+
+
+RETURN
+
+
+
+
+PROS_JR:
+
+
+  DECOMPOSE_DATE DIS_DT TO BDAY BMONTH BYEAR
+  [MULTIUSER] REREAD
+
+//DEBIT ENTRY
+     MOVE (0) TO COUNT
+   REPEAT
+     MOVE 'MC' TO JOURNALS.JR
+     MOVE BYEAR TO JOURNALS.YR
+     MOVE BMONTH TO JOURNALS.MN
+     MOVE BDAY TO JOURNALS.DY
+     IF COUNT EQ (0) MOVE REF.DPFEES TO JOURNALS.GL
+     IF COUNT EQ (1) MOVE REF.APPFEES TO JOURNALS.GL
+     MOVE REF.DISTRICT TO JOURNALS.BR
+     MOVE '20' TO JOURNALS.DP
+     MOVE 'Prosecutors Account' TO JOURNALS.DESC
+     MOVE MCHKA.6 TO JOURNALS.AMOUNT
+     MOVE DIS_PCKNO TO JOURNALS.EMPLY
+     MOVE '' TO JOURNALS.JOB
+     MOVE USER_NUMB TO JOURNALS.OPERATOR
+     MOVE (REF.REF_NUM + 1) TO JOURNALS.CHK
+     MOVE (REF.REF_NUM + 1) TO REF.REF_NUM
+       SAVERECORD REF
+     GOSUB FIND_GL
+     GOSUB UPDATE_GL
+     SAVERECORD JOURNALS
+     SAVE LEDGER
+     CLEAR LEDGER JOURNALS
+     INCREMENT COUNT
+  UNTIL COUNT GE (2)
+
+//CREDIT ENTRY
+    MOVE (0) TO COUNT
+  REPEAT
+    MOVE 'MC' TO JOURNALS.JR
+    MOVE BYEAR TO JOURNALS.YR
+    MOVE BMONTH TO JOURNALS.MN
+    MOVE BDAY TO JOURNALS.DY
+    IF COUNT EQ (0) MOVE REF.CASH TO JOURNALS.GL
+    IF COUNT EQ (1) MOVE REF.APPROCESS TO JOURNALS.GL
+    MOVE (MCHKA.6 * (-1)) TO CHKDISB
+    MOVE CHKDISB TO JOURNALS.AMOUNT
+    IF COUNT EQ (0) GOSUB BANK_BAL
+    MOVE REF.DISTRICT TO JOURNALS.BR
+    MOVE '20' TO JOURNALS.DP
+    MOVE 'Prosecutors Account' TO JOURNALS.DESC
+    MOVE DIS_PCKNO TO JOURNALS.EMPLY
+    MOVE '' TO JOURNALS.JOB
+    MOVE USER_NUMB TO JOURNALS.OPERATOR
+    MOVE (REF.REF_NUM + 1) TO JOURNALS.CHK
+    MOVE (REF.REF_NUM + 1) TO REF.REF_NUM
+      SAVERECORD REF
+    GOSUB FIND_GL
+    GOSUB UPDATE_GL
+    SAVERECORD JOURNALS
+    SAVE LEDGER
+    CLEAR JOURNALS LEDGER
+    INCREMENT COUNT
+  UNTIL COUNT GE (2)
+
+[MULTIUSER] UNLOCK
+
+RETURN
+
+
+
+
+RECON_MER2:
+
+
+  SCREENMODE 240 ON
+  DISPLAY '       Creating Check Registers         ' TO NOTICE.1
+  SCREENMODE 1 ON
+
+
+
+  CLEAR RECON CHECKS DISTRIB
+  [MULTIUSER] REREAD
+[OK_RECON] BEGIN
+  MOVE 'HC' TO RECON.BANK_CODE
+  MOVE DIS_CKNO  TO RECON.CHECK_NUMBER
+  MOVE TODAY TO RECON.TRANS_DATE
+  MOVE MERCHANT.NAME TO RECON.PAYOR
+  MOVE (MCHKA.4 + MCHKA.5) TO RECON.AMOUNT
+  MOVE 'N' TO RECON.STATUS
+  MOVE TODAY TO RECON.POSTING_DATE
+  MOVE 'Manual Check' TO RECON.REFERENCE
+  MOVE 'C' TO RECON.TYPE
+END
+
+  //CHECK REGISTER
+    MOVE TODAY TO CHECKS.JR_DATE
+    MOVE BANK.CODE TO CHECKS.BANK_CODE
+    MOVE DIS_CKNO  TO CHECKS.CHECK_NUM
+    MOVE (MCHKA.4 + MCHKA.5) TO CHECKS.CHK_AMT
+    MOVE 'Manual Check' TO CHECKS.REFERENCE
+    MOVE MERCHANT.NAME TO CHECKS.PAYEE
+    MOVE TODAY TO CHECKS.CK_DATE
+    MOVE USER_NUMB TO CHECKS.OPER
+      decompose_date today to bday bmonth byear
+    MOVE bmonth TO CHECKS.SEQ_NUM
+    MOVE 'X' TO CHECKS.UPDATE
+    MOVE MCHKA.5  TO CHECKS.MFEE
+    MOVE MCHKA.6  TO CHECKS.PFEE
+    MOVE MCHKA.4  TO CHECKS.HC_AMT
+  SAVE RECON CHECKS
+
+  //CHECK DISTRIBUTION RECORD
+     MOVE 0 TO COUNT
+      REPEAT
+       MOVE TODAY TO DISTRIB.JR_DATE
+       MOVE BANK.CODE TO DISTRIB.BANK_CODE
+       MOVE DIS_CKNO  TO DISTRIB.CHECK_NUMB
+       MOVE COUNT TO DISTRIB.SEQUENCE
+         IF COUNT EQ (0) MOVE REF.DREST TO DISTRIB.ACCOUNT
+         IF COUNT EQ (1) MOVE REF.DMFEES TO DISTRIB.ACCOUNT
+       MOVE REF.DISTRICT TO DISTRIB.DISTRICT
+       MOVE '20' TO DISTRIB.DIVISION
+         IF COUNT EQ (0) MOVE MCHKA.4  TO DISTRIB.AMOUNT
+         IF COUNT EQ (1) MOVE MCHKA.5 TO DISTRIB.AMOUNT
+         IF COUNT EQ (0) MOVE REF.DREST TO LEDGER.NUMBER
+         IF COUNT EQ (1) MOVE REF.DMFEES TO LEDGER.NUMBER 
+               MOVE REF.DISTRICT TO LEDGER.DISTRICT
+               MOVE '20' TO LEDGER.DIVISION
+                 FIND EQ LEDGER BY INDEX.1
+               MOVE LEDGER.DESC TO DISTRIB.DESCRIPTION
+               CLEAR LEDGER
+        MOVE 'X' TO DISTRIB.UPDATE
+        MOVE USER_NUMB TO DISTRIB.OPER
+        SAVE DISTRIB
+        CLEAR DISTRIB
+        INCREMENT COUNT
+        UNTIL COUNT GE (2)
+
+  [MULTIUSER] UNLOCK
+  CLEAR RECON CHECKS DISTRIB
+RETURN
+
+
+
+RECON_PROS:
+  MOVE MCHKA.6 TO CHKDISB
+  GOSUB RECON_SUB1
+[OK_RECON] BEGIN
+  MOVE DIS_PCKNO TO RECON.CHECK_NUMBER
+  MOVE 'Prosecutors Account' TO RECON.PAYOR
+END
+
+
+  //CHECK REGISTER
+    MOVE DIS_PCKNO TO CHECKS.CHECK_NUM
+    MOVE 'Prosecutors Account' TO CHECKS.PAYEE
+    GOSUB RECON_SUB2
+
+  //CHECK DISTRIBUTION RECORD
+       MOVE TODAY TO DISTRIB.JR_DATE
+       MOVE BANK.CODE TO DISTRIB.BANK_CODE
+       MOVE DIS_PCKNO TO DISTRIB.CHECK_NUMB
+       MOVE (0) TO DISTRIB.SEQUENCE
+       MOVE REF.DPFEES TO DISTRIB.ACCOUNT
+       MOVE REF.DISTRICT TO DISTRIB.DISTRICT
+       MOVE '20' TO DISTRIB.DIVISION
+       MOVE MCHKA.6  TO DISTRIB.AMOUNT
+               MOVE REF.DPFEES TO LEDGER.NUMBER
+               MOVE REF.DISTRICT TO LEDGER.DISTRICT
+               MOVE '20' TO LEDGER.DIVISION
+                 FIND EQ LEDGER BY INDEX.1
+               MOVE LEDGER.DESC TO DISTRIB.DESCRIPTION
+               CLEAR LEDGER
+        MOVE 'X' TO DISTRIB.UPDATE
+        MOVE USER_NUMB TO DISTRIB.OPER
+        SAVE DISTRIB
+
+  [MULTIUSER] UNLOCK
+  CLEAR RECON CHECKS DISTRIB
+RETURN
+
+
+RECON_SUB1:
+   CLEAR RECON CHECKS DISTRIB
+   [OK_RECON] BEGIN
+      MOVE 'HC' TO RECON.BANK_CODE
+      MOVE TODAY TO RECON.TRANS_DATE
+      MOVE CHKDISB TO RECON.AMOUNT
+      MOVE 'N' TO RECON.STATUS
+      MOVE TODAY TO RECON.POSTING_DATE
+      MOVE 'MANUAL CHECK' TO RECON.REFERENCE
+      MOVE 'C' TO RECON.TYPE
+   END
+RETURN
+
+RECON_SUB2:
+   MOVE TODAY TO CHECKS.JR_DATE
+   MOVE BANK.CODE TO CHECKS.BANK_CODE
+   MOVE CHKDISB TO CHECKS.CHK_AMT
+   MOVE 'MANUAL CHECK' TO CHECKS.REFERENCE
+   MOVE TODAY TO CHECKS.CK_DATE
+   MOVE USER_NUMB TO CHECKS.OPER
+   decompose_date today to bday bmonth byear
+   MOVE bmonth TO CHECKS.SEQ_NUM
+   MOVE 'X' TO CHECKS.UPDATE
+   SAVE RECON CHECKS
+RETURN
+
+CK_DISTRIB:
+   MOVE TODAY TO DISTRIB.JR_DATE
+   MOVE BANK.CODE TO DISTRIB.BANK_CODE
+   MOVE REF.DISTRICT TO DISTRIB.DISTRICT
+   MOVE '20' TO DISTRIB.DIVISION
+   MOVE 'X' TO DISTRIB.UPDATE
+   MOVE USER_NUMB TO DISTRIB.OPER
+RETURN
+
+//=============================================================================
+
+KEYPROC KEY.ANY
+  [~ KEY.ESCAPE][IN_MULTI] ENTAGAIN
+RETURN
+
+
+
+
+KEYPROC KEY.ESCAPE
+[~ INVOID] BEGIN
+ [NOT KEY.DELETE][~ OK_QUES] BEGIN
+  CLEARXY 24 0
+  GOTOXY 24 10
+  SHOW 'Do you really want to return to the main menu (Y/N)?  '
+  INKEY ANSW
+  if answ in 'Yy' page exit
+  IF ANSW IN 'Yy' ABORT
+  else begin
+     clearxy 24 0
+  //   clear disburse offense merchant
+     return entrysec       //disbursement
+   end
+  END
+  END
+
+    [INVOID] RETURN RETURN DISBURSEMENT
+
+  ENTAGAIN
+RETURN
+
+KEYPROC KEY.USER2
+  IF CURRENT_WINDOW EQ 1 BEGIN 
+      indicate inoff false
+      INDICATE INDEF TRUE
+      page star
+      accept star.1
+        if star.1 ne '' indicate start$_name true
+     [key.escape]  begin
+        clearform star
+        INDICATE INDEF FALSE
+        return defendant
+      end
+   screenmode 248 on
+   display "   *   STANDBY   *      " to stand.1
+   page stand
+   screenmode 248 off
+   keyproc off
+     clear defendnt
+     move 0 to first_rec
+     move 0 to last_rec
+      begin
+       move 'AAA' to defendnt.name
+       find gt defendnt by index.2
+        [found] move defendnt.idno to first_rec
+        clear defendnt
+       move 'ZZZ' to defendnt.name
+       find lt defendnt by index.2
+        [found] move defendnt.idno to last_rec
+        clear defendnt
+      end
+
+gosub SCROLL_ROUTINE
+screenmode 1 on
+keyproc on
+[KEY.ESCAPE] BEGIN
+      CLEAR DEFENDNT
+      CLEARFORM
+      INDICATE INDEF FALSE
+      RETURN DEFENDANT
+      END
+
+[key.return] begin
+  CLEAR DEFENDNT
+  move def.1& to DEFENDNT.IDNO
+    FIND EQ DEFENDNT BY INDEX.1
+    ENTDISPLAY DEFENDNT
+  INDICATE INDEF FALSE
+  return RESTITUTION
+end
+  INDICATE INDEF FALSE
+end
+
+IF CURRENT_WINDOW GE 21 BEGIN
+   [INDISB] CLEAR OFFENSE DISBURSE
+    MOVE DEFENDNT.IDNO TO DEF_NUM
+   indicate indef false
+   INDICATE INOFF TRUE
+   INDICATE OK_SCROLL FALSE
+   CLEARFORM OFF
+   MOVE 0 TO FIRST_REC
+   MOVE 0 TO LAST_REC
+     KEYPROC OFF
+     IF STATUS DEFENDNT BEGIN
+       CLEAR OFFENSE
+       MOVE DEFENDNT.IDNO TO OFFENSE.IDNO
+       MOVE 1 TO OFFENSE.CTRLNO
+       FIND GE OFFENSE BY INDEX.1
+       [FINDERR] GOTO MOVE_ON
+       [FOUND] IF ~ OFFENSE.ACTIVE IN 'IN' GOTO MOVE_ON
+       [FOUND] IF OFFENSE.ACTIVE IN 'IN' BEGIN
+          REPEAT
+            FIND GT OFFENSE BY INDEX.1
+            [FINDERR] GOTO MOVE_ON
+            IF ~ OFFENSE.ACTIVE IN 'IN' GOTO MOVE_ON
+            IF OFFENSE.ACTIVE IN 'IN'  LOOP
+          END
+        
+  MOVE_ON:           
+        [FOUND] MOVE OFFENSE.RECNUM TO FIRST_REC
+        [FOUND] MOVE OFFENSE.RECNUM TO LAST_REC
+        [FOUND] INDICATE OK_SCROLL TRUE
+        [FINDERR] BEGIN
+            CLEARXY 24 0
+            GOTOXY 24 0
+            SHOW " No Active Offenses on file for this defendant !!;
+                                   Press any key to continue"
+            INKEY ANSW
+            CLEARXY 24 0
+            KEYPROC ON
+            INDICATE INOFF FALSE
+            [INREST] RETURN RESTITUTION
+            [INDISB] RETURN DISBURSEMENT
+         END
+        [FOUND] REPEAT
+           FIND GT OFFENSE BY INDEX.1
+         IF OFFENSE.IDNO NE DEFENDNT.IDNO INDICATE FOUND FALSE
+         [FOUND] MOVE OFFENSE.RECNUM TO LAST_REC
+         [FOUND] LOOP
+   END
+     INDICATE START$ TRUE
+     CLEAR OFFENSE
+     GOSUB SCROLL_ROUTINE
+     SCREENMODE 1 ON
+     KEYPROC ON 
+     [KEY.ESCAPE] BEGIN
+         CLEAR OFFENSE
+         INDICATE INOFF FALSE
+         [INREST] RETURN RESTITUTION
+         [INDISB] RETURN DISBURSEMENT
+       END
+
+
+
+     [KEY.RETURN] BEGIN
+          INDICATE INOFF FALSE
+          [INREST]  BEGIN
+          MOVE OFF.2& TO DIS_#    
+          MOVE OFF.7& TO RAMT
+          END
+          [INDISB] MOVE OFF.2& TO DIS_#
+          [INREST] RETURN RESTITUTION 
+          [INDISB] RETURN DISBURSEMENT
+      END
+
+
+
+END
+
+
+RETURN
+
+//=====< KEYPROC KEY.PRINT >==================================================
+
+KEYPROC KEY.PRINT
+    IF RCPT1.1 EQ '' BEGIN
+      TRIM USER TO USER
+      UPPERCASE USER
+      POS '' IN USER TO PLACE
+      LEFT USER TO INITIAL_1 (1)
+      LEFT USER TO INITIAL_2 (PLACE + 1)
+      APPEND RCPT1.1 INITIAL_1 INITIAL_2
+  END
+  GOTOXY 23 8
+  SHOW "Please Wait ...... Printing Current Receipt           "
+  PRINT SETUP.PROSNAME TO RCPT2.1
+  PRINT RID TO RCPT2.2
+  PRINT RSEQNO TO RCPT2.3
+  PRINT RDT TO RCPT2.4
+  PRINT DNAME    TO RCPT2.5 
+  IF RMETHOD EQ "M" PRINT "Money Order    " TO RCPT2.6  
+  IF RMETHOD EQ "R" PRINT "Cashier's Check" TO RCPT2.6
+  IF RMETHOD EQ "J" PRINT "Journal Entry  " TO RCPT2.6
+  IF RMETHOD EQ "C" PRINT "Cash           " TO RCPT2.6
+  IF RMETHOD EQ "X" PRINT "Credit Card    " TO RCPT2.6
+  PRINT RAMT TO RCPT2.7
+  PRINT USER_NUMB TO RCPT2.8
+  PRINT RCPT1.1 TO RCPT2.9
+  DIRECT_OUTPUT "LPT1:"
+  OUTPUT RCPT2
+  DESPOOL
+  GOTOXY 23 8
+  SHOW "                                             "
+  ENTAGAIN
+  RETURN 
+
+
+
+//=======< KEYPROC KEY.CLEAR >===============================================
+
+
+
+
+//=======< KEYPROC KEY.DELETE >==============================================
+
+KEYPROC KEY.DELETE
+    [inchange] entagain
+    INDICATE DELETER TRUE
+    if status disburse begin
+		indicate indisb true
+		indicate inrest false
+    end
+    if ~ status disburse begin
+		indicate inrest true
+		indicate indisb false
+	end
+    [INDISB]  BEGIN
+		IF STATUS DISBURSE BEGIN
+			INDICATE MUST_VOID AS DISBURSE.CHKNO NE (0)
+			DISPLAY DISBURSE.ID_NO TO SCRVOID.1
+			DISPLAY DEFENDNT.NAME TO SCRVOID.2
+			DISPLAY DISBURSE.SEQ_NO TO SCRVOID.3
+			DISPLAY DISBURSE.SEQNO TO SCRVOID.4
+			DISPLAY DISBURSE.CHKNO TO SCRVOID.5
+			DISPLAY DISBURSE.DISPDT TO SCRVOID.6
+			DISPLAY DISBURSE.MERCHANT_IDNO TO SCRVOID.7
+			DISPLAY DISBURSE.MERCHANT TO SCRVOID.8
+			DISPLAY DISBURSE.PCKNO TO SCRVOID.9
+			DISPLAY OFFENSE.CKAMT TO SCRVOID.10
+			DISPLAY OFFENSE.MFEE TO SCRVOID.11
+			DISPLAY OFFENSE.PFEE TO SCRVOID.12
+
+			CLEARFORM SCRVOID.13 THRU SCRVOID.14
+			
+			
+			
+			DO_QUES:
+				REPEAT
+					ACCEPT SCRVOID.13             {CAPSLOCK}
+				IF ~ SCRVOID.13 IN 'TDVQ' LOOP
+				IF SCRVOID.13 EQ 'Q' INDICATE MUST_VOID FALSE
+				[~ in_find_disb] IF SCRVOID.13 EQ 'Q' RETURN DISBURSEMENT
+				[in_find_disb] if scrvoid.13 eq 'Q' return return disbursement
+				CLEARXY 24 0
+				GOTOXY 24 0
+				SHOW 'Are you sure of your choice' 
+				GOTOXY 24 30
+				REPEAT
+					INKEY ANSW
+					UPPERCASE ANSW
+				IF ~ ANSW IN 'YN' LOOP
+				CLEARXY 24 0
+				IF ANSW EQ 'N' BEGIN
+					CLEARFORM SCRVOID.13
+					GOTO DO_QUES
+				END
+
+				DO_NEW_MER:
+					[~ must_void] IF SCRVOID.13 EQ 'T' BEGIN
+						INDICATE CHK_ONLY AS [MUST_VOID]
+						REPEAT
+							ACCEPT SCRVOID.14
+						IF SCRVOID.14 EQ 0 LOOP
+						GOSUB VALIDATE_MER
+						PAGE TSCR
+						DISPLAY DISBURSE.MERCHANT_IDNO TO TSCR.1
+						DISPLAY DISBURSE.MERCHANT TO TSCR.2
+						DISPLAY SCRVOID.14 TO TSCR.3
+						DISPLAY MER_NAME TO TSCR.4
+						REPEAT
+							CLEARFORM TSCR.5
+							ACCEPT TSCR.5
+							UPPERCASE TSCR.5
+						IF ~ TSCR.5 IN 'YN' LOOP
+						IF TSCR.5 EQ 'N' BEGIN
+							CLEARFORM TSCR
+							CLEARFORM SCRVOID.13 THRU SCRVOID.14
+							GOTO DO_QUES
+						END
+						IF TSCR.5 EQ 'Y' PAGE SCRVOID
+						CLEARXY 24 0
+						GOTOXY 24 0
+						SHOW 'Are you sure of the new Merchant Number'
+						GOTOXY 24 42
+						REPEAT
+							INKEY ANSW
+							UPPERCASE ANSW
+							CLEARXY 24 0
+						IF ~ ANSW IN 'YN' LOOP
+						IF ANSW EQ 'N' CLEARFORM SCRVOID.14
+						IF ANSW EQ 'N' GOTO DO_NEW_MER
+					END
+					[~ must_void] IF SCRVOID.13 EQ 'T' GOSUB TRANS_MER
+					[must_void] if scrvoid.13 eq "T" begin
+						clearxy 24 0
+						gotoxy 24 0
+						screenmode 112 on
+						show "   Cannot transfer - Checks have been Issued / Press space bar to continue   "
+						screenmode 1 on
+						inkey answ
+						clearxy 24 0
+						goto do_ques
+					end
+					
+					[MUST_VOID] IF SCRVOID.13 EQ 'D' BEGIN
+						PAGE DSCR
+						REPEAT
+							CLEARFORM DSCR.1
+							ACCEPT DSCR.1
+							UPPERCASE DSCR.1
+						IF ~ DSCR.1 IN 'YN' LOOP
+						IF DSCR.1 EQ 'N' GOTO DO_QUES
+						move disburse.recnum to disb_recnum
+						page standby
+						move (9) to disb_delete
+						chain "deldisb"
+					END
+
+					[~ MUST_VOID] IF SCRVOID.13 EQ 'D' BEGIN
+						PAGE DSCR2
+						REPEAT
+							CLEARFORM DSCR2.1
+							ACCEPT DSCR2.1
+							UPPERCASE DSCR2.1
+						IF ~ DSCR2.1 IN 'YN' LOOP
+						IF DSCR2.1 EQ 'N' GOTO DO_QUES
+						GOSUB DEL_MER
+					END
+					[must_void] IF SCRVOID.13 EQ 'V' BEGIN
+						display "VOID" to vscr.1
+						display disburse.chkno to vscr.2
+						display disburse.dispdt to vscr.3
+						display disburse.merchant_idno to vscr.4
+						display disburse.merchant to vscr.5
+						display "WRONG" to vscr.6
+						display "CLEARED" to vscr.7
+						display "CANNOT" to vscr.8
+						PAGE VSCR
+						REPEAT
+							clearform vscr.9
+							ACCEPT VSCR.9
+							UPPERCASE VSCR.9
+						IF ~ VSCR.9 IN 'YN' LOOP
+						if vscr.9 eq 'N' goto do_ques
+						INDICATE CHK_ONLY AS VSCR.9 EQ 'N'
+						move disburse.recnum to disb_recnum
+						move (0) to disb_delete
+						chain "deldisb"
+					END
+					[~ must_void] if scrvoid.13 eq "V" begin
+						clearxy 24 0
+						gotoxy 24 0
+						show xchar
+						screenmode 112 on
+						show "        No check has been issued for this offense\disburse;
+						record            "
+						screenmode 1 on
+						inkey answ
+						clearxy 24 0
+						goto do_ques
+					end
+					CLEARFORM REST1
+					CLEAR RESTITUT DISBURSE DEFENDNT OFFENSE
+				END
+				INDICATE MUST_VOID FALSE
+				RETURN  START_TOP
+			END
+
+			[INREST] IF STATUS RESTITUT BEGIN
+				IF ~ STATUS DISBURSE BEGIN
+					CLEAR DISBURSE
+					MOVE RESTITUT.IDNO TO DISBURSE.ID_NO
+					MOVE RESTITUT.SEQNO TO DISBURSE.SEQ_NO
+					MOVE RESTITUT.IDNO TO DISBURSE.IDNO
+					FIND GE DISBURSE.OVERLAP
+				END
+				IF STATUS DISBURSE IF DISBURSE.SEQ_NO EQ RESTITUT.SEQNO BEGIN
+					BLANKFORM SCRDEL2
+					RELATE DISBURSE
+					ENTDISPLAY OFFENSE
+					ENTDISPLAY DISBURSE
+					DISPLAY RESTITUT.SEQNO TO SCRDEL2.1
+					DISPLAY RESTITUT.RESAMT TO SCRDEL2.2
+					DISPLAY DISBURSE.ID_NO TO SCRDEL2.3
+					DISPLAY DISBURSE.SEQ_NO TO SCRDEL2.4
+					DISPLAY DISBURSE.SEQNO TO SCRDEL2.5
+					DISPLAY DISBURSE.DISPDT TO SCRDEL2.6
+					DISPLAY DISBURSE.DISPAMT TO SCRDEL2.7
+					DISPLAY DISBURSE.PROSAMT TO SCRDEL2.8
+					DISPLAY DISBURSE.CHKNO TO SCRDEL2.9
+					DISPLAY DISBURSE.PCKNO TO SCRDEL2.10
+					PAGE SCRDEL2
+					INKEY ANSW
+					RETURN DISBURSEMENT
+				END
+				IF STATUS DISBURSE IF DISBURSE.SEQ_NO NE RESTITUT.SEQNO BEGIN
+					CLEAR DISBURSE OFFENSE
+				END
+				CLEARXY 24 0
+				GOTOXY 24 0
+				SHOW 'Are you sure you wish to delete this receipt? (Y/N)'
+				GOTOXY 24 60
+				REPEAT
+					INKEY ANSW
+					UPPERCASE ANSW
+				IF ~ ANSW IN 'YN' LOOP
+				CLEARXY 24 0
+				IF ANSW EQ 'N' RETURN
+				
+// the below listed code between markers was commented out
+				BLANKFORM SCRDEL
+				PAGE SCRDEL
+				DISPLAY RESTITUT.SEQNO TO SCRDEL.1
+				DISPLAY RESTITUT.RESAMT TO SCRDEL.2
+				if restitut.type ne 'J' begin
+					INDICATE INBANK AS restitut.dep_date ne ''
+					[inbank] BEGIN
+						BLANKFORM SCRDEL.3 THRU SCRDEL.4
+						REPEAT
+							DISPLAY '(1)  -  Take money from Acct. 1000 - Cash in Bank' TO SCRDEL.3
+							DISPLAY '(2)  -  Move money to   Acct. 1220 - Refunds/Allowances ' TO SCRDEL.4
+							ACCEPT SCRDEL.5
+						IF ~ SCRDEL.5 IN (12) LOOP
+						INDICATE REFUND AS SCRDEL.5 EQ '2'
+					END
+				end
+// this was the end of above code that was commented out
+
+//DEBIT ENTRY
+				MOVE 'RD' TO JOURNALS.JR
+				IF RMETHOD NE 'J' MOVE REF.NEWOFF TO JOURNALS.GL
+//J     IF RMETHOD EQ 'J' MOVE REF.RJR TO JOURNALS.GL
+				IF RMETHOD EQ 'J' MOVE (1215) TO JOURNALS.GL 
+				MOVE DEFENDNT.NAME TO JOURNALS.DESC
+				MOVE RAMT TO JOURNALS.AMOUNT
+				MOVE RESTITUT.SEQNO TO JOURNALS.JOB
+				GOSUB GL_JRNLS
+
+//CREDIT ENTRY
+				MOVE 'RD' TO JOURNALS.JR
+				//J     IF RMETHOD NE 'J' BEGIN
+				[~ INBANK] MOVE (1010) TO JOURNALS.GL
+				[INBANK][~ REFUND] MOVE (1000) TO JOURNALS.GL 
+				[INBANK][REFUND] MOVE (1220) TO JOURNALS.GL
+				//J     END
+				IF RMETHOD EQ 'J' MOVE REF.APPROCESS TO JOURNALS.GL
+				MOVE DEFENDNT.NAME TO JOURNALS.DESC
+				MOVE (RAMT * (-1)) TO JOURNALS.AMOUNT
+				MOVE RESTITUT.SEQNO TO JOURNALS.JOB  
+				GOSUB GL_JRNLS
+
+				IF RMETHOD NE 'J' BEGIN
+				//DECREASE PARTIAL RECEIPTS ACCOUNT BY RECEIPT AMOUNT
+//DEBIT ENTRY
+				MOVE 'RD' TO JOURNALS.JR
+				MOVE (1215) TO JOURNALS.GL
+				MOVE DEFENDNT.NAME TO JOURNALS.DESC
+				MOVE RAMT TO JOURNALS.AMOUNT
+				MOVE RESTITUT.SEQNO TO JOURNALS.JOB 
+				GOSUB GL_JRNLS
+		
+//CREDIT ENTRY
+				MOVE 'RD' TO JOURNALS.JR
+				MOVE (2500) TO JOURNALS.GL
+				MOVE DEFENDNT.NAME TO JOURNALS.DESC
+				MOVE (RAMT * (-1)) TO JOURNALS.AMOUNT
+				MOVE RESTITUT.SEQNO TO JOURNALS.JOB
+				GOSUB GL_JRNLS
+			END
+
+			[MULTIUSER] REREAD DEFENDNT
+			MOVE (DEFENDNT.CREDIT - RAMT) TO DEFENDNT.CREDIT
+			MOVE DEFENDNT.CREDIT TO REMAINING
+			SAVERECORD DEFENDNT
+			[MULTIUSER] UNLOCK
+			ENTDISPLAY DEFENDNT
+
+			GOSUB RECORD_CHANGE 
+			GOSUB RECORD_TRANSACT
+			DELETE RESTITUT
+			CLEAR RESTITUT OFFENSE DISBURSE
+			CLEARFORM REST1.21 THRU REST1.39
+			RETURN DEFENDANT
+		END
+		
+		ENTAGAIN
+RETURN
+
+
+//=========< KEYPROC KEY.SAVE >===============================================
+
+KEYPROC KEY.SAVE
+   IF CURRENT_WINDOW LT 29 ENTAGAIN
+RETURN
+
+
+keyproc key.field
+   [in_multi] return stop_keyfield
+   backfield
+return

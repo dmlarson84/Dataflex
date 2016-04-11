@@ -1,0 +1,32 @@
+----------------------------------------------------------------------------- 
+  DATE: 01/20/92      TIME: 01:34                                  PAGE:  1
+  FILE DEFINITION FOR FILE: CTX (# 254)
+-----------------------------------------------------------------------------
+  FILE ROOT NAME          : HELPCTX
+  USER DISPLAY NAME       : CONTEXT
+  DATAFLEX FILE NAME      : CTX
+-----------------------------------------------------------------------------
+  RECORD LENGTH           : 73        ( USED: 73 )
+  MAX NUMBER OF RECORDS   : 10000     ( USED: 0 )
+  FILE COMPRESSION        : None
+  RE-USE DELETED SPACE    : Yes
+  MULTI-USER REREAD       : Yes
+-----------------------------------------------------------------------------
+
+NUM  FIELD NAME       TYPE SIZE  OFFST IX   RELATES TO FILE.FIELD
+---  ---------------  ---- ----- ----- --   ---------------------------------
+  1  APP_NAME         ASC     15     1  1   
+  2  MOD_NAME         ASC     15    16  1   
+  3  HLP_NAME         ASC     40    31  1   
+  4  XRF_RECNUM       NUM    6.0    71  2   FILE_253.RECNUM (253,0)
+
+
+INDEX# FIELDS          DES U/C    LENGTH LEVELS SEGMENTS MODE
+------ --------------- --- ---    ------ ------ -------- -------
+  1    APP_NAME        No  Yes      70     5       3     Online
+       MOD_NAME        No  Yes
+       HLP_NAME        No  Yes
+
+  2    XRF_RECNUM      No  No       6      3       2     Online
+       RECNUM          No  No 
+

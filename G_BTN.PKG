@@ -1,0 +1,69 @@
+//-------------------------------------------------------------------------
+// G_Btn.pkg - Global button class
+//
+// Class: Global_Button_Bar 
+//
+// Objects based on this class will send the item's message back to
+// the object that was the focus object when the button was selected.
+// It will only send the message if the object supports button bars.
+// All objects in an entry_view_client0 support button bars.
+// 
+// Public Access:
+//
+//   Send Add_Focus to (object_name)Current_Object)) Desktop
+//
+//
+// Note: This package is in a program directory and not in the package 
+//       directory. This is intentional. The package is on probation. If 
+//       it works well, we might decide to "promote" it and move it to 
+//       the 2e package directory. For now, it is still being tested.
+//
+// 07/20/94 - Set location relative to bottom of screen (not 23). Added
+//            ability to send directly to object via aux_value
+//-------------------------------------------------------------------------
+
+Use allentry
+
+// Create required so the button object can figure out if it should
+// try sending the button's message.
+//
+//
+// Support_btn_Bar will respond "no" to all objects except for any object 
+// that is encapsulated inside of a view (nested in an 
+// entry_view_Client0 object).
+//
+Function Support_Btn_Bar FOR DESKTOP Returns Integer
+  Local Integer rVal
+  // if not desktop object, delegate this message. If desktop,
+  // return with a "no" answer. No=0
+  If Current_Object eq Desktop Function_return
+  Delegate Get Support_Btn_Bar to rVal
+  Function_Return RVal
+End_Function
+
+Function Support_Btn_Bar FOR ENTRY_VIEW_CLIENT
+  Function_Return 1 // I sure do support this.
+End_Function  
+
+Class Global_Button_Bar is a Button
+  Procedure Construct_Object Integer Img#
+    Forward Send Construct_Object Img#
+    Set Location to (screenend-1) 0
+    Set Focus_Mode to Pointer_Only
+    Set Skip_State to TRUE
+    On_key KEnter Send Redirect_Message
+  End_Procedure  // Construct_Object
+  
+  Procedure Redirect_Message returns integer
+     local integer Msg Obj
+     get Message to Msg
+     get Aux_value to obj
+     If obj eq 0 Begin
+        Get Focus to Obj
+        If (Msg AND Obj AND Support_Btn_Bar(Obj)) Send Msg to Obj
+     end
+     else send msg to obj
+  End_procedure
+  
+End_Class
+

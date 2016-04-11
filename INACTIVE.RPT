@@ -1,0 +1,305 @@
+/PAGE1
+                   Change Outstanding Offenses to Inactive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ID No: [_____.]                                                        
+Defendant Name: [______________________________]  (Last, First MI)
+Address: _________________________ City: _______________ St: __ Zip: _________
+Identification: Physical (Y/N) _ Driver's License ________ Soc Sec _________
+                Other ______________________________________________________
+Description: Sex _   Race _   DOB __/__/__   Height _.'_."   Weight __. lbs.
+Previous Credit: _____.__
+
+/HEADER
+                   Change Outstanding Offenses to Inactive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ENTRY                                                       OLD        NEW
+DATE      DEFENDANT                         OFFENSE #      ACTIVE     ACTIVE
+ 
+/BODY RESIDENT
+__/__/__  ______________________________    ____.-__.        _           _
+/TOTAL
+RECORDS CHANGED = ______.
+/SELECTION
+                   Change Outstanding Offenses to Inactive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+    Outstanding offenses can be set Inactive for a defendant or for 
+    all offenses entered prior to a specified date.  
+
+    You may also specify whether to change all outstanding offenses, or
+    just those of a particular offense type (e.g. Felony, Misdemeanor or
+    Warm Check)
+
+Change for one defendant or prior to an entry date?  _   D = Defendant
+                                                         T = Date
+
+Which type of outstanding offenses should be set inactive? _  H = Felony
+                                                              M = Misdemeanor
+                                                              W = Warm Check
+                                                              A = All 
+/PAGE2
+                   Change Outstanding Offenses to Inactive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+                               W A R N I N G ! ! !
+
+All outstanding offenses entered prior to the date you enter here will be
+set inactive -- regardless of offense date.
+
+Select records by ENTRY DATE less than or equal to __/__/__
+
+/CHANGES
+                          WORTHLESS CHECK SYSTEM
+                        Record Changing Entry Screen
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+            Operator: ___                       Date: __/__/__
+
+            Changes: (What was changed and Why)
+
+            _______________________________________________________ |
+            _______________________________________________________ |
+            _______________________________________________________ |
+
+/DATESCRN
+__/__/__
+/info
+
+   file inactive.rpt
+   Change ==  2/26/91    by Gary Grooms
+             added the user tracking routine and noenter to user id on the
+             changes screen because of a problem on exit from program
+             the user number integer would be reset to 1
+
+              3/26/91    by Beth
+              added date to Change screen,  changed control # to 3 digits
+
+/*
+
+
+//----------------- Cannot Run Program From Command Line (DOS)
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+
+DATE_MACRO_INIT
+
+STRING ANSW 1 BY_DATE_LN 55 BY_DEF_LN 55 user 30
+INDICATOR BYDEF BYDATE
+INTEGER NEWLINE ADAY AMONTH AYEAR  user_access uhc
+DATE YRDTCK
+SYSDATE DATESCRN.1
+MOVE (DATESCRN.1 - 365) TO YRDTCK
+
+multi$ OPEN DEFENDNT RECHANGE REF LEDGER JOURNALS userx
+OPEN OFFENSE INDEX.1
+
+//==========< Track Logged On User and Their Access Level >===================
+
+CLEAR USERX
+MOVE USER_NUMB TO USERX.USER_NUMB
+     FIND EQ USERX BY INDEX.1
+     MOVE USERX.USER_NAME TO USER
+     MOVE USERX.ACCS_LEVL TO USER_ACCESS
+     MOVE USERX.HC_LEVEL TO UHC
+
+
+FORMAT CHANGES.1 {REQUIRED}
+format changes.2 {required}
+FORMAT CHANGES.4 {REQUIRED}
+
+DECOMPOSE_DATE DATESCRN.1 TO ADAY AMONTH AYEAR
+
+OUTFILE "CON:"
+
+PAGE SELECTION
+    ACCEPT SELECTION.1              {CAPSLOCK, CHECK='DT'}
+    INDICATE BYDEF   AS SELECTION.1 EQ 'D'
+    INDICATE BYDATE  AS SELECTION.1 EQ 'T'
+    accept selection.2              {capslock, check = 'HMWA'}
+    indicate alloffs as selection.2 eq 'A'
+
+MOVE 22 TO PAGEEND
+
+[BYDEF] BEGIN
+    ENTERGROUP 
+         AUTOPAGE PAGE1
+         ENTRY DEFENDNT.IDNO                   {AUTOFIND}
+         ENTRY DEFENDNT.NAME                   {AUTOFIND}
+         ENTRY DEFENDNT.ADDR                   {SKIPFOUND}
+         ENTRY DEFENDNT.CITY                   {SKIPFOUND}
+         ENTRY DEFENDNT.ST                     {SKIPFOUND}
+         ENTRY DEFENDNT.ZIP                    {SKIPFOUND}
+         ENTRY DEFENDNT.PHYS                   {SKIPFOUND}
+         ENTRY DEFENDNT.LIC                    {SKIPFOUND}
+         ENTRY DEFENDNT.SOCSEC                 {SKIPFOUND}
+         ENTRY DEFENDNT.OTHER                  {SKIPFOUND}
+         ENTRY DEFENDNT.SEX                    {SKIPFOUND}
+         ENTRY DEFENDNT.RACE                   {SKIPFOUND}
+         ENTRY DEFENDNT.AGE                    {SKIPFOUND}
+         ENTRY DEFENDNT.FT                     {SKIPFOUND}
+         ENTRY DEFENDNT.IN                     {SKIPFOUND}
+         ENTRY DEFENDNT.LBS                    {SKIPFOUND}
+         ENTRY DEFENDNT.CREDIT                 {SKIPFOUND}
+    ENDGROUP
+    CLEARSCREEN
+    MOVE PAGE1.1 TO OFFENSE.IDNO
+END
+
+[BYDATE] BEGIN
+  DT_AGAIN:
+    ACCEPT PAGE2.1                       
+    IF PAGE2.1 GT YRDTCK BEGIN
+         GOTOXY 24 0
+         SHOW 'THE DATE INDICATED IS LESS THAN A YEAR AGO.  IS THIS CORRECT?'
+         INKEY ANSW
+         IF ANSW IN 'Yy' GOTO OKAY
+         ELSE GOTO DT_AGAIN
+  OKAY:
+         CLEARXY 24 0
+    END
+END
+
+CHNGS:
+    CLEARFORM CHANGES
+    PAGE CHANGES
+    [BYDATE]  BEGIN
+         MOVE 'OUTSTAND. ' TO BY_DATE_LN 
+         APPEND BY_DATE_LN SELECTION.2 
+         APPEND BY_DATE_LN ' OFFENSES ENTERED < ' PAGE2.1 ' SET INACTIVE' 
+         MOVE BY_DATE_LN TO CHANGES.3
+    END
+    [BYDEF] BEGIN
+         MOVE "SET THIS ID'S OUTSTAND OFFENSES INACTIVE BECAUSE" TO CHANGES.3
+    END
+    display user_numb to CHANGES.1
+    move datescrn.1 to changes.2
+    AUTOPAGE CHANGES 4
+    ACCEPT CHANGES.4
+    ACCEPT CHANGES.5
+
+REPORT OFFENSE BY INDEX.1
+    [BYDEF     ]       INDICATE SELECT AS OFFENSE.IDNO EQ PAGE1.1
+    [BYDEF ~ SELECT]   GOTO END.OF.REPORT
+    [BYDATE    ]       INDICATE SELECT AS OFFENSE.ENTRY_DATE LE PAGE2.1
+    [BYDATE ~ SELECT]  RETURN
+                       INDICATE SELECT AS OFFENSE.ACTIVE MATCH ' '
+    [NOT SELECT]       INDICATE SELECT AS OFFENSE.ACTIVE MATCH 'L'
+    [select ~ alloffs] indicate select as offense.offen match selection.2
+
+SECTION HEADER
+    CLEARSCREEN    
+    OUTPUT HEADER
+SECTION BODY
+    PRINT OFFENSE.entry_date
+    PRINT OFFENSE.def_name
+    print offense.idno
+    print offense.ctrlno
+    PRINT OFFENSE.ACTIVE
+    REREAD
+         MOVE 'I' TO OFFENSE.ACTIVE
+         MOVE DATESCRN.1 TO OFFENSE.ACTIVE_DATE
+         MOVE (DEFENDNT.BAL - OFFENSE.TOTAL ) TO DEFENDNT.BAL
+         GOSUB DEL_JR
+         SAVERECORD OFFENSE DEFENDNT
+    UNLOCK
+    PRINT OFFENSE.ACTIVE
+    GOSUB RECORD_CHANGE
+    OUTPUT BODY
+SECTION TOTAL
+    PRINT RECCOUNT TO TOTAL.1
+    OUTPUT TOTAL
+REPORTEND
+FORMFEED
+ABORT
+
+KEYPROC KEY.USER
+    SHOW ' YRDTCK = ' YRDTCK
+RETURN
+
+KEYPROC KEY.ESCAPE
+    ABORT
+RETURN
+
+RECORD_CHANGE:
+    MOVE 'OFFENSE'      TO RECHANGE.FILE
+    MOVE CHANGES.1      TO RECHANGE.OPERATOR
+    MOVE CHANGES.2      TO rechange.date
+    move changes.3      to RECHANGE.DESC1
+    MOVE CHANGES.4      TO RECHANGE.DESC2
+    MOVE CHANGES.5      TO RECHANGE.DESC3
+    MOVE OFFENSE.IDNO   TO RECHANGE.ID_NUMBER
+    MOVE OFFENSE.CTRLNO TO RECHANGE.CONTROL_NUMBER
+    MOVE OFFENSE.MFEE   TO RECHANGE.OLD_MFEE
+    MOVE OFFENSE.MFEE   TO RECHANGE.NEW_MFEE
+    MOVE OFFENSE.PFEE   TO RECHANGE.OLD_PFEE
+    MOVE OFFENSE.PFEE   TO RECHANGE.NEW_PFEE
+    MOVE OFFENSE.CKAMT  TO RECHANGE.OLD_CKAMT
+    MOVE OFFENSE.CKAMT  TO RECHANGE.NEW_CKAMT
+    SAVERECORD RECHANGE
+    CLEAR RECHANGE
+RETURN
+
+
+DEL_JR:
+
+// DEBIT ENTRY
+     MOVE 'OF'               TO JOURNALS.JR
+     MOVE AYEAR              TO JOURNALS.YR
+     MOVE AMONTH             TO JOURNALS.MN
+     MOVE ADAY               TO JOURNALS.DY
+     MOVE REF.APPROCESS      TO JOURNALS.GL
+     MOVE REF.DISTRICT       TO JOURNALS.BR
+     MOVE '20'               TO JOURNALS.DP
+     MOVE DEFENDNT.NAME      TO JOURNALS.DESC
+     MOVE (OFFENSE.MFEE + OFFENSE.CKAMT+ OFFENSE.PFEE) TO JOURNALS.AMOUNT
+     MOVE DEFENDNT.IDNO      TO JOURNALS.EMPLY
+     MOVE OFFENSE.CTRLNO     TO JOURNALS.JOB  
+     MOVE (REF.REF_NUM + 1)  TO JOURNALS.CHK
+     MOVE (REF.REF_NUM +1 )  TO REF.REF_NUM
+      SAVERECORD REF
+      GOSUB FIND_GL
+      GOSUB UPDATE_GL
+    SAVE  JOURNALS LEDGER
+    CLEAR JOURNALS LEDGER
+
+//CREDIT ENTRY
+     MOVE 'OF'                    TO JOURNALS.JR
+     MOVE AYEAR                   TO JOURNALS.YR
+     MOVE AMONTH                  TO JOURNALS.MN
+     MOVE ADAY                    TO JOURNALS.DY
+     MOVE REF.NEWOFF              TO JOURNALS.GL
+     MOVE REF.DISTRICT            TO JOURNALS.BR
+     MOVE '20'                    TO JOURNALS.DP
+     MOVE DEFENDNT.NAME           TO JOURNALS.DESC
+     MOVE (OFFENSE.TOTAL * (-1))  TO JOURNALS.AMOUNT
+     MOVE DEFENDNT.IDNO           TO JOURNALS.EMPLY
+     MOVE OFFENSE.CTRLNO          TO JOURNALS.JOB  
+     MOVE (REF.REF_NUM + 1)       TO JOURNALS.CHK
+     MOVE (REF.REF_NUM +1 )       TO REF.REF_NUM
+      SAVERECORD REF
+      GOSUB FIND_GL
+      GOSUB UPDATE_GL
+    SAVE  JOURNALS LEDGER
+    CLEAR JOURNALS LEDGER
+RETURN
+
+
+FIND_GL:
+   MOVE JOURNALS.GL TO LEDGER.NUMBER
+   MOVE JOURNALS.BR TO LEDGER.DISTRICT
+   MOVE JOURNALS.DP TO LEDGER.DIVISION
+    FIND EQ LEDGER BY INDEX.1
+RETURN
+
+UPDATE_GL:
+    MOVE (JOURNALS.MN - 1) TO FIELDINDEX
+    MOVE (LEDGER.TYJAN&  + JOURNALS.AMOUNT) TO LEDGER.TYJAN&
+    MOVE (LEDGER.TYTOTAL + JOURNALS.AMOUNT) TO LEDGER.TYTOTAL
+RETURN
+

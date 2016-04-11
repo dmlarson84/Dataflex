@@ -1,0 +1,1123 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+//      
+// Module: 
+//      flist.pkg
+//      
+// Purpose:
+//      Defines Filelist and Filelist_Server classes. Filelist is a "quiet"
+//      class for reading and writing filelists, while the Filelist_Server
+//      supports selecting multiple entries in the filelist and updates
+//      display objects when changes occur. Filelist_Server also supports
+//      a File Set where a (single) group of files can be defined and
+//      selected.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      8/12/94
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+use flistrdr // uses Filelist_Reader superclass; it only reads filelists.
+use brdcster
+use callback
+
+define TOGGLE_SELECT_STATE for 3
+
+// filelist entry array structure:
+//  item number offset      field
+//          0               entry_active
+//          1               root_name
+//          2               display_name
+//          3               logical_name
+//          4               entry_changed
+//          5               open_type
+//          6               open_as_root_name
+
+// add new field to filelist entry structure
+// (requires augmentation of Size_Of_Entry_Structure function)
+define FILELIST_ENTRY_CHANGED     for 4
+define FILELIST_OPEN_TYPE         for 5
+define FILELIST_OPEN_AS_ROOT_NAME for 6
+
+define FILELIST_ENTRY_STRUCTURE_SIZE for 7
+
+define FILELIST_ROOT_NAME_LENGTH    for 40
+define FILELIST_DISPLAY_NAME_LENGTH for 32
+define FILELIST_LOGICAL_NAME_LENGTH for 8
+
+// display_object update modes (NOTE: Insert new modes at TOP of list and
+// incrementinitial enum value!)
+//
+// -2 = update selected_states
+// -1 = update filelist filename
+//  0 = update all files and selected_states
+// >0 = filenumber to update
+
+enum_list
+    define FILELIST_UPDATE_SELECTED for -2
+    define FILELIST_UPDATE_FILELIST_NAME
+    define FILELIST_UPDATE_ALL_FILES
+end_enum_list
+
+enum_list
+    define FILELIST_OPEN_TYPE_NUMBER
+    define FILELIST_OPEN_TYPE_NAME
+    define FILELIST_OPEN_TYPE_NUMBER_AND_NAME
+end_enum_list
+
+
+define FILELIST_ENTRY_VALID for -1
+define FILELIST_ENTRY_VALIDATE_ERROR for 1
+
+define DF_DEF_FILE_EXTENSION for '.def'
+
+class Filelist is a Filelist_Reader
+    register_function Entry_Changed integer File# returns integer
+    register_function Open_Type integer File# returns integer
+    register_function Open_As_Root_Name integer File# returns string
+
+    procedure Construct_Object
+        property integer Ch_State PUBLIC FALSE
+        property integer Invalid_Entry_File PUBLIC  FILELIST_ENTRY_VALID
+        property integer Invalid_Entry_Field PUBLIC FILELIST_ENTRY_VALID
+        property integer Callback_Object PUBLIC 0
+        property integer Changed_Count PUBLIC 0
+
+        forward send Construct_Object
+    end_procedure
+
+    function Size_Of_Entry_Structure returns integer
+        function_return FILELIST_ENTRY_STRUCTURE_SIZE
+    end_function
+
+    procedure set Filename string Val
+        local string Old_Val
+
+        get Filename to Old_Val
+
+        if Old_Val NE Val begin
+            forward set Filename to Val
+            set Changed_State to TRUE
+        end
+    end_procedure
+
+    procedure Delete_Data
+        forward send Delete_Data
+
+        set Changed_State to FALSE
+    end_procedure
+
+    procedure Close
+        send Close_Open_As
+        forward send Close
+    end_procedure
+
+    procedure Fill_List
+        local integer Fnum
+
+        forward send Fill_List
+
+        get Original_First_Used to Fnum
+
+        while Fnum GT 0
+            set Entry_Changed Fnum to FALSE
+            get Original_Next_Used Fnum to Fnum
+        end
+
+        set Changed_State to FALSE
+    end_procedure
+
+    procedure Change_All
+        local integer File#
+
+        get First_Used to File#
+
+        while File# GT 0
+            set Entry_Changed File# to TRUE
+            get Next_Used File# to File#
+        end
+
+        set Changed_State to TRUE
+    end_procedure
+
+    procedure Save
+        local integer Onum Nnum CBO Quit
+
+        get Callback_Object to CBO
+
+        if CBO NE 0 ;
+            get Callback of CBO ("Saving filelist: " + ;
+                Filename(Current_Object)) CALLBACK_TYPE_BEGIN to Quit
+
+        if not (Changed_State(Current_Object)) begin
+            if CBO NE 0 ;
+                get Callback of CBO "" CALLBACK_TYPE_COMPLETE to Quit
+            procedure_return
+        end
+
+        // iteratively find lower of next_original or next and update/delete.
+        get Original_First_Used to Onum
+        get First_Used to Nnum
+        move 0 to Quit
+
+        while (((Onum > 0) or (Nnum > 0)) and not(Quit))
+            if (Open_Type(Current_Object, Nnum)) NE FILELIST_OPEN_TYPE_NUMBER ;
+                get Next_Used Nnum to Nnum // skip opened as files
+            else begin
+                if ((Onum > 0) and ((Onum < Nnum) or (Nnum = 0))) begin
+                    if CBO NE 0 ;
+                        get Callback of CBO ("Deleting entry for " + ;
+                        (Original_Logical_Name(Current_Object, Onum))) ;
+                        CALLBACK_TYPE_TEXT to Quit
+                    if not Quit ;
+                        send Delete_Original_Entry Onum
+                    get Original_Next_Used Onum to Onum
+                end
+                else begin
+                    if (Entry_Changed(Current_Object, Nnum)) begin
+                        if CBO NE 0 ;
+                            get Callback of CBO ("Saving entry for " + ;
+                            (Logical_Name(Current_Object, Nnum))) ;
+                            CALLBACK_TYPE_TEXT to Quit
+                        if not Quit ;
+                            send Save_Original_Entry Nnum
+                    end
+
+                    if Onum EQ Nnum ;
+                        get Original_Next_Used Onum to Onum
+
+                    get Next_Used Nnum to Nnum
+                end
+            end
+        end
+
+        if not Quit begin
+            set Changed_State to FALSE
+
+            if CBO NE 0 ;
+                get Callback of CBO "" CALLBACK_TYPE_COMPLETE to Quit
+        end
+    end_procedure
+
+    procedure Delete_Original_Entry integer Fnum
+        set_attribute DF_FILE_ROOT_NAME of Fnum to ""
+        set Entry_Active Fnum to FALSE
+        set Entry_Changed Fnum to FALSE
+    end_procedure
+
+    procedure Revert
+        send Fill_List
+    end_procedure
+
+    function Save_Entry integer Fnum returns integer
+        local integer Ret
+
+        send Update_Entry Fnum
+        get Invalid_Entry_File to Ret
+
+        if Ret NE FILELIST_ENTRY_VALID ;
+            function_return FILELIST_ENTRY_VALIDATE_ERROR
+        else ;
+            function_return 0
+    end_function
+
+    procedure Save_Original_Entry integer Fnum
+        set_attribute DF_FILE_ROOT_NAME of Fnum to (trim(Root_Name(Current_Object, Fnum)))
+        set_attribute DF_FILE_DISPLAY_NAME of Fnum to (trim(Display_Name(Current_Object, Fnum)))
+        set_attribute DF_FILE_LOGICAL_NAME of Fnum to (trim(Logical_Name(Current_Object, Fnum)))
+
+        set Entry_Changed Fnum to FALSE
+    end_procedure
+
+    procedure Update_Entry integer Fnum
+        set Invalid_Entry_File to FILELIST_ENTRY_VALID
+        set Invalid_Entry_Field to FILELIST_ENTRY_VALID
+    end_procedure
+
+    procedure Validate_Entry integer File# string Rt_Name ;
+            string Disp_Name string Logi_Name
+        local integer Invalid_Fld
+
+        move FILELIST_ENTRY_VALID to Invalid_Fld
+
+        if ((File# <= 0) or (File# > FILELIST_MAX_FILE_NUMBER)) ;
+                move FILELIST_FILE_NUMBER to Invalid_Fld
+        if Rt_Name LE "" ;
+            move FILELIST_ROOT_NAME to Invalid_Fld
+        else if Disp_Name LE "" ;
+            move FILELIST_DISPLAY_NAME to Invalid_Fld
+        else if Logi_Name LE "" ;
+            move FILELIST_LOGICAL_NAME to Invalid_Fld
+
+        if Invalid_Fld NE FILELIST_ENTRY_VALID begin
+            set Invalid_Entry_File to File#
+            set Invalid_Entry_Field to Invalid_Fld
+        end
+    end_procedure
+
+    procedure Edit_Entry integer File# string Rt_Name ;
+            string Disp_Name string Logi_Name
+        local integer Ret
+
+        send Validate_Entry File# Rt_Name Disp_Name Logi_Name
+        get Invalid_Entry_Field to Ret
+
+        if Ret EQ FILELIST_ENTRY_VALID begin
+            set Root_Name File# to Rt_Name
+            set Display_Name File# to Disp_Name
+            set Logical_Name File# to Logi_Name
+        end
+    end_procedure
+
+    procedure Delete_Entry integer File#
+        local integer State
+
+        get Entry_Active File# to State
+
+        if State begin
+            if (Open_Type(Current_Object, File#)) NE FILELIST_OPEN_TYPE_NUMBER ;
+                send Close_As_Database File#
+
+            set Root_Name File# to ""
+            set Display_Name File# to ""
+            set Logical_Name File# to ""
+            set Entry_Active File# to FALSE
+            set Entry_Changed File# to ;
+                    (Original_Entry_Active(Current_Object, File#))
+        end
+    end_procedure
+
+    procedure set Filelist_Struct integer File# integer Ofst string Val
+        local integer Itm_Ofst Was_State
+        local string Old_Val
+
+        move ((File# * Size_Of_Entry_Structure(Current_Object)) + Ofst) ;
+            to Itm_Ofst
+        get String_Value item Itm_Ofst to Old_Val
+
+        if Val NE Old_Val begin
+            // This messy code here allows you to set
+            // entry_changed without changing the
+            // entry_active (otherwise, you can't null out an entry).
+            // Order is important here: to null out an entry, set
+            // entry_active to FALSE, then set entry_changed to
+            // FALSE.
+            if Ofst EQ FILELIST_ENTRY_CHANGED begin
+                get Entry_Active File# to Was_State
+                forward set Filelist_Struct File# Ofst to Val
+                forward set Filelist_Struct File# FILELIST_ENTRY_ACTIVE to Was_State
+            end
+            else begin
+                set Entry_Changed File# to TRUE
+                forward set Filelist_Struct File# Ofst to Val
+            end
+        end
+    end_procedure
+
+    procedure set Entry_Active integer File# integer State
+        set Filelist_Struct File# FILELIST_ENTRY_ACTIVE to State
+    end_procedure
+
+    procedure set Root_Name integer File# string Val
+        set Filelist_Struct File# FILELIST_ROOT_NAME to ;
+            (left(Val, FILELIST_ROOT_NAME_LENGTH))
+    end_procedure
+
+    procedure set Display_Name integer File# string Val
+        set Filelist_Struct File# FILELIST_DISPLAY_NAME to ;
+            (left(Val, FILELIST_DISPLAY_NAME_LENGTH))
+    end_procedure
+
+    procedure set Logical_Name integer File# string Val
+        set Filelist_Struct File# FILELIST_LOGICAL_NAME to ;
+            (left(Val, FILELIST_LOGICAL_NAME_LENGTH))
+    end_procedure
+
+    procedure set Entry_Changed integer File# integer New_State
+        local integer Old_State Cnt
+
+        get Entry_Changed File# to Old_State
+
+        set Filelist_Struct File# FILELIST_ENTRY_CHANGED to New_State
+
+        if New_State ;
+            set Changed_State to New_State
+
+        get Changed_Count to Cnt
+
+        if (New_State and not(Old_State)) ;
+            increment Cnt
+        else if (not(New_state) and Old_State) ;
+            decrement Cnt
+
+        set Changed_Count to Cnt
+    end_procedure
+
+    function Entry_Changed integer File# returns integer
+        function_return (Integer_Value(Current_Object, (File# * ;
+            Size_Of_Entry_Structure(Current_Object)) + ;
+            FILELIST_ENTRY_CHANGED))
+    end_function
+
+    procedure set Open_Type integer File# integer State
+        set Filelist_Struct File# FILELIST_OPEN_TYPE to State
+    end_procedure
+
+    function Open_Type integer File# returns integer
+        function_return (Integer_Value(Current_Object, (File# * ;
+            Size_Of_Entry_Structure(Current_Object)) + ;
+            FILELIST_OPEN_TYPE))
+    end_function
+
+    procedure set Open_As_Root_Name integer File# string Fname
+        set Filelist_Struct File# FILELIST_OPEN_AS_ROOT_NAME to Fname
+    end_procedure
+
+    function Open_As_Root_Name integer File# returns string
+        function_return (String_Value(Current_Object, (File# * ;
+            Size_Of_Entry_Structure(Current_Object)) + ;
+            FILELIST_OPEN_AS_ROOT_NAME))
+    end_function
+
+    procedure set Changed_State integer State
+        set Ch_State to State
+
+        if not State ;
+            set Changed_Count to 0
+    end_procedure
+
+    function Changed_State returns integer
+        local integer State
+
+        get Ch_State to State
+        function_return (State and (Changed_Count(Current_Object) > 0))
+    end_function
+
+    function Database_Opened integer File# returns integer
+        local integer Val
+
+        get_attribute DF_FILE_OPENED of File# to Val
+        function_return Val
+    end_function
+
+    procedure Open_Database integer File#
+        local integer Was_Ch
+
+        if (Entry_Active(Current_Object, File#)) begin
+            // open_as files are always open; only open non-open_as files.
+            if (Open_Type(Current_Object, File#)) EQ FILELIST_OPEN_TYPE_NUMBER begin
+                if (Database_Opened(Current_Object, File#)) ;
+                    send Close_Database File#
+
+                open File#
+
+                [not Err] begin
+                    get Entry_Changed File# to Was_Ch
+                    set Open_Type File# to FILELIST_OPEN_TYPE_NUMBER
+                    set Entry_Changed File# to Was_Ch
+                end
+            end
+        end
+    end_procedure
+
+    function Open_As_Database integer File# string Fname returns integer
+        local integer Open#
+
+        if File# NE 0 ;
+            move File# to Open#
+        else begin
+            get First_Empty to Open#
+
+            if Open# LE 0 ; // no entries available
+                function_return Open#
+        end
+
+        if (Database_Opened(Current_Object, Open#)) ;
+            close Open# // close it, if for some reason it was already opened.
+
+        open Fname as Open#
+
+        if [Err] ;
+            move 0 to Open#
+        else begin
+            set Entry_Active Open# to TRUE
+
+            if File# EQ 0 ;
+                set Open_Type Open# to FILELIST_OPEN_TYPE_NAME
+            else ;
+                set Open_Type Open# to FILELIST_OPEN_TYPE_NUMBER_AND_NAME
+
+            set Open_As_Root_Name Open# to Fname
+            set Entry_Changed Open# to FALSE
+        end
+
+        function_return Open#
+    end_function
+
+    procedure Error_Report integer Error_Info string Err_Msg
+        indicate Err TRUE
+    end_procedure
+
+    function Open_Database_No_Error integer File# returns integer
+        local integer Obj Ret_Val
+
+        move Error_Object_ID to Obj
+        move Current_Object to Error_Object_ID
+
+        indicate Err FALSE
+        send Open_Database File#
+        move (Err) to Ret_Val
+        indicate Err FALSE
+
+        move Obj to Error_Object_ID
+        function_return Ret_Val
+    end_function
+
+    function Open_As_Database_No_Error integer File# string Fname returns integer
+        local integer Obj Ret_Val
+
+        move Error_Object_ID to Obj
+        move Current_Object to Error_Object_ID
+
+        indicate Err FALSE
+        get Open_As_Database File# Fname to Ret_Val
+        move ((Ret_Val = 0) or Err) to Ret_Val
+        indicate Err FALSE
+
+        move Obj to Error_Object_ID
+        function_return Ret_Val
+    end_function
+
+    procedure Close_Database integer File#
+         // open_as files remain open; only close non-open_as files.
+        if (Entry_Active(Current_Object, File#) and ;
+                (Open_Type(Current_Object, File#) = FILELIST_OPEN_TYPE_NUMBER)) ;
+            close File#
+    end_procedure
+
+    procedure Close_As_Database integer File#
+        if (Entry_Active(Current_Object, File#) and ;
+            (Open_Type(Current_Object, File#) NE FILELIST_OPEN_TYPE_NUMBER)) begin
+            close file#
+
+            set Open_Type File# to FILELIST_OPEN_TYPE_NUMBER
+            set Entry_Active File# to (Original_Entry_Active(Current_Object, File#))
+            set Entry_Changed File# to FALSE
+        end
+    end_procedure
+
+    procedure Close_Open_As
+        local integer Cnt Itm#
+
+        get Item_Count to Cnt
+        move 0 to Itm#
+        increment Itm#
+
+        while Itm# LT Cnt
+            if (Entry_Active(Current_Object, Itm#) and ;
+                    (Open_Type(Current_Object, Itm#) <> ;
+                    FILELIST_OPEN_TYPE_NUMBER)) ;
+                send Close_As_Database Itm#
+
+            increment Itm#
+        end
+    end_procedure
+
+    function Logical_Name integer File# returns string
+        local string Logic_Name
+
+        if (Open_Type(Current_Object, File#)) EQ FILELIST_OPEN_TYPE_NUMBER ;
+            forward get Logical_Name File# to Logic_Name
+        else begin
+            get Open_As_Root_Name File# to Logic_Name
+
+            if (length( Logic_Name )) LE (FILELIST_LOGICAL_NAME_LENGTH - 1) ;
+                move ("=" + Logic_Name) to Logic_Name
+            else ;
+                move ("=..." + ;
+                    right(Logic_Name, FILELIST_LOGICAL_NAME_LENGTH - 4)) ;
+                    to Logic_Name
+        end
+
+        function_return Logic_Name
+    end_function
+
+    function Display_Name integer File# returns string
+        local string Disp_Name
+
+        if (Open_Type(Current_Object, File#)) EQ FILELIST_OPEN_TYPE_NUMBER ;
+            forward get Display_Name File# to Disp_Name
+        else begin
+            get Open_As_Root_Name File# to Disp_Name
+
+            if (length(Disp_Name)) LE (FILELIST_DISPLAY_NAME_LENGTH - 1) ;
+                move ("=" + Disp_Name) to Disp_Name
+            else ;
+                move ("=..." + ;
+                    right(Disp_Name, FILELIST_DISPLAY_NAME_LENGTH - 4)) ;
+                    to Disp_Name
+        end
+
+        function_return Disp_Name
+    end_function
+
+    function Root_Name integer File# returns string
+        local string Rt_Name
+
+        if (Open_Type(Current_Object, File#)) EQ FILELIST_OPEN_TYPE_NUMBER ;
+            forward get Root_Name File# to Rt_Name
+        else begin
+            get Open_As_Root_Name File# to Rt_Name
+
+            if (length(Rt_Name)) LE (FILELIST_ROOT_NAME_LENGTH - 1) ;
+                move ("=" + Rt_Name) to Rt_Name
+            else ;
+                move ("=..." + ;
+                    right(Rt_Name, FILELIST_ROOT_NAME_LENGTH - 4)) ;
+                    to Rt_Name
+        end
+
+        function_return Rt_Name
+    end_function
+
+    function Report_Select integer File# returns integer
+        local integer State
+
+        get Entry_Active File# to State
+
+        move (State and ;
+            (Open_Type(Current_Object, File#) EQ FILELIST_OPEN_TYPE_NUMBER)) to State
+
+        function_return State
+    end_function
+end_class
+
+register_procedure Update_Filelist_Entry
+register_procedure Filelist_Server_Destroyed
+
+class Filelist_Server is a Filelist
+    procedure Construct_Object
+        // properties/objects before fwd because construct_object in
+        // superclass calls fill_list which is augmented here to access
+        // these properties/objects.
+
+        property integer Sel_Cnt PUBLIC 0
+        property integer Update_Display_Objects_State PUBLIC FALSE
+        property integer Display_Objects PUBLIC (Make_Broadcaster(Desktop))
+        
+        object Selected_List is an Array
+        end_object
+
+        object File_Set_List is a Set
+            // Set of file numbers and root names (Format: "###,Rootname")
+        end_object
+
+        object File_Set_Open_As_List is a Set
+            // Set of file numbers that are open as first empty for file set
+        end_object
+
+        forward send Construct_Object
+    end_procedure
+
+    procedure Revert
+        local integer Was
+        
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+        forward send Revert
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects FILELIST_UPDATE_ALL_FILES
+    end_procedure
+
+    procedure Fill_List
+        local integer Was
+        
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+        forward send Fill_List
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects FILELIST_UPDATE_ALL_FILES
+    end_procedure
+
+    procedure set Entry_Active integer File# integer State
+        forward set Entry_Active File# to State
+        send Update_Display_Objects File#
+    end_procedure
+
+    function Select_Count returns integer
+        function_return (Sel_Cnt(Current_Object))
+    end_function
+
+    procedure set Select_Count integer Cnt
+        local integer Old_Cnt
+
+        get Sel_Cnt to Old_Cnt
+        set Sel_Cnt to Cnt
+
+        if Cnt NE Old_Cnt ;
+            send Update_Display_Objects FILELIST_UPDATE_FILELIST_NAME
+    end_procedure
+
+    function Next_Selected integer Fnum returns integer
+        local integer Cnt Itm#
+
+        get Item_Count to Cnt
+        move Fnum to Itm# // itm# = fnum
+        increment Itm#
+
+        while Itm# LT Cnt
+            if (Entry_Active(Current_object, Itm#) and ;
+                    Select_State(Current_Object, Itm#)) ;
+                function_return Itm#
+            increment Itm#
+        end
+
+        function_return 0
+    end_function
+
+    function First_Selected returns integer
+        function_return (Next_Selected(Current_Object, 0))
+    end_function
+
+    procedure Delete_Data
+        forward send Delete_Data
+
+        if (Child_Count(Current_Object)) GT 0 begin // protection for destroy_object
+            send Delete_Data to (Selected_List(Current_Object))
+            set Select_Count to 0
+        end
+    end_procedure
+
+    procedure Clear_File_Set
+        send Delete_Data to (File_Set_List(Current_Object))
+    end_procedure
+
+    procedure Add_To_File_Set integer File#
+        local integer OType
+
+        get Open_Type File# to OType
+
+        if OType EQ FILELIST_OPEN_TYPE_NUMBER ;
+            send Add_Element to (File_Set_List(Current_Object)) ;
+                (string(File#) + ",")
+        else if OType EQ FILELIST_OPEN_TYPE_NUMBER_AND_NAME ;
+            send Add_Element to (File_Set_List(Current_Object)) ;
+                (string(File#) + "," + ;
+                Open_As_Root_Name(Current_Object, File#))
+        else ; // if OType EQ FILELIST_OPEN_TYPE_NAME ;
+            send Add_Element to (File_Set_List(Current_Object)) ;
+                (string(0) + "," + Open_As_Root_Name(Current_Object, File#))
+    end_procedure
+
+    procedure Select_File_Set
+        local integer Itm# File# Cnt FS_Obj Comma_Pos Open_As_First_Empty Done
+        local string FS_Val Rtname
+
+        move (File_Set_List(Current_Object)) to FS_Obj
+
+        get Item_Count of FS_Obj to Cnt
+
+        // Open all files by file number first to avoid an open as file
+        // number that is in use due to an open as first empty; i.e. we
+        // don't want an open as first empty to use an entry that will
+        // later be used for open as file number.
+        move (FALSE) to Open_As_First_Empty
+
+        repeat
+            move 0 to Itm#
+
+            while Itm# LT Cnt
+                get String_Value of FS_Obj item Itm# to FS_Val
+
+                pos "," in FS_Val to Comma_Pos
+                left FS_Val to File# (Comma_Pos - 1)
+
+                if (((File# = 0) and Open_As_First_Empty) or ;
+                        ((File# <> 0) and not(Open_As_First_Empty))) begin
+                    right FS_Val to Rtname (length(FS_Val) - Comma_Pos)
+
+                    if Rtname GT "" ;
+                        get Open_As_Database File# Rtname to File#
+
+                    if (Entry_Active(Current_Object, File#)) ;
+                        set Select_State item File# to TRUE
+                end
+
+                increment Itm#
+            end
+
+            move Open_As_First_Empty to Done
+            move (not(Open_As_First_Empty)) to Open_As_First_Empty
+        until Done
+    end_procedure
+
+    procedure Delete_Entry integer File#
+        local integer Cnt State
+
+        forward send Delete_Entry File#
+
+        if (Integer_Value(Selected_List(Current_Object), File#)) begin
+            get Select_Count to Cnt
+            decrement Cnt
+            set Select_Count to Cnt
+        end
+
+        send Update_Display_Objects File#
+    end_procedure
+
+    procedure Delete_Selected_Entries
+        local integer Fnum Was
+
+        get First_Selected to Fnum
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        while Fnum GT 0
+            send Delete_Entry Fnum
+            get Next_Selected Fnum to Fnum
+        end
+
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects FILELIST_UPDATE_ALL_FILES
+    end_procedure
+
+    procedure Save
+        local integer Was Ch
+
+        move (Changed_State(Current_Object)) to Ch
+
+        if Ch begin
+            get Update_Display_Objects_State to Was
+            set Update_Display_Objects_State to FALSE
+        end
+
+        forward send Save
+
+        if Ch begin
+            set Update_Display_Objects_State to Was
+            send Update_Display_Objects FILELIST_UPDATE_ALL_FILES
+        end
+    end_procedure
+
+    procedure New
+        local integer Was
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        forward send New
+
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects FILELIST_UPDATE_FILELIST_NAME
+        send Update_Display_Objects FILELIST_UPDATE_ALL_FILES
+    end_procedure
+
+    procedure Open string Fname
+        local integer Was
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        forward send Open Fname
+
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects FILELIST_UPDATE_FILELIST_NAME
+        send Update_Display_Objects FILELIST_UPDATE_ALL_FILES
+    end_procedure
+
+    procedure Close
+        local integer Was
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        forward send Close
+
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects FILELIST_UPDATE_FILELIST_NAME
+        send Update_Display_Objects FILELIST_UPDATE_ALL_FILES
+    end_procedure
+
+    procedure Open_Database integer File#
+        local integer Was Ret_Val
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        forward send Open_Database File#
+
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects File#
+    end_procedure
+
+    function Open_As_Database integer File# string Fname returns integer
+        local integer Was Ret_Val
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        forward get Open_As_Database File# Fname to Ret_Val
+
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects File#
+
+        function_return Ret_Val
+    end_function
+
+    function Any_Selected returns integer
+        function_return (Select_Count(Current_Object) > 0)
+    end_function
+
+    procedure Select_All integer State
+        local integer Itm# // note: Itm# = File# in this case
+        local integer Cnt Tot Was
+
+        get Item_Count to Cnt
+        move 0 to Itm#
+        move 0 to Tot
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        while Itm# LT Cnt
+            if (Entry_Active(Current_Object, Itm#)) begin
+                set Select_State item Itm# to State
+                increment Tot
+            end
+
+            increment Itm#
+        end
+
+        if State ;
+            set Select_Count to Tot
+        else ;
+            set Select_Count to 0
+            
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects FILELIST_UPDATE_SELECTED
+    end_procedure
+
+    procedure Select_Bad
+        local integer Itm# // note: itm# eq file# in this case
+        local integer Cnt Tot Was Bad
+
+        get Item_Count to Cnt
+        move 0 to Itm#
+        move 0 to Tot
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        while Itm# LT Cnt
+            if (Entry_Active(Current_Object, Itm#) and ;
+                    (Open_Type(Current_Object, Itm#) = ;
+                    FILELIST_OPEN_TYPE_NUMBER)) begin
+                get Open_Database_No_Error Itm# to Bad
+
+                if not Bad ;
+                    send Close_Database Itm#
+
+                set Select_State item Itm# to Bad
+
+                if Bad ;
+                    increment Tot
+            end
+
+            increment Itm#
+        end
+
+        set Select_Count to Tot
+            
+        set Update_Display_Objects_State to Was
+
+        send Update_Display_Objects FILELIST_UPDATE_SELECTED
+    end_procedure
+
+    procedure set Select_State integer File# integer State
+        local integer Cnt St
+
+        if (Entry_Active(Current_object, File#)) begin
+            move State to St
+
+            if St EQ TOGGLE_SELECT_STATE ;
+                move (not(Select_State(Current_Object, File#))) to St
+
+            set Array_Value of (Selected_List(Current_Object)) item File# to St
+            get Select_Count to Cnt
+
+            if St ;
+                increment Cnt
+            else ;
+                decrement Cnt
+
+            set Select_Count to Cnt
+        end
+
+        send Update_Display_Objects File#
+    end_procedure
+
+    function Select_State integer File# returns integer
+        if not (Entry_Active(Current_Object, File#)) ;
+            function_return 0
+        else ;
+            function_return (Integer_Value(Selected_List(Current_Object), File#))
+    end_function
+
+    procedure Close_Selected
+        local integer Itm# // note: Itm# = File# in this case
+        local integer Cnt Tot Was
+
+        get Item_Count to Cnt
+        move 0 to Itm#
+        move 0 to Tot
+
+        while Itm# LT Cnt
+            if (Entry_Active(Current_Object, Itm#) and ;
+                    Select_State(Current_Object, Itm#)) ;
+                send Close_Database Itm#
+
+            increment Itm#
+        end
+    end_procedure
+
+    procedure Change_All integer Display_Changes
+        local integer Was
+
+        get Update_Display_Objects_State to Was
+        set Update_Display_Objects_State to FALSE
+
+        forward send Change_All
+
+        set Update_Display_Objects_State to Was
+
+        if ((NUM_ARGUMENTS > 0) and Display_Changes) ;
+            send Update_Display_Objects FILELIST_UPDATE_ALL_FILES
+    end_procedure
+
+    procedure set Filename string Val
+        local string Old_Val
+
+        get Filename to Old_Val
+
+        if Val NE Old_Val begin
+            forward set Filename to Val
+            send Update_Display_Objects FILELIST_UPDATE_FILELIST_NAME
+        end
+    end_procedure
+
+    procedure Register_Display_Object integer Obj#
+        local integer DO#
+
+        move (Display_Objects(Current_Object)) to DO#
+        set Broadcast_State of DO# to FALSE
+        send Add_Element to DO# Obj#
+        set Broadcast_State of DO# to TRUE
+        set Update_Display_Objects_State to TRUE
+    end_procedure
+
+    procedure Deregister_Display_Object integer Obj#
+        local integer DO#
+
+        get Display_Objects to DO#
+        set Broadcast_State of DO# to FALSE
+        send Remove_Element to DO# Obj#
+
+        if (Item_Count(DO#)) LE 0 ;
+            set Update_Display_Objects_State to FALSE
+
+        set Broadcast_State of DO# to TRUE
+    end_procedure
+
+    procedure Destroy_Object
+        send Notify_Server_Destroyed
+
+        forward send Destroy_Object
+    end_procedure
+
+    procedure Notify_Server_Destroyed
+        send Filelist_Server_Destroyed to (Display_Objects(Current_Object))
+    end_procedure
+
+    procedure Update_Display_Objects integer Mode
+        if (Update_Display_Objects_State(Current_Object)) ;
+            send Refresh to (Display_Objects(Current_Object)) Mode
+    end_procedure
+
+    procedure Update_Entry
+        forward send Update_Entry
+
+        send Update_Filelist_Entry to (Display_Objects(Current_Object))
+    end_procedure
+
+    procedure Edit_Entry integer File# string Rt_Name ;
+            string Disp_Name string Logi_Name
+        local integer Ret
+
+        forward send Edit_Entry File# Rt_Name Disp_Name Logi_Name
+
+        get Invalid_Entry_File to Ret
+
+        if Ret EQ FILELIST_ENTRY_VALID ;
+            send Update_Display_Objects File#
+    end_procedure
+
+    procedure set Filelist_Struct integer File# integer Ofst string Val
+        local integer Itm_Ofst
+        local string Old_Val
+
+        move ((File# * Size_Of_Entry_Structure(Current_Object)) + Ofst) ;
+            to Itm_Ofst
+        get String_Value item Itm_Ofst to Old_Val
+
+        if Val NE Old_Val begin
+            forward set Filelist_Struct File# Ofst to Val
+            send Update_Display_Objects File#
+        end
+    end_procedure
+
+    procedure Print_Internal_Filelist string Fname
+        local integer Fnum Cnt Itm
+
+        if Num_Arguments GT 0 ;
+            direct_output Fname
+        else ;
+            direct_output ".\filelist.lst"
+
+        get Item_Count to Cnt
+        move 0 to Itm
+        move 1 to Fnum
+
+        writeln "Size of Entry Structure: " (Size_Of_Entry_Structure(Current_Object))
+        writeln "File#, Active, Selected, Root, Display, Logical, Changed, Open Type, Open As Root"
+
+        while Itm LT Cnt
+            write Fnum
+            write " " (Entry_Active(Current_Object, Fnum))
+            write " " (Select_State(Current_Object, Fnum))
+            write " '" (Root_Name(Current_Object, Fnum)) "'"
+            write " '" (Display_Name(Current_Object, Fnum)) "'"
+            write " '" (Logical_Name(Current_Object, Fnum)) "'"
+            write " " (Entry_Changed(Current_Object, Fnum))
+            write " " (Open_Type(Current_Object, Fnum))
+            write " '" (Open_As_Root_Name(Current_Object, Fnum)) "'"
+            writeln
+
+            increment Fnum
+            move (Itm + Size_Of_Entry_Structure(Current_Object)) to Itm
+        end
+
+        close_output
+    end_procedure
+end_class

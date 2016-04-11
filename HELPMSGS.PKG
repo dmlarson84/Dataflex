@@ -1,0 +1,52 @@
+// HELPMSGS.PKG
+// April 25, 1991
+// LS
+//
+// Global Messages for Global Help Object
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use UI
+
+Register_Object Help_Editor
+Register_Object Help_Object
+
+Register_Procedure Request_Help
+Register_Procedure Request_Edit_Help
+Register_Procedure View_Context_Help
+Register_Procedure View_Help_For_Help
+Register_Procedure View_Help_Index
+Register_Procedure View_Keys_Help
+
+procedure Edit_Help for Desktop
+    if (Help_Editor( Desktop )) NE Null_Object ;
+        if not (Active_State( Help_Editor( Desktop ) )) ;
+      send Request_Edit_Help to (Help_Editor( Desktop )) Current_Object
+end_procedure
+
+procedure Extended_Help for Desktop
+    if (Help_Object( Desktop )) NE Null_Object ;
+      send Request_Help to (Help_Object( Desktop )) ;
+      Msg_View_Context_Help Current_Object
+end_procedure
+
+procedure Help for Desktop
+    if (Help_Object( Desktop )) NE Null_Object ;
+      send Request_Help to (Help_Object( Desktop )) ;
+      Msg_View_Context_Help Current_Object
+end_procedure
+
+procedure Help_For_Help for Desktop
+    if (Help_Object( Desktop )) NE Null_Object ;
+      send Request_Help to (Help_Object( Desktop )) Msg_View_Help_For_Help
+end_procedure
+
+procedure Help_Index for Desktop
+    if (Help_Object( Desktop )) NE Null_Object ;
+      send Request_Help to (Help_Object( Desktop )) Msg_View_Help_Index
+end_procedure
+
+procedure Keys_Help for Desktop
+    if (Help_Object( Desktop )) NE Null_Object ;
+      send Request_Help to (Help_Object( Desktop )) Msg_View_Keys_Help
+end_procedure

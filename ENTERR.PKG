@@ -1,0 +1,10 @@
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+// This package is used for general data entry error trapping.
+
+  use ui
+  Use Error
+  Send Ignore_Error to Error_Info_Object 41 // Find prior to end
+  Send Ignore_Error to Error_Info_Object 42 // Find past end of file
+
+// These errors should be left for the default error notification.

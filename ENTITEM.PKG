@@ -1,0 +1,548 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\entitem.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//
+//     $Log: entitem.pkg,v $
+//Revision 2.1  1993/08/25  17:47:39  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:04  james
+//Initial revision
+//
+//Revision 1.4  92/06/17  23:57:36  lee
+//added object_item_entry_exit property to disable item entry/exit messages
+//during scroll.
+//
+//Revision 1.3  92/05/14  16:45:57  SWM
+//Updated Copyright slug.
+//
+//Revision 1.2  92/03/09  19:01:29  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:20:28  elsa
+//Initial revision
+//
+//************************************************************************/
+// Augmentations:
+//    Entry
+//
+// 12/20/94 JJT - merged autoprompt support
+// 03/17/95 - Findreq_Auto_prompt fixed to check for itm and not the
+//            current_item for data-file. Also, improved
+//            status checking logic.
+// 08/29/95 JJT - Procedure Auto_prompt now only sets auto_prompt_check
+//                if the current mode is not auto_prompt_on. Otherwise
+//                ivalidates which turn these on get lost.
+//
+// 08/30/95 JJT - Prompt only resets auto_prompt_mode if we are returning
+//                to the same current_item (which is the normal case).
+// 08/30/95 JJT - Fixed auto-prompt after image move with a messy fix
+//                creates a duplicate move_client_location here that
+//                adjusts prompt_entry_mode. This must mix in after entitem.
+// 08/30/95 JJT - New public message Entry_Value. Returns numbers stripped
+//                of uneeded 0 decimals and decimal point.
+//************************************************************************/
+
+//************************************************************************
+//     File Name: EntItem.Inc
+// Creation Date: January 1, 1991
+// Modified Date: May 23, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module defines the routines and properties required to support
+// the use of entry-items, collected in the abstract class Entry_Item_Mixin.
+//
+// This file should be USEd prior to and IMPORTed within the scope of the
+// class definition by any user-interface (esp. data-entry) class which
+// must support entry-items.
+//
+// This file is used by ENTRYFRM.PKG and WIDELIST.PKG.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+enum_list
+    define AUTO_PROMPT_READY  // ready for auto-prompt. (idle)
+    define AUTO_PROMPT_CHECK  // Auto-prompt next item if it is blank.
+    define AUTO_PROMPT_ON     // Next entry WILL be auto-prompt
+    define AUTO_PROMPT_OFF    // Next entry WILL NOT be auto-prompt
+end_enum_list
+
+Register_function Validate_all_items_state returns integer
+
+class Entry_Item_Mixin is a message
+
+  //
+  // Description
+  //
+  //   This procedure defines kPrompt and kZoom accelerator keys for this
+  //   object.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This procedure should only be invoked from the Construct_Object
+  //   procedure of a class definition.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure define_entry_item
+    on_key kPrompt SEND Prompt PRIVATE
+    on_key kZoom   SEND Zoom   PRIVATE
+    property integer object_item_entry_exit PUBLIC TRUE
+     
+    // (JJT) Added for auto-prompt support (from autoprmpt.pkg)
+    // Auto_Prompt_State: If true, autoprompt if iPrompt message exists 
+    //                    and field is blank. If False Auto_prompt must
+    //                    be asked for (Msg_Auto_prompt). 
+    property integer Auto_prompt_State public False
+
+    // Prompt_Entry_Mode 
+    //    AUTO_PROMPT_READY = Allow autoPrompt.  (idle position)
+    //    AUTO_PROMPT_CHECK = AutoPrompt if blank field
+    //    AUTO_PROMPT_ON    = Do AutoPrompt on the next entry
+    //    AUTO_PROMPT_OFF   = Do NOT AutoPrompt the next enxtry. (internal)
+    //
+    Property Integer Prompt_Entry_Mode public AUTO_PROMPT_READY
+
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure activates the zoom-objct, if any, for the current
+  //   entry-item.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object (or one of its ancestor classes) implements a
+  //   zoom_object function to return a valid object id (for a
+  //   user-interface object understanding the PopUp message), or 0.
+  //
+  // Exceptions
+  //
+  //   If the zoom-object is 0, no action is taken.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure Zoom
+    local integer obj#
+    get zoom_object item CURRENT to obj#
+    if obj# ne 0 send POPUP to obj#
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure activates the prompt-objct, if any, for the current
+  //   entry-item.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object (or one of its ancestor classes) implements a
+  //   prompt_object function to return a valid object id (for a
+  //   user-interface object understanding the PopUp message), or 0.
+  //
+  // Exceptions
+  //
+  //   If the prompt-object is 0, no action is taken.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure Prompt
+    local integer obj# Itm
+    Get Current_Item to Itm
+    get prompt_object item Itm to obj#
+    if obj# ne 0 send POPUP to obj#
+    // After a popup we don't want an autoprompt. However if the popup
+    // changes the current item then an autoprompt on the new item would be
+    // ok and we would want an autoprompt when we return to this item.
+    If (Current_Item(Current_Object)=itm) ;      // only set if cycling back.
+       Set Prompt_Entry_Mode to AUTO_PROMPT_OFF // been there, done that
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This function invokes the message given by msg#, passing the
+  //   specified item# as the only argument to the message.  The value
+  //   returned by execution of the message is returned; non-zero means
+  //   that entry to the specified item# should be denied.
+  //
+  // Assumptions/Preconditions
+  //
+  //   The msg# argument must be either a valid message id or 0.  The item#
+  //   argument must be a valid entry-item index (between 0 and Item_Count-1).
+  //
+  // Exceptions
+  //
+  //   If the specified msg# is 0, no action is taken.
+  //
+  // Notes
+  //
+  //   This function is invoked by the Item_Change procedure, among others.
+  //
+  function ITEM_ENTRY integer msg# integer item# returns integer 
+    local integer retVal
+    if not (object_item_entry_exit(current_object)) function_return 0
+    move 0 to retval
+    if msg# ne 0 get msg# item item# to retVal
+    function_return retVal
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function invokes the message given by msg#, passing the
+  //   specified item# as the only argument to the message.  The value
+  //   returned by execution of the message is returned; non-zero means
+  //   that exit from the specified item# should be denied.
+  //
+  // Assumptions/Preconditions
+  //
+  //   The msg# argument must be either a valid message id or 0.  The item#
+  //   argument must be a valid entry-item index (between 0 and Item_Count-1).
+  //
+  // Exceptions
+  //
+  //   If the specified msg# is 0, no action is taken.
+  //
+  // Notes
+  //
+  //   This function is invoked by the Item_Change procedure, among others.
+  //
+  function ITEM_EXIT integer msg# integer item# returns integer 
+    local integer retVal
+    if not (object_item_entry_exit(current_object)) function_return 0
+    move 0 to retval
+    if msg# ne 0 get msg# item item# to retVal
+    function_return retVal
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function invokes the message given by msg#, passing the
+  //   specified item# as the only argument to the message.  The value
+  //   returned by execution of the message is returned; non-zero means
+  //   that the data entered in the specified item# is invalid, and that
+  //   the cursor should stay on the specified item#.
+  //
+  // Assumptions/Preconditions
+  //
+  //   The msg# argument must be either a valid message id or 0.  The item#
+  //   argument must be a valid entry-item index (between 0 and Item_Count-1).
+  //
+  // Exceptions
+  //
+  //   If the specified msg# is 0, no action is taken.
+  //
+  // Notes
+  //
+  //   This function is invoked by the Item_Change procedure, among others.
+  //
+  function ITEM_VALIDATE integer msg# integer item# returns integer 
+    local integer retVal
+    move 0 to retval
+    if msg# ne 0 get msg# item item# to retVal
+    function_return retVal
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function invokes the entry-message for the specified item#, and
+  //   returns the result; non-zero means that entry to the specified item#
+  //   should be denied.
+  //
+  // Assumptions/Preconditions
+  //
+  //   The item# argument must be a valid entry-item index (between 0 and
+  //   Item_Count-1), or the sentinel value CURRENT.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   This function is used to force execution of an item's entry-msg.
+  //
+  function exec_entry integer item# returns integer
+    local integer retval curItem entMsg
+    if item# eq CURRENT get current_item to curItem
+    else move item# to curItem
+    get item_entry_msg item curItem to entMsg
+    get item_entry entMsg curItem to retval
+    function_return retval
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function invokes the exit-message for the specified item#, and
+  //   returns the result; non-zero means that exit from the specified item#
+  //   should be denied.
+  //
+  // Assumptions/Preconditions
+  //
+  //   The item# argument must be a valid entry-item index (between 0 and
+  //   Item_Count-1), or the sentinel value CURRENT.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   This function is used to force execution of an item's exit-msg.
+  //
+  function exec_exit integer item# returns integer
+    local integer retval curItem exitMsg
+    if item# eq CURRENT get current_item to curItem
+    else move item# to curItem
+    get item_exit_msg item curItem to exitMsg
+    get item_exit exitMsg curItem to retval
+    function_return retval
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function invokes the validate-message for the specified item#,
+  //   and returns the result; non-zero means that the data entered in the
+  //   specified item# is invalid, and that the cursor should stay on the
+  //   specified item#.
+  //
+  // Assumptions/Preconditions
+  //
+  //   The item# argument must be a valid entry-item index (between 0 and
+  //   Item_Count-1), or the sentinel value CURRENT.
+  //
+  // Exceptions
+  //
+  //   If the specified item# uses the AUTOFIND option, an entry_autofind
+  //   is performed.
+  //
+  // Notes
+  //
+  //   This function is used to force execution of an item's validate-msg.
+  //
+  function exec_validate integer item# returns integer
+    local integer retval curItem valMsg chgd autoFlag autoGEFlag
+    if item# eq CURRENT get current_item to curItem
+    else move item# to curItem
+    //
+    // check for AUTOFIND, AUTOFIND_GE
+    //
+    #IFSUB 'AUTOFIND_BIT'
+    #ELSE
+      #REPLACE AUTOFIND_BIT    0
+    #ENDIF
+    #IFSUB 'AUTOFIND_GE_BIT'
+    #ELSE
+      #REPLACE AUTOFIND_GE_BIT 8
+    #ENDIF
+    get item_changed_State item curItem to chgd
+    if chgd ne 0 begin
+      get item_option item curItem AUTOFIND_BIT retval
+      if retval begin
+        get item_option item curItem AUTOFIND_GE_BIT retval
+        if retval send entry_autofind GE
+        else send entry_autofind EQ
+      end
+    end
+    //
+    // validate item
+    //
+    get Valid_Item item curItem to retval
+    function_return retval
+  end_function
+
+  // *********************JJT
+  // The following was added for auto_prompt support. In addition,
+  // some properties in the define_entry_item and Prompt was changed.
+  //
+
+  // This tells the next entry statement to execute an auto-prompt.
+  //
+  // Right now there is a bug in the iEntry mechanism that causes the
+  // the iEntry to not always get called. When this happens we lose the
+  // auto_prompt (this often happens if your auto-prompt is in the first
+  // item). The work-around for now is that the ENTRY function makes an
+  // check. If the iEntry message is MSG_AUTO_PROMPT it will do the auto-
+  // prompt for you. This means that the one line here is not really required.
+  // However, when iEntry is fixed - it WILL be needed. This also shows how you
+  // can use this statement in other iEntry messages
+  Procedure Auto_Prompt Integer Itm#
+     // only change to check if it is not already set to do a prompt.
+     if ( prompt_entry_mode(Current_Object)<>AUTO_PROMPT_ON ) ;
+        Set Prompt_entry_mode to AUTO_PROMPT_CHECK
+  End_Procedure
+
+  // Function: Test_for_Auto_Prompt
+  //
+  // Test if an auto-prompt should be executed. This is only called
+  // by the entry function. It should Return TRUE if an autoprompt is
+  // required. This checks to see if the item is blank.
+  // This was designed for augmentation.
+  Function Test_for_Auto_prompt Integer Itm# Returns Integer
+    // if blank we will auto-prompt
+    If (Value(Current_Object,Itm#)='') Function_Return 1
+  End_function
+
+
+  Function Entry Returns Integer
+    local Integer Retval Pmode Itm# Auto_state
+    Get Current_Item to Itm#
+    Get Prompt_Entry_Mode to PMode
+
+    // if auto-mode always check for auto-prompting
+    If (pMode=AUTO_PROMPT_READY AND Auto_Prompt_State(Current_Object)) ;
+         Move AUTO_PROMPT_CHECK to pMode
+
+    // This is our fix code until iEntry is always called and only called
+    // at the right time. In the mean time this'll do.
+    If ( pMode=AUTO_PROMPT_READY AND ;
+         Item_Entry_MSG(Current_Object,Itm#)=MSG_Auto_Prompt) ;
+            Move AUTO_PROMPT_CHECK to pMode
+
+    If (PMode=AUTO_PROMPT_CHECK AND ;
+        Test_for_Auto_Prompt(Current_Object,Itm#) ) ;
+            Move AUTO_PROMPT_ON to PMode
+
+    If PMode eq AUTO_PROMPT_ON move kPrompt to retVal
+    Else Forward get Entry to RetVal
+    // Always reset mode after an entry (PROMPT might change it).
+    Set Prompt_Entry_Mode to AUTO_PROMPT_READY
+    function_return retval
+  End_function
+
+  // useful validate function. If you set iValidate to this message
+  // you'll get an error when you attempt save and a prompt when
+  // you attempt to move.
+  //
+  Function required_Auto_Prompt Integer Itm# Returns Integer
+    // in this sample a blank indicates a problem
+    If (Value(Current_Object,Itm#)='')  Begin
+       // if part of a save...just report the error
+       If (Validate_all_items_State(Current_Object)) ;
+           Error 15
+       Else ;
+           Set Prompt_Entry_Mode to AUTO_PROMPT_ON // else...force an autoprompt
+       Function_return 1
+    End          
+  End_Function // Required_Auto_Prompt
+
+   // 03/17/95 - Fixed bug where datafile was not for Itm#.
+   // Fixed logic to better handle autofind (where a record exists
+   // but it was not auto-found.
+  Function Findreq_Auto_Prompt Integer Itm# Returns Integer
+    // in this sample a blank indicates a problem
+    Local integer server# Err# File# Field# Typ Dummy
+    Local string Itm_val FileVal
+    Get Server to Server#
+    If Server# Send Refind_records to Server#
+    // Get data_file to filenumber  // oops - no itm#
+    Get data_file  item itm# to file#
+    Get data_field item itm# to Field#
+    Move File#  to Filenumber
+    Move Field# to FieldIndex
+    if not status Indirect_file  Move 1 to Err# // no record, error
+    Else Begin // if we have a current record, make sure it is right
+       Move Indirect_File.Recnum to FileVal
+       Get Value Item Itm# to Itm_Val // the value on the screen
+       Field_Def File# Field# to Typ Dummy
+       // if field type is Numeric (1) check for numeric equality
+       // we need to do numeric checks because the internal value
+       // of a number is sometimes "1" and sometimes "1.0000"
+       If Typ eq 1 Move (Number(Itm_Val)<>Number(FileVal)) to err#
+       Else        Move (Itm_Val<>FileVal) to err#
+    End
+    //
+    If Err# Begin
+       // if part of a save...just report the error
+       If (Validate_all_items_State(Current_Object)) ;
+           Error 90
+       Else ;
+           Set Prompt_Entry_Mode to AUTO_PROMPT_ON // else...force an autoprompt
+       Function_return 1
+    End          
+  End_Function // Required_Auto_Prompt
+
+  // This is lifted from clmovemx.pkg. It shuts off auto_prompting. If this is 
+  // not done you get an auto-prompt after move. This is only required because
+  // the entry function handles msg_auto_prompt directly because the ientry
+  // hook is not always reliable. When that is fixed, we could also remove 
+  // this code. For this to work the entitem package MUST be mixed in after
+  // the clmove mixin package. Used in entry_form and wide_list
+  //
+//  procedure Move_Client_Location integer yoff integer xoff
+//     
+//     // new line of code
+//     Set Prompt_Entry_Mode to AUTO_PROMPT_OFF // been there, done that
+//
+//     //.....direct from clmovemx
+//     // if allowed do the move....else delegate
+//     if (Allow_Move_State(Current_Object)) ;
+//        send Move_Location yoff xoff
+//     Else Delegate Send Move_Client_Location yoff xoff
+//
+//  end_procedure
+
+  // Public Message
+  //
+  //  Just like Value except this will strip .0000 from numeric
+  //  items which allows for comparison with data fields. Only works if
+  //  item is associated with a file.field
+  Function Entry_Value integer Itm# returns string
+     Local Integer File# Field# Type# Dummy#
+     Local String Val
+     Get Value Item Itm# to Val // the value on the screen
+     Get Data_File Item Itm# to File#
+     If File# Begin
+        Get Data_Field Item Itm# to Field#
+        Field_Def File# Field# to Type# Dummy#
+        If Type# eq 1 ; // numeric
+           Move (Number(Val)) to Val
+     End
+     Function_Return Val
+  end_function
+
+
+end_class
