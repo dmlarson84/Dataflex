@@ -1,0 +1,68 @@
+        FILE DEFINITION LISTING FOR FILE #31
+*************************************************** 
+        FILE ROOT NAME     = LEDGER
+        USER DISPLAY NAME  = GL Ledger
+        DATAFLEX FILE NAME = LEDGER
+*************************************************** 
+        RECORD LENGTH = 256  (USED = 252)
+        MAX NUMBER OF RECORDS = 200  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       2   NUMERIC   0    2     0     0     NUMBER
+   2       3       3   ASCII          2     0     0     DISTRICT
+   3       6       2   ASCII          2     0     0     DIVISION
+   4       8      25   ASCII          0     0     0     DESC
+   5      33       2   ASCII          0     0     0     CT
+   6      35       1   ASCII          0     0     0     BR
+   7      36       1   ASCII          0     0     0     CD
+   8      37       5   NUMERIC   2    0     0     0     TYJAN
+   9      42       5   NUMERIC   2    0     0     0     TYFEB
+  10      47       5   NUMERIC   2    0     0     0     TYMAR
+  11      52       5   NUMERIC   2    0     0     0     TYAPR
+  12      57       5   NUMERIC   2    0     0     0     TYMAY
+  13      62       5   NUMERIC   2    0     0     0     TYJUN
+  14      67       5   NUMERIC   2    0     0     0     TYJUL
+  15      72       5   NUMERIC   2    0     0     0     TYAUG
+  16      77       5   NUMERIC   2    0     0     0     TYSEP
+  17      82       5   NUMERIC   2    0     0     0     TYOCT
+  18      87       5   NUMERIC   2    0     0     0     TYNOV
+  19      92       5   NUMERIC   2    0     0     0     TYDEC
+  20      97       6   NUMERIC   2    0     0     0     TYBEG
+  21     103       6   NUMERIC   2    0     0     0     TYTOTAL
+  22     109       5   NUMERIC   2    0     0     0     LYJAN
+  23     114       5   NUMERIC   2    0     0     0     LYFEB
+  24     119       5   NUMERIC   2    0     0     0     LYMAR
+  25     124       5   NUMERIC   2    0     0     0     LYAPR
+  26     129       5   NUMERIC   2    0     0     0     LYMAY
+  27     134       5   NUMERIC   2    0     0     0     LYJUN
+  28     139       5   NUMERIC   2    0     0     0     LYJUL
+  29     144       5   NUMERIC   2    0     0     0     LYAUG
+  30     149       5   NUMERIC   2    0     0     0     LYSEP
+  31     154       5   NUMERIC   2    0     0     0     LYOCT
+  32     159       5   NUMERIC   2    0     0     0     LYNOV
+  33     164       5   NUMERIC   2    0     0     0     LYDEC
+  34     169       6   NUMERIC   2    0     0     0     LYBEG
+  35     175       6   NUMERIC   2    0     0     0     LYTOTAL
+  36     181       5   NUMERIC   2    0     0     0     BJAN
+  37     186       5   NUMERIC   2    0     0     0     BFEB
+  38     191       5   NUMERIC   2    0     0     0     BMAR
+  39     196       5   NUMERIC   2    0     0     0     BAPR
+  40     201       5   NUMERIC   2    0     0     0     BMAY
+  41     206       5   NUMERIC   2    0     0     0     BJUN
+  42     211       5   NUMERIC   2    0     0     0     BJUL
+  43     216       5   NUMERIC   2    0     0     0     BAUG
+  44     221       5   NUMERIC   2    0     0     0     BSEP
+  45     226       5   NUMERIC   2    0     0     0     BOCT
+  46     231       5   NUMERIC   2    0     0     0     BNOV
+  47     236       5   NUMERIC   2    0     0     0     BDEC
+  48     241       6   NUMERIC   2    0     0     0     BBEG
+  49     247       6   NUMERIC   2    0     0     0     BYTOTAL
+  50       1       7   OVERLAP        2     0     0     OVERLAP
+ 
+INDEX 1:  FIELD SEGMENTS:  <50>   
+INDEX 2:  FIELD SEGMENTS:  <3>   <2>   <1>   
+

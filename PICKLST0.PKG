@@ -1,0 +1,3 @@
+use picklist
+define Pick_List0 for Pick_List
+define U_Pick_List0 for U_Pick_List

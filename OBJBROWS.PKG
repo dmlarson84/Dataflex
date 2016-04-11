@@ -1,0 +1,206 @@
+
+
+// **********************************************************************
+// * System: DataFlex 3.0 System Utilities                              *
+// *Program: OBJBROWS.PKG                                               *
+// * Author: James Ricci 8/1/90                                         *
+// *Purpose: To allow browsing of object parentage in a program.        *
+// **********************************************************************
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+USE UI
+
+
+REGISTER_PROCEDURE Exit_Object
+
+// Define Object Button Class
+CLASS Object_Button IS A BUTTON
+
+  PROCEDURE CONSTRUCT_OBJECT INTEGER @Object_Img
+    FORWARD SEND CONSTRUCT_OBJECT @Object_Img
+    ITEM_LIST
+      ON_ITEM "" SEND Object_Selected
+    END_ITEM_LIST
+  END_PROCEDURE  
+  
+  // Set the 41 rightmost characters of the name of the object passed.
+  PROCEDURE Store_ID INTEGER @ID
+    SET AUX_VALUE ITEM 0 TO @ID
+    IF @ID NE 0  SET VALUE ITEM 0 TO (RIGHT(NAME(@ID),41))
+    ELSE         SET VALUE ITEM 0 TO "NULL"  
+  END_PROCEDURE
+  
+  // Meant to be overriden by user.
+  PROCEDURE Object_Selected
+    SEND Display_Object (AUX_VALUE(CURRENT_OBJECT,CURRENT))
+  END_PROCEDURE
+  
+END_CLASS
+
+
+// Define Main Object Button Class
+CLASS Main_Object_Button IS AN Object_Button
+
+  PROCEDURE CONSTRUCT_OBJECT INTEGER @Object_Img
+    FORWARD SEND CONSTRUCT_OBJECT @Object_Img
+    PROPERTY INTEGER Browse_State PUBLIC TRUE
+  END_PROCEDURE  
+  
+  // Meant to be overriden by user.
+  PROCEDURE Object_Selected
+    LOCAL INTEGER @ID
+    IF (NOT(Browse_State(CURRENT_OBJECT))) BEGIN
+      GET PRIOR_SCOPE TO @ID
+      SET CURRENT_SCOPE TO @ID
+      SET VALUE OF @ID TO (Value(CURRENT_OBJECT,0))
+      SET ITEM_CHANGED_STATE OF @ID ITEM CURRENT TO TRUE
+      DELEGATE SEND Exit_Object
+    END  
+  END_PROCEDURE
+  
+END_CLASS
+
+
+// Define LIST object to be used by Object_Browser.
+CLASS Object_List IS A LIST
+  
+  // Construct the object.
+  PROCEDURE CONSTRUCT_OBJECT INTEGER @Object_Img
+    FORWARD SEND CONSTRUCT_OBJECT @Object_Img
+  END_PROCEDURE
+  
+  // Delete all children to display new list.
+  PROCEDURE Initialize
+    SEND DELETE_DATA
+  END_PROCEDURE
+  
+  // Set the parent object to the id passed.
+  PROCEDURE Store_ID INTEGER @ID
+    SEND ADD_ITEM Msg_Object_Selected (RIGHT(NAME(@ID),41))
+    SET CURRENT_ITEM TO (ITEM_COUNT(CURRENT_OBJECT)-1)
+    SET AUX_VALUE TO @ID
+  END_PROCEDURE
+
+  // Meant to be overriden by user.
+  PROCEDURE Object_Selected
+    SEND Display_Object (AUX_VALUE(CURRENT_OBJECT,CURRENT))
+  END_PROCEDURE
+  
+  // Show first items when activated.
+  PROCEDURE ACTIVATE
+  IF (NOT(ACTIVE_STATE(CURRENT_OBJECT))) SET CURRENT_ITEM TO 0
+    FORWARD SEND ACTIVATE
+  END_PROCEDURE
+  
+END_CLASS
+
+
+CLASS Object_Browser IS A CLIENT
+
+  // Construct Object.
+  PROCEDURE Construct_Object INTEGER @Main_Img;
+                      INTEGER @Parent_Img INTEGER @Current_Img INTEGER @Child_Img
+    SET LOCATION          TO 5 15 ABSOLUTE
+    SET SCOPE_STATE       TO TRUE
+    SET BLOCK_MOUSE_STATE TO TRUE
+    SET POPUP_STATE       TO TRUE
+    
+    ON_KEY KCANCEL SEND Exit_Object
+    ON_KEY KEY_CTRL+KEY_F10 SEND MSG_NONE
+    ON_KEY KEY_ALT+KEY_F10  SEND MSG_NONE
+    
+    // Button to select current object as context.
+    OBJECT Current_Button IS A Main_Object_Button @Current_Img
+    END_OBJECT
+    
+    // List of children. Clicking on a child should make it the current object.
+    Object Child_List IS AN Object_List @Child_Img
+    END_OBJECT
+    
+    // Button to make parent object the current object
+    OBJECT Parent_Button IS AN Object_Button @Parent_Img
+    END_OBJECT
+    
+  END_PROCEDURE                    
+
+  // Display object with ID passed.
+  PROCEDURE Display_Object INTEGER @ID
+    LOCAL INTEGER @Counter @Old @Child
+    IF @ID NE 0 BEGIN
+      SEND Store_ID TO (Current_Button(CURRENT_OBJECT)) @ID
+      IF @ID NE DESKTOP;
+         SEND Store_ID  TO (Parent_Button(CURRENT_OBJECT))  (PARENT(@ID))
+      ELSE;   
+         SEND Store_ID  TO (Parent_Button(CURRENT_OBJECT))  0
+      SEND Initialize    TO (Child_List(CURRENT_OBJECT))     
+      MOVE CURRENT_OBJECT TO @Old      
+      SET DYNAMIC_UPDATE_STATE OF (Child_List(CURRENT_OBJECT)) TO FALSE
+      FOR @Counter FROM 1 TO (CHILD_COUNT(@ID))
+        MOVE @ID TO CURRENT_OBJECT
+        GET OBJECT_ID OF (-@Counter) TO @Child
+        MOVE @Old TO CURRENT_OBJECT
+        IF (@Child GT 0) SEND Store_ID TO (Child_List(CURRENT_OBJECT)) @Child
+      LOOP
+      SET DYNAMIC_UPDATE_STATE OF (Child_List(CURRENT_OBJECT)) TO TRUE
+    END
+  END_PROCEDURE
+  
+  // Cancel current scope.
+  PROCEDURE Exit_Object
+    SET CURRENT_SCOPE TO (PRIOR_SCOPE(DESKTOP))
+    SEND DEACTIVATE 
+  END_PROCEDURE
+  
+  // POPUP override
+  PROCEDURE POPUP
+    IF (NOT(ACTIVE_STATE(CURRENT_OBJECT))) BEGIN
+      SEND Display_Object DESKTOP
+      FORWARD SEND POPUP
+    END
+  END_PROCEDURE
+  
+  // Return the Browse_State of the object. For use by children.
+  PROCEDURE SET Browse_State INTEGER @State
+   SET Browse_State OF (Current_Button(CURRENT_OBJECT)) TO @State
+  END_FUNCTION
+  
+END_CLASS
+
+
+/Object_List_Img
+ษอออออออออออออออออออออออออออออออออออออออออออออออออป
+บ Parent Object:                                  บ
+บ _______________________________________________ บ
+บฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤบ
+บ Current Object:                                 บ
+บ _______________________________________________ บ
+บฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤบ
+บ Child Objects:                                  บ
+บ _______________________________________________ บ
+บ _______________________________________________ บ
+บ _______________________________________________ บ
+บ _______________________________________________ บ
+บ _______________________________________________ บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+
+
+SUB_PAGE  Parent_Button_Img   FROM  Object_List_Img 1
+SUB_PAGE  Current_Button_Img  FROM  Object_List_Img 2
+SUB_PAGE  Child_List_Img      FROM  Object_List_Img VERTICAL 3 5
+
+
+
+// Popup that will display objects for creation of context records.
+OBJECT Object_List IS A Object_Browser Object_List_Img;
+                   Parent_Button_Img Current_Button_Img Child_List_Img
+END_OBJECT
+
+
+PROCEDURE Browse_Objects
+  SEND POPUP TO Object_List
+END_PROCEDURE
+
+ON_KEY KEY_CTRL+KEY_F10 SEND Browse_Objects
+ 

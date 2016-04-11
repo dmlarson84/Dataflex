@@ -1,0 +1,210 @@
+/HEADER
+                      DISBURSEMENTS for  __/__/____           
+                                       
+ 
+  DEFENDANT        IDNO
+   MERCHANT                      CKAMT    MFEE    PFEE   DISPAMT   PROSAMT   TOTAL
+===================================================================================
+/BODY RESIDENT
+_____________________ ______.
+    ______________________     ______.__ ____.__ ____.__ ______.__ ____.__ _____.__
+/SUBTOTAL1
+                               --------- ------- ------- --------- ------- --------
+ Merchant Totals               ______.__ ____.__ ____.__ ______.__ ____.__ _____.__
+
+/TOTAL
+                               --------- ------- ------- --------- ------- --------
+ Totals __/__/____             ______.__ ____.__ ____.__ ______.__ ____.__ _____.__
+RECORDS PRINTED = ______.
+/SELECTION
+                       Disbursement records report by Merchant
+                                       
+ 
+Select records by DISBURSE.DISPDT equal to __/__/____
+/FRM
+ษออออออออออออออออออออออป                              ษอออออออออออออออออออออออป
+บ REPORT STATUS SCREEN บ                              บ       MERSTATS.DFR    บ
+ฬออออออออออออออออออออออสออออออออออออออออออออออออออออออสอออออออออออออออออออออออน
+บ                                                                             บ
+บ                        This Report is being Printed.                        บ
+บ                                                                             บ
+บ                  There are _______.  records in this File.                  บ
+บ                  Currently reviewing record number _______.                 บ
+บ                  Number of records printed:        _______.                 บ
+บ                                                                             บ
+บ                        Press ANY KEY to Abort Report                        บ
+บ                                                                             บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ      _______________________  _______________________________________  _    บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/OUTSEL
+ษออออออออออออออออออออออป                              ษอออออออออออออออออออออออป
+บ OUTPUT SELECT SCREEN บ                              บ       Mertot.rpt      บ
+ฬออออออออออออออออออออออสออออออออออออออออออออออออออออออสอออออออออออออออออออออออน
+บ                                                                             บ
+บ     This report may be sent to the Printer or the Screen.                   บ
+บ     Please enter  <P>rinter, <S>creen <F>ile or <A>bort........ [ _ ]       บ
+บ                                                                             บ
+บ                                                                             บ
+บ                                                                             บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ                             Press <F1> for Help                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/HELP1 HELP
+ษออออออออออออออออออออออป                              ษอออออออออออออออออออออออป
+บ  REPORT HELP SCREEN  บ                              บ       Mertot.rpt      บ
+ฬออออออออออออออออออออออสออออออออออออออออออออออออออออออสอออออออออออออออออออออออน
+บ                                                                             บ
+บ     OUTPUT:  Specify by a single letter whether the output is to be sent    บ
+บ     to  the <P>rinter, or the <S>creen.                                     บ
+บ                                                                             บ
+บ     SELECTION:  Select the records to be printed by filling in the blanks.  บ
+บ                                                                             บ
+บ     HALTING THE REPORT:  The report may be temporarily halted by pressing   บ
+บ     any key.  The option of aborting the report or continuing will then     บ
+บ     be presented.                                                           บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ                                                                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+Read_dfini "df23ini.cfg"
+#include Calcdate.inc
+#include macs.frm
+OPEN DISBURSE INDEX.2
+OPEN RESTITUT
+OPEN DEFENDNT
+OPEN OFFENSE
+
+Indicator prt
+
+String condense  Regular boldwide endbold cmd1 1  pausekey 1
+
+Character 18 to regular
+Character 15 to condense
+Character 14 to boldwide
+Character 20 to endbold
+
+//Write condense
+
+Gosub select_output
+
+  PAGE SELECTION
+  ACCEPT SELECTION.1
+  MOVE SELECTION.1 TO DISBURSE.DISPDT //JUMP INTO INDEX
+REPORT DISBURSE BY INDEX.2 BREAK DISBURSE.MERCHANT_IDNO
+RELATE DISBURSE
+             INDICATE SELECT AS DISBURSE.DISPDT EQ SELECTION.1
+[NOT SELECT] RETURN END.OF.REPORT  //JUMP OUT OF INDEX
+SECTION HEADER
+        Write boldwide
+        PRINT SELECTION.1 TO HEADER.1
+        write endbold
+        OUTPUT HEADER
+SECTION BODY
+        PRINT OFFENSE.DEF_NAME
+        PRINT DISBURSE.ID_NO
+        PRINT DISBURSE.MERCHANT
+        PRINT OFFENSE.CKAMT
+        PRINT OFFENSE.MFEE
+        PRINT OFFENSE.PFEE
+        PRINT DISBURSE.DISPAMT
+        PRINT DISBURSE.PROSAMT
+        PRINT (BODY.7 + BODY.8) 
+        OUTPUT BODY
+SECTION SUBTOTAL1
+        SUBTOTAL BODY.4 TO SUBTOTAL1.1
+        SUBTOTAL BODY.5 TO SUBTOTAL1.2
+        SUBTOTAL BODY.6 TO SUBTOTAL1.3
+        SUBTOTAL BODY.7 TO SUBTOTAL1.4
+        SUBTOTAL BODY.8 TO SUBTOTAL1.5
+        SUBTOTAL BODY.9 TO SUBTOTAL1.6
+        OUTPUT SUBTOTAL1
+SECTION TOTAL
+        PRINT SELECTION.1 TO TOTAL.1
+        SUBTOTAL SUBTOTAL1.1 TO TOTAL.2
+        SUBTOTAL SUBTOTAL1.2 TO TOTAL.3
+        SUBTOTAL SUBTOTAL1.3 TO TOTAL.4
+        SUBTOTAL SUBTOTAL1.4 TO TOTAL.5
+        SUBTOTAL SUBTOTAL1.5 TO TOTAL.6
+        SUBTOTAL SUBTOTAL1.6 TO TOTAL.7
+        PRINT RECCOUNT TO TOTAL.8
+        OUTPUT TOTAL     
+
+
+REPORTEND
+write regular
+FORMFEED
+ABORT
+
+// Subroutines  อออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
+
+// อออออออออออออออออออออออออออออออออออ halt report check
+     keypressed:   
+         [prt] begin
+              display 'A key has been pressed.' to frm.4
+              display 'Do you wish to abort the report? (Y/N)' to frm.5
+              display 'N' to frm.6
+              accept frm.6 to pausekey
+              blankform frm.4 thru frm.6
+              if pausekey eq 'Y' return rpt_end       
+         end
+         [not prt] begin
+              showln 'A Key has been pressed.'
+              input 'Do you wish to abort the Report? (Y/N) ' pausekey
+              if pausekey in 'Yy' return rpt_end        
+         end
+    return
+
+    rpt_end:       
+//       [heads] output footer
+         [not prt] writeln
+         [not prt] formfeed
+         [multiuser] despool
+         formfeed
+         abort
+// อออออออออออออออออออออออออออออออออออ Select Output
+
+// อออออออออออออออออออออออออออออออออออ Select Output
+select_output:
+         cmdline cmd1
+         indicate prt false
+         page outsel
+         uppercase cmd1
+  resel: if cmd1 eq '' begin
+              accept outsel.1 {capslock,check='PSFA'}
+              move outsel.1 to cmd1
+         end
+         if cmd1 eq 'S' begin
+              direct_output 'CON:'
+              indicate heads true
+              move 24 to pageend
+              move -1 to pagefeed
+              goto endsel
+         end
+         if cmd1 eq 'P' begin
+              indicate prt true
+              indicate heads true
+              direct_output
+              move 60 to pageend
+              move  0 to pagefeed
+              blankform frm.4 thru frm.6
+              goto endsel
+         end
+
+         if cmd1 eq 'F' begin
+              indicate prt true
+              indicate heads true
+              Direct_output 'Mertot.txt'
+              move 60 to pageend
+              move  0 to pagefeed
+              blankform frm.4 thru frm.6
+              goto endsel
+         end
+
+          if cmd1 eq 'A' abort
+
+         goto resel
+ endsel: 
+return
+
+

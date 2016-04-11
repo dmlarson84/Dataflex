@@ -1,0 +1,289 @@
+use ui
+use dfmisc
+use clwindow
+use key_btn
+use drvrlst
+use srvrlst
+
+declare_datafile DFDriver
+
+enum_list
+    define DF_LOGIN_NOT_ATTEMPTED
+    define DF_LOGIN_SUCCEEDED
+    define DF_LOGIN_FAILED
+end_enum_list
+
+#COMMAND INIT_FIELD_NUMBER R .
+  #SET Q$ %!1
+#ENDCOMMAND
+
+init_field_number DFDriver.Name
+define DFDriver.Name.Field_Number for !q
+init_field_number DFDriver.Description
+define DFDriver.Description.Field_Number for !q
+
+define MAX_PASSWORD_LENGTH for 9 // I'm not sure this is right.
+
+/Login_Client_Img
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ__________________________________________________________________________บ
+บ                                                                          บ
+บ                                                                          บ
+บ                                                                          บ
+บ                                                                          บ
+บ                                                                          บ
+บ                                                                          บ
+บ                                                                          บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/Login_Driver_Img
+Driver:      _________________________
+/Login_Driver_Prompt_Button_Img
+__________________
+/Login_Server_Img
+Server:      ________________________________________
+/Login_Server_Prompt_Button_Img
+__________________
+/Login_User_Img
+User Name:   ________________________________________
+/Login_Password_Img
+Password:    ________________________________________
+/Login_Button_Img
+              _______     ____________     _________               
+/*
+
+class Password_Form is a Form
+    register_function Password returns string
+    
+    procedure Supply_Key integer Char_Pos returns integer
+        local string The_Key The_Password
+
+        set Kbd_Input_Mode to TRUE
+
+        repeat
+            inkey The_Key
+
+            if Termchar NE KEY_ENTER begin
+                get Password to The_Password
+
+                if Termchar EQ KEY_BACK_SPACE ;
+                    left The_Password to The_Password (length(The_Password) - 1)
+                else if Termchar LE 255 begin
+                    if (length(The_Password)) GE MAX_PASSWORD_LENGTH ;
+                        move 0 to Termchar
+                    else begin
+                        append The_Password The_Key
+                        move (ascii("*")) to Termchar
+                    end
+                end
+
+                set Password to The_Password
+            end
+        until Termchar NE 0
+
+        set Kbd_Input_Mode to FALSE
+
+        procedure_return Termchar
+    end_procedure
+
+    function Entry returns integer
+        local integer Retval
+
+        move (length(Password(Current_Object)) + 1) to CURSOR_SET
+        set Kbd_Input_Mode to FALSE
+
+        forward get Entry to Retval
+
+        set Kbd_Input_Mode to TRUE
+        function_return Retval
+    end_function
+end_class
+
+class Login_Client is a Client_Window
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        property string Password           PUBLIC ""
+        property integer Last_Login_Result PUBLIC DF_LOGIN_NOT_ATTEMPTED
+        property integer Login_State       PUBLIC TRUE
+
+        set Popup_State to TRUE
+        set Attach_Parent_State to FALSE
+        set Block_Mouse_State to TRUE
+        set Value to "Login"
+        send Locate_In_Center_Of_Screen
+
+        object Driver_Name is a Form Login_Driver_Img
+            set Location to 3 2 RELATIVE
+
+            item_list
+                on_item "" send Next
+                set Autoclear_State to TRUE
+            end_item_list
+        end_object
+
+        object Driver_Prompt_Button is a Key_Button Login_Driver_Prompt_Button_Img
+            set Location to 3 56 RELATIVE
+
+            item_list
+                on_item "<Alt+D=Drivers...>" send Prompt_Driver_List
+            end_item_list
+        end_object
+
+        object Driver_List is a Database_Driver_Selection_Client Database_Driver_Selection_Client_Img
+            set Invoking_Object_ID to (Driver_Name(Current_Object))
+        end_object
+
+        object Server_Name is a Form Login_Server_Img
+            set Location to 4 2 RELATIVE
+
+            item_list
+                on_item "" send Next
+                set Autoclear_State to TRUE
+            end_item_list
+        end_object
+
+        object Server_Prompt_Button is a Key_Button Login_Server_Prompt_Button_Img
+            set Location to 4 56 RELATIVE
+
+            item_list
+                on_item "<Alt+S=Servers...>" send Prompt_Server_List
+            end_item_list
+        end_object
+
+        object Server_List is a Database_Server_Selection_Client Database_Server_Selection_Client_Img
+            set Invoking_Object_ID to (Server_Name(Current_Object))
+        end_object
+
+        object User_Name is a Form Login_User_Img
+            set Location to 5 2 RELATIVE
+
+            item_list
+                on_item "" send Next
+                set Autoclear_State to TRUE
+            end_item_list
+        end_object
+
+        object Password_Name is a Password_Form Login_Password_Img
+            set Location to 6 2 RELATIVE
+
+            item_list
+                on_item "" send Next
+            end_item_list
+        end_object
+
+        object Button is a Button Login_Button_Img
+            set Location to 8 1 RELATIVE
+
+            item_list
+                on_item "<F2=OK>" send Save_Login
+                on_item "<Esc=Cancel>" send Close_Client
+                on_item "<F1=Help>" send Help
+            end_item_list
+        end_object
+
+        set Key_Path to Desktop
+
+        on_key KSAVE_RECORD  send Save_Login
+        on_key KEY_ALT+KEY_D send Prompt_Driver_List
+        on_key KEY_ALT+KEY_S send Prompt_Server_List
+        on_key KHELP         send Help
+    end_procedure
+
+    procedure Activating
+        set Password to ""
+        set Value of (Password_Name(Current_Object)) to ""
+
+        forward send Activating
+    end_procedure
+
+    function Translate_Driver string Driver_Val returns string
+        local integer Idx Tot Driver_File# Was_ID Open_Err
+        local string Name_Val
+        //
+        // First, check active drivers
+        //
+        move 1 to Idx
+        get_attribute DF_NUMBER_DRIVERS to Tot
+
+        while Idx LE Tot
+            get_attribute DF_DRIVER_NAME of Idx to Name_Val
+
+            if Name_Val EQ Driver_Val ;
+                function_return Driver_Val
+
+            increment Idx
+        end
+
+        trim Driver_Val to Name_Val
+
+        //
+        // If not an active driver, check dfdriver datafile
+        //
+        get_attribute DF_FILE_NEXT_EMPTY to Driver_File#
+
+        indicate Err FALSE
+        move Error_Object_ID to Was_ID
+        move Current_Object to Error_Object_ID
+
+        open "dfdriver" as Driver_File#
+
+        move Was_ID to Error_Object_ID
+        move (Err) to Open_Err
+        indicate Err FALSE
+
+        if not Open_err begin
+            clear Driver_File#
+            set_field_value Driver_File# DFDriver.Name.Field_Number to Name_Val
+            vfind Driver_File# Index.1 EQ
+
+            [not Found] begin
+                clear Driver_File#
+                set_field_value Driver_File# DFDriver.Description.Field_Number to Name_Val
+                vfind Driver_File# Index.2 EQ
+                [Found] get_field_value Driver_File# DFDriver.Name.Field_Number to Name_Val
+            end
+
+            close Driver_File#
+        end
+
+        function_return Name_Val
+    end_function
+
+    procedure Prompt_Driver_List
+        send Popup to (Driver_List(Current_Object))
+    end_procedure
+
+    procedure Prompt_Server_List
+        local integer Obj
+        local string Val
+
+        get Value of (Driver_Name(Current_Object)) to Val
+
+//        if Val LE "" ;
+//            procedure_return
+
+        move (Server_List(Current_Object)) to Obj
+        set Current_Driver_Name of Obj to (Translate_Driver(Current_Object, Val))
+        send Popup to Obj
+    end_procedure
+
+    procedure Save_Login
+        send Close_Client
+    end_procedure
+
+    procedure Login
+        set Login_State to TRUE
+        set Value to "Login"
+        set Focus_Mode of (User_Name(Current_Object)) to FOCUSABLE
+        set Focus_Mode of (Password_Name(Current_Object)) to FOCUSABLE
+        send Popup
+    end_procedure
+
+    procedure Logout
+        set Login_State to FALSE
+        set Value to "Logout"
+        set Focus_Mode of (User_Name(Current_Object)) to NO_ACTIVATE
+        set Focus_Mode of (Password_Name(Current_Object)) to NO_ACTIVATE
+        send Popup
+    end_procedure
+end_class

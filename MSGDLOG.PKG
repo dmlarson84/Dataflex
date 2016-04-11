@@ -1,0 +1,460 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Confidential Trade Secret.
+// Copyright 1987-1994 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//      
+// Module: 
+//      msgdlg.pkg
+//      
+// Purpose:
+//      Defines the Message_Dialog_Client class. This class is used to display
+//      message dialogs and confirmation dialogs using common sets of buttons.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      10/3/94
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+use ui
+use dfmisc
+use clwindow
+
+///xxxxMessage_Dialog_Client_Img
+//ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+//บ__________________________________________________________________________บ
+//บ ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ บ
+//บ ณ                                                                      ณ บ
+//บ ณ                                                                      ณ บ
+//บ ณ                                                                      ณ บ
+//บ ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู บ
+//บ                                                                          บ
+//ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/Message_Dialog_Client_Img
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ__________________________________________________________________________บ
+บ                                                                          บ
+บ                                                                          บ
+บ                                                                          บ
+บ                                                                          บ
+บ                                                                          บ
+บ                                                                          บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/Message_Dialog_Button_OK_Img
+____
+/Message_Dialog_Button_Yes_Img
+_____
+/Message_Dialog_Button_No_Img
+____
+/Message_Dialog_Button_Close_Img
+_______
+/Message_Dialog_Button_Cancel_Img
+________
+/Message_Dialog_Button_Help_Img
+______
+/*
+
+register_object OK_Button
+register_object Yes_Button
+register_object No_Button
+register_object Close_Button
+register_object Cancel_Button
+register_object Help_Button
+
+enum_list
+    define MSG_DLG_BUTTON_OK
+    define MSG_DLG_BUTTON_YES
+    define MSG_DLG_BUTTON_NO
+    define MSG_DLG_BUTTON_CLOSE
+    define MSG_DLG_BUTTON_CANCEL
+    define MSG_DLG_BUTTON_HELP
+end_enum_list
+
+class Message_Dialog_Button is a Button
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        set Focus_Mode to NO_ACTIVATE
+
+        on_key KENTER send Accept
+        on_key KCANCEL send Do_Cancel
+        on_key KEXIT_APPLICATION send Do_Cancel
+    end_procedure
+
+    procedure End_Construct_Object
+        forward send End_Construct_Object
+        set Message to 0
+    end_procedure
+
+    procedure Disable_Button
+        set Focus_Mode to NO_ACTIVATE
+    end_procedure
+
+    procedure Accept
+        local integer Obj
+
+        get Callback_Object to Obj
+
+        if Obj EQ 0 ;
+            procedure_return (Message(Current_Object, 0))
+        else begin
+            send (Message(Current_Object, 0)) to Obj
+            send Close_Client
+        end
+    end_procedure
+
+    procedure Do_OK
+        local integer Obj Ret_Val
+
+        move (OK_Button(Current_Object)) to Obj
+
+        if (Active_State(Obj)) begin
+            if (Focus(Desktop)) NE Obj ;
+                send Activate to Obj
+            get MSG_Accept of Obj to Ret_Val
+            procedure_return Ret_Val
+        end
+    end_procedure
+
+    procedure Do_Yes
+        local integer Obj Ret_Val
+
+        move (Yes_Button(Current_Object)) to Obj
+
+        if (Active_State(Obj)) begin
+            if (Focus(Desktop)) NE Obj ;
+                send Activate to Obj
+            get MSG_Accept of Obj to Ret_Val
+            procedure_return Ret_Val
+        end
+    end_procedure
+
+    procedure Do_No
+        local integer Obj Ret_Val
+
+        move (No_Button(Current_Object)) to Obj
+
+        if (Active_State(Obj)) begin
+            if (Focus(Desktop)) NE Obj ;
+                send Activate to Obj
+            get MSG_Accept of Obj to Ret_Val
+            procedure_return Ret_Val
+        end
+    end_procedure
+
+    procedure Do_Close
+        local integer Obj Ret_Val
+
+        move (Close_Button(Current_Object)) to Obj
+
+        if (Active_State(Obj)) begin
+            if (Focus(Desktop)) NE Obj ;
+                send Activate to Obj
+            get MSG_Accept of Obj to Ret_Val
+            procedure_return Ret_Val
+        end
+    end_procedure
+
+    procedure Do_Help
+        local integer Obj Ret_Val
+
+        move (Help_Button(Current_Object)) to Obj
+
+        if (Active_State(Obj)) begin
+            if (Focus(Desktop)) NE Obj ;
+                send Activate to Obj
+            send Help
+        end
+    end_procedure
+
+    procedure Key integer Key_Val returns integer
+        local integer Ret_Val
+        local string Char
+
+        move 0 to Ret_Val
+
+        uppercase (character(Key_Val)) to Char
+
+        if Char in "OYNCH" begin
+            if Char EQ "O" ;
+                get Msg_Do_OK to Ret_Val
+            else if Char EQ "Y" ;
+                get Msg_Do_Yes to Ret_Val
+            else if Char EQ "N" ;
+                get Msg_Do_No to Ret_Val
+            else if Char EQ "C" ;
+                get Msg_Do_Close to Ret_Val
+            else if Char EQ "H" ;
+                send Do_Help
+        end
+        else if Key_Val EQ KRIGHTARROW ;
+            send Next
+        else if Key_Val EQ KLEFTARROW ;
+            send Previous
+        else ;
+            forward get MSG_Key Key_Val to Ret_Val
+
+        procedure_return Ret_Val
+    end_procedure
+
+    procedure Do_Cancel
+        local integer Obj Ret_Val
+
+        move (Cancel_Button(Current_Object)) to Obj
+
+        if (Active_State(Obj)) begin
+            get MSG_Accept of Obj to Ret_Val
+            procedure_return Ret_Val
+        end
+        // special case for Escape/Exit_App keys: always quit
+        else begin
+            get Callback_Object to Obj
+
+            if Obj NE 0 ;
+                send Close_Client
+            else ;
+                procedure_return MSG_CANCEL
+        end
+    end_procedure
+
+    procedure Return_Active_Button integer Obj integer CBMsg
+        local integer Cur_Obj
+
+        if (Message(Current_Object, 0)) begin
+            move Current_Object to Cur_Obj
+            send CBMsg to Obj Cur_Obj
+        end
+    end_procedure
+end_class
+
+class Message_Dialog_Client is a Client_Window
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        property integer Callback_Object PUBLIC 0
+        property integer Initial_Object PUBLIC 0
+
+        set Popup_State to TRUE
+        set Attach_Parent_State to FALSE
+        set Block_Mouse_State to TRUE
+
+        send Locate_In_Center_Of_Screen
+
+        object Button_List is an Array
+        end_object
+
+        object Text_Message is an Edit
+            set Size to 3 70
+            set Location to 3 3 RELATIVE
+            set Focus_Mode to NONFOCUSABLE
+            set Scroll_Bar_Visible_State to FALSE
+            set Object_Color to ;
+                (hi(Object_Color(Parent(Current_Object)))) ;
+                (low(Object_Color(Parent(Current_Object))))
+        end_object
+
+        object OK_Button is a Message_Dialog_Button ;
+                Message_Dialog_Button_OK_Img
+            item_list
+                on_item "<OK>"
+            end_item_list
+        end_object
+
+        object Yes_Button is a Message_Dialog_Button ;
+                Message_Dialog_Button_Yes_Img
+            item_list
+                on_item "<Yes>"
+            end_item_list
+        end_object
+
+        object No_Button is a Message_Dialog_Button ;
+                Message_Dialog_Button_No_Img
+            item_list
+                on_item "<No>"
+            end_item_list
+        end_object
+
+        object Close_Button is a Message_Dialog_Button ;
+                Message_Dialog_Button_Close_Img
+            item_list
+                on_item "<Close>"
+            end_item_list
+        end_object
+
+        object Cancel_Button is a Message_Dialog_Button ;
+                Message_Dialog_Button_Cancel_Img
+            item_list
+                on_item "<Cancel>"
+            end_item_list
+        end_object
+
+        object Help_Button is a Message_Dialog_Button ;
+                Message_Dialog_Button_Help_Img
+            item_list
+                on_item "<Help>"
+            end_item_list
+
+            on_key KENTER send Help
+        end_object
+
+        set Key_Path to Desktop
+    end_procedure
+
+    procedure set OK_Msg integer Msg
+        set Message of (OK_Button(Current_Object)) to Msg
+    end_procedure
+
+    procedure set Yes_Msg integer Msg
+        set Message of (Yes_Button(Current_Object)) to Msg
+    end_procedure
+
+    procedure set No_Msg integer Msg
+        set Message of (No_Button(Current_Object)) to Msg
+    end_procedure
+
+    procedure set Close_Msg integer Msg
+        set Message of (Close_Button(Current_Object)) to Msg
+    end_procedure
+
+    procedure set Cancel_Msg integer Msg
+        set Message of (Cancel_Button(Current_Object)) to Msg
+    end_procedure
+
+    procedure set Help_Msg integer Msg
+        set Message of (Help_Button(Current_Object)) to Msg
+    end_procedure
+
+    procedure Default_Button integer Obj
+        if Obj EQ MSG_DLG_BUTTON_OK ;
+            set Initial_Object to (OK_Button(Current_Object))
+        else if Obj EQ MSG_DLG_BUTTON_YES ;
+            set Initial_Object to (Yes_Button(Current_Object))
+        else if Obj EQ MSG_DLG_BUTTON_NO ;
+            set Initial_Object to (No_Button(Current_Object))
+        else if Obj EQ MSG_DLG_BUTTON_CLOSE ;
+            set Initial_Object to (Close_Button(Current_Object))
+        else if Obj EQ MSG_DLG_BUTTON_CANCEL ;
+            set Initial_Object to (Cancel_Button(Current_Object))
+        else if Obj EQ MSG_DLG_BUTTON_YES ;
+            set Initial_Object to (Help_Button(Current_Object))
+    end_procedure
+
+    procedure Active_Button integer Obj
+        local integer BList Itm
+
+        move (Button_List(Current_Object)) to BList
+        set Array_Value of BList item (Item_Count(BList)) to Obj
+    end_procedure
+
+    procedure Clear_Buttons
+        set Callback_Object to 0
+        broadcast send Disable_Button
+        set Initial_Object to 0
+
+        set OK_Msg to 0
+        set Yes_Msg to 0
+        set No_Msg to 0
+        set Close_Msg to 0
+        set Cancel_Msg to 0
+        set Help_Msg to 0
+    end_procedure
+
+    procedure Do_Callback integer Msg
+        local integer Obj
+
+        if Msg NE 0 begin
+            get Callback_Object to Obj
+
+            if Obj NE 0 ;
+                send Msg to Obj
+            else ;
+                send Msg // we assume it'll delegate
+        end
+        else ;
+            procedure_return Msg
+
+        send Close_Client
+    end_procedure
+
+    procedure Initialize_Buttons
+        local integer BList Itm BWidth Obj Spacing Sz Row Cur_Offset Cnt
+
+        move (Button_List(Current_Object)) to BList
+
+        send Delete_Data to BList
+        move Current_Object to Obj
+        broadcast send Return_Active_Button Obj MSG_Active_Button
+
+        // determine spacing and location of chosen buttons
+        move 0 to BWidth
+        get Item_Count of BList to Cnt
+        move 0 to Itm
+
+        while Itm LT Cnt
+            get Integer_Value of BList item Itm to Obj
+            move (BWidth + Low(Size(Obj))) to BWidth
+            increment Itm
+        end
+
+        get Size to Sz
+
+        // find spacing between buttons
+        move (((Low(Sz) - 4) - BWidth) / (Cnt + 1)) to Spacing
+
+        // center buttons based on spacing: calc starting offset
+        move ((Low(Sz) - ((Cnt - 1) * Spacing) - BWidth) / 2) to Cur_Offset
+
+        move (Hi(Sz) - 2) to Row
+        
+        move 0 to Itm
+
+        while Itm LT Cnt
+            get Integer_Value of BList item Itm to Obj
+
+            set Focus_Mode of Obj to FOCUSABLE
+            set Location of Obj to Row Cur_Offset RELATIVE
+
+            // advance cur_offset by size of button plus spacing
+            move (Cur_Offset + Low(Size(Obj)) + Spacing) to Cur_Offset
+
+            increment Itm
+        end
+    end_procedure
+
+    function Display_Message string Txt returns integer
+        local integer Ret_Val
+
+        send Initialize_Buttons
+        set Callback_Object to 0
+        send Display_Message Txt
+        start_ui
+        move StrMark to Ret_Val
+        send Close_Client
+        function_return Ret_Val
+    end_function
+
+    procedure set Message_Text string Txt
+        send Delete_Data to (Text_Message(Current_Object))
+        send Insert to (Text_Message(Current_Object)) Txt
+    end_procedure
+
+    procedure Display_Message string Txt
+        local integer Obj
+
+        send Initialize_Buttons
+        set Message_Text to Txt
+        send Popup
+
+        get Initial_Object to Obj
+        if Obj NE 0 ;
+            send Activate to Obj
+    end_procedure
+
+    procedure Close_Client
+        send Clear_Buttons
+        forward send Close_Client
+    end_procedure
+end_class

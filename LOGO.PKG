@@ -1,0 +1,52 @@
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+/logo
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                          บ
+บ                                                                          บ
+บ                                 DataFlex                                 บ
+บ                                                                          บ
+บ                               Version 3.01                               บ
+บ                                                                          บ
+บ                            Copyright 1981-1992                           บ
+บ                   Data Access Corporation, Miami Florida                 บ
+บ                            All Rights Reserved                           บ
+บ                                                                          บ
+บ                               Serial Number                              บ
+บ                               _____________                              บ
+บ                                                                          บ
+บ                          This Program Licensed To                        บ
+บ                  ________________________________________                บ
+บ                                                                          บ
+บ                                                                          บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+use ui
+
+object logo is a message
+	set location to 2 2 relative
+	set center_state item 0 to true
+	set center_state item 1 to true
+
+	procedure display_logo
+		local integer regnum
+		local string regname
+
+		if (signon_status(desktop)) begin
+			registration regname regnum
+			set value item 0 to regnum
+			set value item 1 to regname
+			send page_object true
+			for regnum from 1 to 3
+				sleep 1
+				inkey$ regname
+				if termchar move 3 to regnum
+			loop
+			send page_object false
+		end
+	end_procedure
+end_object
+
+set application_name to 'System'
+send display_logo to logo.obj

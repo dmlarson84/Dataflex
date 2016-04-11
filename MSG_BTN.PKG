@@ -1,0 +1,73 @@
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use UI
+
+class Message_Button_Text is an Edit
+end_class
+
+set Class_Colors U_Message_Button_Text to 0 0
+
+class Message_Button is a Client
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        property integer Button_Type          Public
+        property integer Original_Child_Count Public
+        property string  Original_Text        Public
+
+        set Block_Mouse_State to True
+        set Popup_State       to True
+        set Scope_State       to True
+
+        object Text_Area is an Message_Button_Text
+            set Location to 1 2 Relative
+            set Scroll_Bar_Visible_State to False
+            set Focus_Mode to Pointer_Only
+        end_object
+
+        set Original_Child_Count to (Child_Count( Current_Object ))
+    end_procedure
+
+    procedure Activate
+        if (Child_Count( Current_Object )) EQ (Original_Child_Count( Current_Object )) ;
+          set Focus_Mode of (Text_Area( Current_Object )) to Focusable
+        forward send Activate
+    end_procedure
+
+    procedure set Text_Size integer Rows integer Cols
+        set Size of (Text_Area( Current_Object )) to Rows Cols
+    end_procedure
+
+    procedure set Text_Value string Val
+        local integer Obj
+
+        move (Text_Area( Current_Object )) to Obj
+        send Delete_Data to Obj
+        send Insert to Obj Val
+    end_procedure
+
+    procedure Replace_All string Old_Val string New_Val
+        local integer Obj Fnd
+
+        move (Text_Area( Current_Object )) to Obj
+        send Beginning_Of_Data to Obj
+
+        repeat
+            get Msg_Replace of Obj Old_Val (trim( New_Val )) to Fnd
+        until (not( Fnd ))
+    end_procedure
+
+    procedure set Arguments string Val1 string Val2 string Val3 string Val4 ;
+      string Val5 string Val6 string Val7 string Val8 string Val9
+        if Num_Arguments GE 1 send Replace_All "%1" Val1
+        if Num_Arguments GE 2 send Replace_All "%2" Val2
+        if Num_Arguments GE 3 send Replace_All "%3" Val3
+        if Num_Arguments GE 4 send Replace_All "%4" Val4
+        if Num_Arguments GE 5 send Replace_All "%5" Val5
+        if Num_Arguments GE 6 send Replace_All "%6" Val6
+        if Num_Arguments GE 7 send Replace_All "%7" Val7
+        if Num_Arguments GE 8 send Replace_All "%8" Val8
+        if Num_Arguments GE 9 send Replace_All "%9" Val9
+    end_procedure
+end_class

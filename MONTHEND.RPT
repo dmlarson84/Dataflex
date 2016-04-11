@@ -1,0 +1,112 @@
+/HEADER RESIDENT                          monthend.rpt
+Date: __/__/____          Outstanding Offenses Report                Page: __
+
+                        Offense Dates From __/__/____ to __/__/____
+
+
+Defendant               # of Offenses   Total Owed     Credit       Balance
+
+/BODY RESIDENT
+__________.__ 
+/SUBTOTAL1    RESIDENT
+_________________________    ____.     ________.__   ________.__   ________.__
+/TOTAL
+______________________________________________________________________________
+Total Defendants  _____     _____. ____________.__  _________.__ __________.__
+/SELECT
+                          WORTHLESS CHECK SYSTEM
+                        Outstanding Offenses Report
+อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+
+    Enter the beginning offense date for this report: __/__/____
+    Enter the ending offense date for this report:    __/__/____  (Return for
+                                                                   today)
+      Enter H to use handfed paper     _
+
+
+/info
+
+    changes made on 10/11/1999 by Jeff March
+        added direct_output to LPT1: and calcDate.inc for Y2k update.
+
+Recompiled 01-19-2000 by Jeff March
+        Recognize new backspace command in calcdate.inc
+     
+
+/*
+use y2k.pkg
+Read_dfini "dfini23.cfg"
+//----------------- Cannot Run Program From Command Line (DOS)
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+#INCLUDE calcDATE.INC
+#INCLUDE MACS.FRM
+
+OPEN DEFENDNT
+OPEN OFFENSE INDEX.5
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+INTEGER DEF_TOTAL DEFS
+DATE TODAY
+SYSDATE4 TODAY
+MOVE 0 TO PAGEFEED
+
+PAGE SELECT
+ACCEPT SELECT.1
+ACCEPT SELECT.2
+IF SELECT.2 LE '' MOVE TODAY TO SELECT.2
+ACCEPT SELECT.3
+IF SELECT.3 IN 'Hh' MOVE -1 TO PAGEFEED
+
+
+direct_output "d:\dataflex\offense.txt"
+REPORT OFFENSE BY INDEX.5 BREAK OFFENSE.IDNO
+
+         INDICATE SELECT AS OFFENSE.ACTIVE IN  'L '
+[SELECT] INDICATE SELECT AS OFFENSE.ENTRY_DATE GE SELECT.1
+[SELECT] INDICATE SELECT AS OFFENSE.ENTRY_DATE LE SELECT.2
+
+SECTION HEADER
+        PRINT TODAY
+        PRINT PAGECOUNT
+        PRINT SELECT.1
+        PRINT SELECT.2
+        OUTPUT HEADER
+SECTION SUBHEADER1
+        PRINT DEFENDNT.NAME TO SUBTOTAL1.1
+        PRINT DEFENDNT.CREDIT TO SUBTOTAL1.4
+        MOVE (TOTAL.5 + SUBTOTAL1.4) TO TOTAL.5
+        MOVE 0 TO DEF_TOTAL
+SECTION BODY
+        PRINT (OFFENSE.MFEE + OFFENSE.PFEE + OFFENSE.CKAMT)
+        INCREMENT DEF_TOTAL
+SECTION SUBTOTAL1
+        INCREMENT DEFS
+        PRINT DEF_TOTAL TO SUBTOTAL1.2
+        MOVE (TOTAL.3 + DEF_TOTAL) TO TOTAL.3
+        SUBTOTAL BODY.1 TO SUBTOTAL1.3
+        MOVE (TOTAL.4 + SUBTOTAL1.3) TO TOTAL.4
+        PRINT (SUBTOTAL1.3 - SUBTOTAL1.4) TO SUBTOTAL1.5
+        MOVE (TOTAL.6 + SUBTOTAL1.5) TO TOTAL.6
+        OUTPUT SUBTOTAL1
+SECTION TOTAL
+        PRINT DEFS TO TOTAL.2
+        OUTPUT TOTAL
+REPORTEND
+FORMFEED
+ABORT

@@ -1,0 +1,37 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Pkg2e0.Pkg
+// version: 3.02e
+// 02-04-1993 : Created
+//
+// Author: John J. Tuohy
+//
+// Upgraded from version 3.0 support
+// version 1.1 changes
+// 03/31/94 - Fixed bug in inactivate (was clearing the buffer- whoops)
+//
+//************************************************************************
+
+Use UI
+use dafmac
+
+define Define_Symbol for Define
+
+use cd_stuff    // Object Create/Destroy command support
+
+// Aliases for DAF 1.1 "0"-classes
+define Code_Selection_List0     for Code_Selection_List
+define Code_Radio_Entry_Form0   for Code_Radio_Entry_Form
+define Code_Pick_List0          for Code_Pick_List
+define Type_Data_Set0           for Type_Data_Set
+define Type_List_Client0        for Type_List_Client
+define Type_Selection_List0     for Type_Selection_List
+

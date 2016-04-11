@@ -1,0 +1,21 @@
+        FILE DEFINITION LISTING FOR FILE #48
+*************************************************** 
+        FILE ROOT NAME     = QUERY
+        USER DISPLAY NAME  = DF Query
+        DATAFLEX FILE NAME = QUERY
+*************************************************** 
+        RECORD LENGTH = 102  (USED = 100)
+        MAX NUMBER OF RECORDS = 3000  (USED = 1)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1      10   ASCII          1     0     0     DATA
+   2      11      50   ASCII          1     0     0     DESCRIPTION
+   3      61      40   ASCII          0     0     0     FILENAME
+   4      11      15   OVERLAP        1     0     0     IDXOLAP
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   <4>   <0>   
+

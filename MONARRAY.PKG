@@ -1,0 +1,88 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\monarray.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: monarray.pkg,v $
+//Revision 2.1  1993/08/25  17:49:17  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:07  james
+//Initial revision
+//
+//Revision 1.3  92/05/14  15:50:37  unknown
+//Updated Copyright slug - SWM.
+//
+//Revision 1.2  92/03/09  19:03:27  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:21:41  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: MonArray.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: May 23, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Monitored_Array class definition.
+//
+// This class may be used as a debugging tool to inspect arrays as they
+// are modified.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+
+class monitored_array is an array
+  procedure construct_object 
+    forward send construct_object
+    property integer xloc public 0
+    property integer yloc public 15
+  end_procedure
+  procedure set array_value integer item# string val
+    forward set array_value item item# to val
+    send show_elements
+  end_procedure
+  procedure show_elements
+    local integer count maxx x y
+    local string val
+    get xloc to x
+    get yloc to y
+    calc (item_count(current_object) - 1) to maxx
+    clearxy y x
+    showln "ItemCount = " (maxx + 1)
+    for count from 0 to maxx
+      gotoxy (y + count + 1) x
+      get array_value item count to val
+      show "[" count "] = " val
+    loop
+  end_procedure
+  procedure SET item_count integer newVal
+    forward set item_count to newVal
+    send show_elements
+  end_procedure
+  procedure delete_item integer item#
+    forward send delete_item item#
+    send show_elements
+  end_procedure
+end_class
+

@@ -1,0 +1,438 @@
+/HEADER  18        RESIDENT                               MCHECKS.dfr
+=======< Check Register >======================================================
+  
+             _________________________________________________
+             _________________________________________________
+             _________________________________________________
+
+Date..{ __/__/__         From  __/__/__  Thru  __/__/__            Page.{ __.
+==============================================================================
+Check    Check        Ref                  Payee                       Check
+  #       Date                     -- Distribution--                   Amount
+                                  Account    Amount
+-------------------------------------------------------------------------------
+/SUBHEADER1    RESIDENT
+Bank..{ __  ______________________________
+
+/SUBHEADER3 6  RESIDENT
+______. __/__/__ _______________ ______________________________     ______.__
+/BODY 5      RESIDENT
+    ___. ___ __  _________________________ _______.__
+/SUBTOTAL3 4   RESIDENT
+                                           ----------            
+                          Distribution Total..........< _______.__ >          
+
+/SUBTOTAL2  RESIDENT
+                                                                    ---------
+   T O T A L   F O R   M O N T H      ---------------------->>      ______.__
+
+/SUBTOTAL1
+                                                        ==========  =========
+Total For Bank < __> ____________________________       _______.__  ______.__
+
+/TOTAL       RESIDENT
+                                                        ==========  =========
+T O T A L   F O R   R E P O R T                         _______.__  ______.__
+
+/SCRPRT
+อออออออ< Printing Check Registers >อออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+
+
+
+
+   Checks are printing between the dates of < __/__/__ > and < __/__/__ >
+
+            Drawn on the Bank of < ____________________________ >
+
+
+
+              Printing Check #...........{ __  ______.
+
+
+
+
+_________________________   ________________________________________  _
+
+/SCRPRT2
+ออออออออ< Print Check Register >อออออออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+
+
+
+
+
+
+
+
+
+           _________________________________________  _
+
+
+
+
+
+
+
+
+/SCRSELECT
+ออออออออ< Print Check Register >อออออออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+
+
+               Start Date................{ __/__/__
+
+               End Date..................{ __/__/__
+
+               Bank Code.................{ __
+
+
+
+
+
+
+
+
+      Output To P)rinter,  C)onsole or A)bort.........{ _
+
+/info
+
+   change made 04/02/91 by gary grooms
+      renamed an old mchecks.rpt to pchecks.rpt in order to split the check
+      register printing between the hot check trust account and any pros
+      fees account or other accounts as may be operating within the system.
+
+      this program is called as a "chain" to program from ledger.flx
+      when this program ends it will chain back to ledger
+/*
+
+//----------------- Cannot Run Program From Command Line (DOS)
+//IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+//*******< Program Variables >*************************************************
+
+
+STRING ANSW 1 LONG 50 SHORT 50
+
+INDICATOR PRT UPDATE  NEWMON  ONETIME LASTREC
+
+INTEGER COUNT LCOUNT TIMER ADAY AMONTH AYEAR SEQ
+INTEGER BDAY BMO BYR PRIOR_MON
+
+NUMBER ACCUM1  ACCUM2
+
+DATE TODAY TEMPDAY
+//*******< Initialize Variables and Set Page Screens >*************************
+
+MOVE 0 TO COUNT
+MOVE 0 TO LCOUNT
+MOVE '' TO ANSW
+MOVE '' TO LONG
+MOVE '' TO SHORT
+
+SYSDATE TODAY
+//*******< Open Files >********************************************************
+
+MULTI$ OPEN CHECKS REF RECON JOURNALS
+OPEN BANK INDEX.1
+OPEN DISTRIB INDEX.4
+OPEN LEDGER INDEX.1
+   
+//*******< Main Program >******************************************************
+DATE_MACRO_INIT
+
+
+FORMAT SCRSELECT.3        {CAPSLOCK}
+FORMAT SCRSELECT.4        {CAPSLOCK}
+
+START:
+MOVE (0.00) TO ACCUM1
+MOVE (0.00) TO ACCUM2
+CLEAR BANK
+CLEAR DISTRIB
+CLEAR CHECKS
+CLEARFORM SCRSELECT.1 THRU SCRSELECT.4
+FIRST_DAY_OF_MONTH TODAY TO TEMPDAY
+DISPLAY TODAY TO SCRSELECT.1
+LAST_DAY_OF_MONTH TODAY TO TEMPDAY
+DISPLAY TODAY TO SCRSELECT.2
+PAGE SCRSELECT
+CHOICE:
+ACCEPT SCRSELECT.1
+ACCEPT SCRSELECT.2
+   DECOMPOSE_DATE SCRSELECT.1 TO ADAY AMONTH AYEAR
+REPEAT   
+ACCEPT SCRSELECT.3
+   MOVE SCRSELECT.3 TO BANK.CODE
+      FIND EQ BANK BY INDEX.1
+      [FINDERR] BEGIN
+        CLEARXY 24 0
+        GOTOXY 24 0
+        SHOW " Incorrect or Missing Bank Code !!"
+        FOR TIMER FROM 0 TO 600
+         LOOP
+        CLEARXY 24 0
+        CLEAR BANK
+        CLEARFORM SCRSELECT.3
+      END
+  [FINDERR] LOOP
+
+REPEAT
+ACCEPT SCRSELECT.4
+IF ~ SCRSELECT.4 IN 'PCA' LOOP       
+MOVE SCRSELECT.4 TO ANSW
+
+
+GOSUB SELECT_OUTPUT_REG
+
+
+INDICATE ONETIME TRUE
+MOVE 0 TO PAGECOUNT
+CLEAR DISTRIB
+MOVE SCRSELECT.1 TO DISTRIB.JR_DATE
+MOVE SCRSELECT.3 TO DISTRIB.BANK_CODE
+
+REPORT DISTRIB BY INDEX.4  BREAK DISTRIB.BANK_CODE DISTRIB.JR_DATE DISTRIB.CHECK_NUMB
+INDICATE SELECT AS DISTRIB.JR_DATE GE SCRSELECT.1
+[SELECT] INDICATE SELECT AS DISTRIB.JR_DATE LE SCRSELECT.2
+[SELECT] INDICATE SELECT AS DISTRIB.BANK_CODE EQ SCRSELECT.3
+
+
+[~ SELECT] INDICATE LASTREC TRUE
+[~ SELECT] INDICATE NEWMON TRUE
+//[~ SELECT] GOTO END.OF.REPORT
+RELATE DISTRIB
+
+
+
+BLANKFORM SCRPRT.6 THRU SCRPRT.8
+[PRT] PAGE SCRPRT
+
+  DISPLAY SCRSELECT.1 TO SCRPRT.1
+  DISPLAY SCRSELECT.2 TO SCRPRT.2
+  DISPLAY DISTRIB.BANK_CODE TO SCRPRT.4
+  DISPLAY DISTRIB.CHECK_NUMB TO SCRPRT.5
+  DISPLAY BANK.NAME TO SCRPRT.3
+
+SECTION HEADER
+  GOSUB OUTHEAD
+[PRT]  OUTPUT HEADER
+[~ PRT] IF PAGECOUNT LE 1 OUTPUT HEADER
+
+SECTION SUBHEADER1
+  PRINT BANK.CODE      TO SUBHEADER1.1
+  PRINT BANK.NAME      TO SUBHEADER1.2
+  OUTPUT SUBHEADER1
+
+SECTION SUBHEADER2
+
+
+SECTION SUBHEADER3
+  PRINT CHECKS.CHECK_NUM   TO SUBHEADER3.1
+  PRINT CHECKS.CK_DATE     TO SUBHEADER3.2
+  PRINT CHECKS.REFERENCE   TO SUBHEADER3.3
+  PRINT CHECKS.PAYEE       TO SUBHEADER3.4
+  PRINT CHECKS.CHK_AMT     TO SUBHEADER3.5
+  OUTPUT SUBHEADER3
+
+SECTION BODY
+  PRINT DISTRIB.ACCOUNT    TO BODY.1
+  PRINT DISTRIB.DISTRICT   TO BODY.2
+  PRINT DISTRIB.DIVISION   TO BODY.3
+  PRINT DISTRIB.DESCRIPTION TO BODY.4
+  PRINT DISTRIB.AMOUNT     TO BODY.5
+  MOVE (DISTRIB.AMOUNT + ACCUM1) TO ACCUM1
+  MOVE (DISTRIB.AMOUNT + ACCUM2) TO ACCUM2
+  MOVE BMO TO PRIOR_MON
+  [ONETIME] INDICATE ONETIME FALSE
+  OUTPUT BODY
+
+SECTION SUBTOTAL3
+  SUBTOTAL BODY.5         TO SUBTOTAL3.1
+  OUTPUT SUBTOTAL3
+
+SECTION SUBTOTAL2
+
+[~ LASTREC] DECOMPOSE_DATE DISTRIB.JR_DATE TO BDAY BMO BYR
+[~ LASTREC] INDICATE NEWMON AS BMO NE PRIOR_MON
+  PRINT ACCUM2 TO  SUBTOTAL2.1
+ [NEWMON] OUTPUT SUBTOTAL2
+ [NEWMON] MOVE (0) TO ACCUM2
+ [NEWMON] BEGIN
+  FORMFEED
+  GOSUB OUTHEAD
+  [PRT] OUTPUT HEADER
+  OUTPUT SUBHEADER1
+ END
+
+
+
+SECTION SUBTOTAL1
+   PRINT BANK.CODE        TO SUBTOTAL1.1
+   PRINT BANK.NAME        TO SUBTOTAL1.2
+   SUBTOTAL SUBTOTAL3.1   TO SUBTOTAL1.3
+   SUBTOTAL SUBHEADER3.5  TO SUBTOTAL1.4
+  OUTPUT SUBTOTAL1
+
+SECTION TOTAL
+  PRINT ACCUM2 TO SUBTOTAL2.1
+  OUTPUT SUBTOTAL2
+  PRINT ACCUM1            TO TOTAL.1
+  SUBTOTAL SUBTOTAL1.3    TO TOTAL.2
+OUTPUT TOTAL
+
+RETURN
+RPT.KEYPRESS:
+  [PRT] BEGIN
+        DISPLAY ' A KEY HAS BEEN PRESSED' TO SCRPRT.6
+        DISPLAY ' DO YOU WISH TO ABORT THE REPORT? (Y/N) ' TO SCRPRT.7
+        DISPLAY 'N' TO SCRPRT.8
+        REPEAT
+         ACCEPT SCRPRT.8 TO ANSW
+         IF ~ ANSW IN 'YN' BLANKFORM SCRPRT.8
+         IF ~ ANSW IN 'YN' LOOP
+         IF ANSW EQ 'Y' RETURN END$OF$REPORT
+      END
+  [~ PRT] BEGIN
+      REPEAT
+        SHOWLN ' A KEY HAS BEEN PRESSED.'
+        INPUT ' DO YOU WISH TO ABORT TH REPORT? (Y/N)' ANSW
+        UPPERCASE ANSW
+        IF ~ ANSW IN 'YN' LOOP
+        IF ANSW EQ 'Y' RETURN END$OF$REPORT
+      END
+
+
+RETURN RPT.LOOP
+     REPORTEND
+     FORMFEED
+     [MULTIUSER] DESPOOL
+     CLOSE_OUTPUT
+
+     [PRT] BEGIN
+     BLANKFORM SCRPRT.1 THRU SCRPRT.8
+     DISPLAY '               Options:' TO SCRPRT.6
+     DISPLAY 'R)eprint report,   Q)uit' TO SCRPRT.7
+     REPEAT
+     CLEARFORM SCRPRT.8
+     DISPLAY 'Q' TO SCRPRT.8
+     ACCEPT SCRPRT.8 TO ANSW
+     UPPERCASE ANSW
+     IF ~ ANSW IN 'RQ' LOOP
+     IF ANSW EQ 'R' GOTO START
+ 
+     END
+
+
+     [~ PRT] BEGIN
+     DISPLAY 'PRINT ANOTHER REGISTER? (Y/N)' TO SCRPRT2.1
+     REPEAT
+     CLEARFORM SCRPRT2.2      
+     DISPLAY 'N' TO SCRPRT2.2
+     ACCEPT SCRPRT2.2 TO ANSW
+     UPPERCASE ANSW
+     IF ~ ANSW IN 'YN' LOOP
+     IF ANSW EQ 'Y' GOTO START
+     END
+
+
+
+chain "ledger"
+
+ 
+
+
+
+
+
+
+
+
+
+
+//*******< Sub Routines >******************************************************
+
+SELECT_OUTPUT_REG:
+
+  IF ANSW EQ 'P' BEGIN
+     INDICATE PRT TRUE
+     OUTFILE "LST:"
+     MOVE 60 TO PAGEEND
+     MOVE 0 TO PAGEFEED
+     RETURN
+   END
+
+  IF ANSW EQ 'C' BEGIN
+     INDICATE PRT FALSE
+     OUTFILE "CON:"
+     MOVE 24 TO PAGEEND
+     MOVE -1 TO PAGEFEED
+     CLEARSCREEN
+     RETURN
+   END
+
+  IF ANSW EQ 'A' BEGIN
+      CLEARXY 24 0
+      GOTOXY 24 0
+      SHOW " Are You Sure You Want To Abort..(Y/N) "
+    REPEAT
+      GOTOXY 24 40
+      MOVE '' TO ANSW
+      INKEY ANSW
+      UPPERCASE ANSW
+      IF ~ ANSW IN 'YN' LOOP
+      IF ANSW EQ 'Y' ABORT
+      IF ANSW EQ 'N' RETURN START
+   END
+
+RETURN
+
+CENTER:
+   LENGTH SHORT TO LCOUNT
+   MOVE "" TO LONG
+    MOVE (50 - LCOUNT / 2 + (.5)) TO LCOUNT
+    FOR COUNT FROM 0 TO LCOUNT
+          APPEND LONG " "
+     LOOP
+    APPEND LONG SHORT
+RETURN
+
+OUTHEAD:
+
+TRIM REF.PROSECUTOR TO SHORT
+   GOSUB CENTER
+PRINT LONG  TO HEADER.1
+TRIM REF.ADDRESS TO SHORT
+    GOSUB CENTER
+PRINT LONG TO HEADER.2
+TRIM REF.CITY_STATE TO  SHORT
+    GOSUB CENTER
+PRINT LONG TO  HEADER.3
+PRINT TODAY TO HEADER.4
+PRINT SCRSELECT.1 TO HEADER.5
+PRINT SCRSELECT.2 TO HEADER.6
+PRINT PAGECOUNT TO HEADER.7
+RETURN
+
+
+

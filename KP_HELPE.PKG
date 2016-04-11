@@ -1,0 +1,187 @@
+// KP_HELPE.PKG
+// May 23, 1991
+// LS
+//
+// Keyproc_Help_Edit package for editing help in non-ui and "mixed" ui programs
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use Helpedit
+
+class Keyproc_Help_Edit_Name is an Array
+    procedure Construct_Object
+        forward send Construct_Object
+
+        property integer Keyproc_Help_Edit_State Public
+        property integer Help_Name_ID            Public
+    end_procedure
+end_class
+
+//----------------------  KEYPROC_HELP_SAVE_CONFIRM -----------------------//
+
+/Keyproc_Help_Save_Confirm_Img
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ____________________________________________________________________บ
+บ                                                                    บ
+บ      Create Link for Group: _________________________________      บ
+บ                and Subject: _________________________________      บ
+บ                                                                    บ
+บ           ฺฤ Create Link and assign to Context: ฤฤฤฤฤฤฤฟ           บ
+บ           ณ  ________________________________________  ณ           บ
+บ           ณ  ________________________________________  ณ           บ
+บ           ณ  ________________________________________  ณ           บ
+บ           ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู           บ
+บ   _______________________   ________________   ________   ______   บ
+บ                                                                    บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/*
+//  <Save Link and Context>   <Save Link Only>   <Cancel>   <Help>
+sub_page Keyproc_Help_Title_Img     from Keyproc_Help_Save_Confirm_Img 1
+sub_page Keyproc_Help_Name_List_Img from Keyproc_Help_Save_Confirm_Img 4 5 6
+sub_page Keyproc_Help_Save_Btns_Img from Keyproc_Help_Save_Confirm_Img 7 8 9 10
+
+register_object Keyproc_Help_Editor
+register_object Window_Help
+
+object Keyproc_Help_Save_Confirm is a Client Keyproc_Help_Save_Confirm_Img
+    set Location    to 4 4 Relative
+    set Popup_State to True
+    set Scope_State to True
+
+    object Title is a Title Keyproc_Help_Title_Img
+        set Center_State item 0 to True
+        set Value        item 0 to "Save Help"
+    end_object
+    
+    object Name_List is a Menu Keyproc_Help_Name_List_Img
+        set Select_Mode        to Auto_Select
+        set Local_Rotate_State to False
+
+        item_list
+            on_item "" send Switch
+            on_item "" send Switch
+            on_item "" send Switch
+        end_item_list
+    end_object
+
+    object Buttons is a Button Keyproc_Help_Save_Btns_Img
+        item_list
+            on_item "<Save Link and Context>" send Save_Both
+            on_item "<Save Link Only>"        send Save_Link
+            on_item "<Cancel>"                send Cancel
+            on_item "<Help>"                  send Help
+        end_item_list
+    end_object
+
+    on_key key_Shift+key_F1 send None
+    on_key kCancel          send Cancel
+    on_key kHelp            send Help
+
+    procedure Save_Both returns integer
+        procedure_return Current_Message
+    end_procedure
+
+    procedure Save_Link returns integer
+        procedure_return Current_Message
+    end_procedure
+
+    procedure Activating
+        local integer Obj Nam_Lst
+
+        forward send Activating
+
+        move (Name_List( Current_Object )) to Nam_Lst
+        move (Keyproc_Help_Editor( Desktop )) to Obj
+        set Value item 1 to (Current_Group( Help_Editor( Desktop ) ))
+        set Value item 2 to (Current_Subject( Help_Editor( Desktop ) ))
+        set Value of Nam_Lst item 0 to ("WINDOW_" + ;
+          string( Help_Name_ID( Window_Help( Obj ) ) ))
+        set Value of Nam_Lst item 1 to ("IMAGE_" + ;
+          string( Help_Name_ID( Obj ) ))
+        set Value of Nam_Lst item 2 to (Help_Name( Desktop ))
+        set Current_Item of Nam_Lst to 0
+    end_procedure
+
+    function Keyproc_Save_Name returns string
+        function_return (Value( Name_List( Current_Object ), Current ))
+    end_function
+end_object
+
+//-------------------------  KEYPROC_HELP_EDITOR --------------------------//
+
+object Keyproc_Help_Editor is a Keyproc_Help_Edit_Name
+    object Window_Help is a Keyproc_Help_Edit_Name
+        function Help_Name returns String
+            local string Hlp_Nam
+
+            if (Keyproc_Help_Edit_State( Parent( Current_Object ) )) ;
+              function_return ;
+              ("WINDOW_" + string( Help_Name_ID( Current_Object ) ))
+            else begin
+                forward get Help_Name to Hlp_Nam
+                function_return Hlp_Nam
+            end
+        end_function
+    end_object
+
+    function Help_Name returns String
+        local string Hlp_Nam
+
+        if (Keyproc_Help_Edit_State( Current_Object )) function_return ;
+          ("IMAGE_" + string( Help_Name_ID( Current_Object ) ))
+        else begin
+            forward get Help_Name to Hlp_Nam
+            function_return Hlp_Nam
+        end
+    end_function
+
+    procedure Request_Edit_Help integer Img integer Win
+        set Keyproc_Help_Edit_State to True
+        set Help_Name_ID to Img
+        set Help_Name_ID of (Window_Help( Current_Object )) to Win
+        send Request_Edit_Help to (Help_Editor(Desktop)) (Window_Help( Current_Object ))
+        start_ui
+    end_procedure
+end_object
+
+// override procedures in help_editor object
+
+procedure Save_Help FOR (Class( Help_Editor( Desktop ) ))
+    local integer Ret_Val Obj Msg_Val Orig
+    local string Hlp_Name
+
+    get Focus to Obj
+
+    get Original_Focus to Orig
+    if Orig EQ 0 move Desktop to Orig
+
+    if (Keyproc_Help_Edit_State( Keyproc_Help_Editor( Desktop ) )) begin
+        ui_accept Keyproc_Help_Save_Confirm to Msg_Val
+        get Keyproc_Save_Name of Keyproc_Help_Save_Confirm to Hlp_Name
+        get Find_Help_Context (Application_Name( Orig )) (Module_Name( Orig )) ;
+            Hlp_Name to Ret_Val
+    end
+    else begin
+        get Context_Help_Name of (Original_Focus( Current_Object )) to Hlp_Name
+        get Find_Help_Context (Application_Name( Orig )) (Module_Name( Orig )) ;
+            Hlp_Name to Ret_Val
+        ui_accept (Keyproc_Help_Save_Confirm( Current_Object )) to Msg_Val
+    end
+
+    send Save_Help_Records Msg_Val Obj Hlp_Name
+end_procedure
+
+procedure Request_Cancel FOR (Class( Help_Editor( Desktop ) ))
+    send Deactivate_Area
+
+    if (Keyproc_Help_Edit_State( Keyproc_Help_Editor( Desktop ) )) begin
+        set Keyproc_Help_Edit_State of Keyproc_Help_Editor to False
+        procedure_return 1
+    end
+end_procedure
+
+// global procedure to access help_editor (keyproc version)
+
+procedure Keyproc_Edit_Help FOR DESKTOP
+    send Request_Edit_Help to Keyproc_Help_Editor Current_Image Current_Window
+end_procedure

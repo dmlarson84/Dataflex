@@ -1,0 +1,150 @@
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Confidential Trade Secret.
+// Copyright 1987-1994 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//      
+// Module: 
+//      parsefn.pkg
+//      
+// Purpose:
+//      Functions for parsing filename specifications.
+//      
+// Author:
+//      Lee Smith
+//      
+// Date:
+//      11/9/94
+//      
+//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+use seq_chnl
+
+function Parse_Drive GLOBAL string Val returns string
+    local string Pth
+
+    move Val to Pth
+
+    while ":" in Pth
+        right Pth to Pth (length(Pth) - pos(":", Pth))
+    end
+
+    function_return (left(Val, (length(Val) - length(Pth))))
+end_function
+
+function Parse_Path GLOBAL string Spec returns string
+    local string DSpec FSpec Sep_List Sep_Char Val Dir_Sep Input_Spec
+    local string Pth First_Path_Char Drv
+    local integer Sep_Len Sep_Pos Chnl Obj Fnd
+
+    move (sysconf(SYSCONF_DIR_SEPARATOR)) to Dir_Sep
+
+    move Spec to Pth
+
+    while ":" in Pth
+        right Pth to Pth (length(Pth) - pos(":", Pth))
+    end
+
+    left Spec to Drv (length(Spec) - length(Pth))
+
+    //
+    // Remove file name from Pth
+    //
+    move Pth to FSpec
+    move "\/" to Sep_List
+    length Sep_List to Sep_Len
+    move 1 to Sep_Pos
+
+    while Sep_Pos LE Sep_Len
+        mid Sep_List to Sep_Char 1 Sep_Pos
+
+        while (FSpec contains Sep_Char)
+            right Pth to FSpec (length(FSpec) - pos(Sep_Char, FSpec))
+        end
+
+        increment Sep_Pos
+    end
+
+    //
+    // if FSpec is "." or "", transform to current file
+    // type (typically "*.*" or "*")
+    //
+    if ((FSpec = ".") or (FSpec <= "")) begin
+        left Pth to Pth (length(Pth) - length(FSpec))
+        move (sysconf(SYSCONF_FILE_MASK)) to FSpec
+
+        if (("/\" contains right(Pth, 1)) and ;
+                (right(Pth, 2) <> ":\") and (right(Pth, 2) <> ":/")) ;
+            move (Pth + FSpec) to Pth
+        else ;
+            move (Pth + Dir_Sep + FSpec) to Pth
+    end
+
+    //
+    // trim off file spec to get dir spec
+    //
+    left Pth to DSpec (length(Pth) - length(FSpec))
+
+    //
+    // trim off dir separator from DSpec and
+    // create string for direct_input to check to see if fspec is a dir
+    //
+    if (right(DSpec, 1)) in "/\" begin
+        move (Drv + DSpec + FSpec) to Input_Spec
+
+        if ((Dspec <> "\") and (Dspec <> "/")) ;
+            left DSpec to DSpec (length(DSpec) - 1)
+    end
+    else ;
+        move (Drv + DSpec + Dir_Sep + FSpec) to Input_Spec
+
+    //
+    // determine if FSpec is really a directory
+    //
+    get Seq_Open_Input_Channel ;
+        ("DIR:" + Input_Spec + Dir_Sep + sysconf(SYSCONF_FILE_MASK)) to Chnl
+
+    if Chnl EQ DF_SEQ_CHANNEL_ERROR ;
+        function_return DSpec
+
+    move (not(Seqeof)) to Fnd
+
+//    move ("[" + uppercase(FSpec) + "]") to Pth
+//
+//    move (FALSE) to Fnd
+//    while (not(Seqeof) and not(Fnd))
+//        readln Val
+//        move (uppercase(Val) = Pth) to Fnd
+//    end
+
+    send Seq_Close_Channel Chnl
+
+    if Fnd begin
+        if ("/\" contains right(DSpec, 1)) ;
+            move (DSpec + FSpec) to DSpec
+        else ;
+            move (DSpec + Dir_Sep + FSpec) to DSpec
+    end
+
+    function_return DSpec
+end_function
+
+function Parse_File GLOBAL string Val returns string
+    local integer Len
+    local string Drv Pth
+
+    get Parse_Drive Val to Drv
+    get Parse_Path Val to Pth
+
+    move (length(Drv) + length(Pth)) to Len
+
+    if Len GT 0 ;
+        if not (right(Pth, 1)) in "\/" ;
+            increment Len
+
+    if Len GE (length(Val)) ;
+        function_return ""
+    else ;
+        function_return (right(Val, (length(Val) - Len)))
+end_function
+

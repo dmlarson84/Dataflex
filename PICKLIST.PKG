@@ -1,0 +1,444 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Picklist.Pkg
+// Version: 1.0
+//  11-05-1992 : Created
+//
+// Author: John J. Tuohy
+//
+//************************************************************************
+//**jjt***********************************************************************
+// picklist.pkg - Modified picklist which is based on List_wide instead
+//                of wide_list. This is identical to picklist.pkg
+//                except when noted (lines marked with //**jjt**).
+//                John Tuohy
+//**jjt***********************************************************************
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\source.30b\pkg\rcs\picklist.pkg $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: steve-l $
+//     $Locker:  $
+//
+//     $Log:	picklist.pkg $
+//Revision 1.7  92/06/05  16:32:31  steve-l
+//altered set current_item occurrances to use set item false/true/2/3 instead,
+//in order to properly handle displayonly/noenter items on top-of-panel et al.
+//
+//Revision 1.6  92/05/29  14:06:05  lee
+//removed end_construct_* messages from mixins; now, classes that use the mixin
+//send the message that used to be sent by the end_construct_* message (for
+//efficiency).
+//
+//Revision 1.5  92/05/14  15:47:38  unknown
+//Updated Copyright slug - SWM.
+//
+//Revision 1.4  92/03/29  18:45:08  lee
+//added MSG_END_CONSTRUCT_OBJECT, moved ENDMAC macro stuff into END_CONSTRUCT-
+//OBJECT procedures (in .pkgs). moved Flag_ITems to list.pkg after generalizing
+//it based on PROTOTYPE_OBJECT instead of Whether or not it is a table-oriented
+//object. Moved define_access_keys mechanism completely into actionbr.pkg.
+//fixed two typos: import_class_protocol used !# instead of !3, and register-
+//procedure used !1 instead of !2.
+//
+//Revision 1.3  92/03/09  19:03:50  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.2  92/01/13  17:39:45  steve-l
+//DAR 2241: send entering retval  changed to  get msg_entering to retval.
+//
+//Revision 1.1  91/10/23  10:21:59  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: PickList.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: January 13, 1992
+//     Author(s): Steven A. Lowe
+//
+// This module contains the Pick_List class definition.
+//************************************************************************/
+
+//************************************************************************
+// Version: 1.0
+//  12-01-1992 : Created
+//
+// Author: John J. Tuohy
+//
+// 1. Adds Stop_UI_State Support to Picklist
+// 2. Creates Move_Value_Out_State property (set when a popup) - Allows lists
+//    in clients.
+// 3. Adds Auto_Locate_State Support
+// 4. Adds movable support (ver 1.1)
+//
+// 05-09-1993  Add Auto_Locate_State support
+// 03/17/94    Item 4 v.1.1
+// 03/20/94    modified add_item so that it does not change the object's
+//             changed_state. Without this creating a new list makes the
+//             item's changed_state true which sets its server's changed_
+//             state to true.  (v1.1)
+// 03-29-1994  (LS) Added Non_Dependent_Item_Mixin (for manual bcst/delg).
+//************************************************************************/
+
+//************************************************************************/
+// 12/22/94 JJT Merge Changes
+//              Merged the 0 class into entry_form.
+//              Added from List.pkg: Activating, Insert_item, Add_item,
+//              Flag_items and Toggle_select.
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+//************************************************************************/
+
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+USE ListWide //**jjt**
+USE List
+Use Dep_Item   // Auto-Dependent_Item Support v1.1
+Use AutoLcMx   // Auto locate of popup mixin
+
+class Pick_List is a List_Wide STARTMAC plStart //**jjt**
+  
+  procedure construct_object integer img
+    forward send construct_object img
+    send define_list    //invoke constructor for list support
+    set export_item_state to TRUE  //change default to export item value
+    Send Define_Auto_Locate
+  end_procedure
+
+  IMPORT_CLASS_PROTOCOL LIST_Mixin     //include list support module
+  IMPORT_CLASS_PROTOCOL Non_Dependent_Item_Mixin // v1.1
+  IMPORT_CLASS_PROTOCOL Auto_Locate_Mixin
+
+  procedure Initialize_List
+    local integer pscope item#
+    local string val
+    if (item_count(current_object)) lt 1 begin
+      send fill_list
+      get Invoking_Object_ID to pScope
+      if pscope ne 0 begin
+        get value of pscope item CURRENT to val
+        move 0 to item#
+        if val gt "" get item_matching val item#  //item# passed & returned
+        if item# ge 0 set current_item to item#
+      end
+    end
+  end_procedure
+
+  procedure Fill_List  //invoked by Initialize_List - intended for override
+  end_procedure
+
+  function first_selected_item returns integer
+    local integer count maxx
+    move (item_count(current_object) - 1) to maxx
+    for count from 0 to maxx
+      if (select_state(current_object,count)) function_Return count
+    loop
+  end_function
+
+  procedure move_value_out
+    local integer item# obj# 
+    local string val
+    get first_selected_item to item#
+    get Invoking_Object_ID to obj#
+    if obj# ne 0 begin
+      if (Export_Item_State(current_object)) begin
+        get value item item# to val
+        set value of obj# item CURRENT to val
+        set item_changed_state of obj# item CURRENT to TRUE
+      end
+    end
+  end_procedure
+
+  procedure Entering returns integer
+    local integer retval item# selMode
+    forward get msg_Entering to retval
+    get current_item to item#
+    set Original_Selection to item#
+    get select_mode to selMode
+    if (SelMode = AUTO_SELECT) set select_state item item# to true
+    procedure_return retval
+  end_procedure
+
+  procedure CANCEL returns integer
+    set current_item to (Original_Selection(current_object)) //set SelState?
+    send request_cancel
+  end_procedure
+
+  function next_selection returns integer  //returns -1 if no selections
+    local integer selCounter retval maxx
+    get Enumeration_Counter to selCounter
+    calc (item_count(current_object) - 1) to maxx
+    if selCounter le maxx begin
+      for retval from selCounter to maxx
+        if (select_state(current_object,retval)) begin
+          set Enumeration_Counter to (retval + 1)
+          set current_item to retval
+          function_return retval
+        end
+      loop
+      function_Return -1    //no more items
+    end
+    else function_Return -1 //no more items
+  end_function
+
+  procedure entry_display integer mfile# integer flag
+    local integer item# selMode file#
+    local string astr
+    get target_file to file#
+    if mfile# eq 0 is_file_included file# 1  //sets FOUND
+    else indicate FOUND as (file# = mfile# OR flag = TRUE)
+    [found] begin
+      get select_mode to selMode
+      if (SelMode = SINGLE_SELECT OR SelMode = AUTO_SELECT) begin
+        if (file# > 0) begin
+          move file# to filenumber
+          get target_field to fieldindex
+          move Indirect_File.RECNUM to astr
+          get item_matching item astr to item#
+          if item# ge 0 begin
+            set current_item to item#
+            set select_state item item# to true
+          end
+          else set select_count to 0
+        end
+      end
+    end
+  end_procedure
+
+  procedure entry_update integer mfile# integer flag
+    local integer item# file# selMode
+    local string astr
+    get target_file to file#
+    if (mfile# = 0 AND flag = 3) is_file_included file# 1  //sets FOUND
+    else indicate FOUND as (file# = mfile# OR flag = TRUE OR mfile# = 0)
+    [found] begin
+      get select_mode to selMode
+      if ((SelMode = SINGLE_SELECT OR SelMode = AUTO_SELECT) AND ;
+          Select_Count(current_object) > 0 AND ;
+          (mfile# = 0 OR mfile# = file#)) begin
+        get first_selected_item to item#
+        get value item item# to astr
+        move file# to filenumber
+        if file# gt 0 begin
+          get target_field to fieldindex
+          move astr to Indirect_File.RECNUM
+        end
+      end
+    end
+  end_procedure
+
+  procedure beginning_of_data
+//    set current_item to 0
+    set item 3                  //go to first item and column in list
+  end_procedure
+
+  procedure end_of_data
+//    set current_item to (item_count(current_object) - 1)
+    set item 2                  //go to last item and column in list
+  end_procedure
+
+  procedure clear
+    get target_file to filenumber
+    if filenumber gt 0 is_file_included filenumber 1
+    else indicate FOUND TRUE
+    [FOUND] begin
+      send beginning_of_data
+      set select_count to 0
+    end
+  end_procedure
+
+  procedure clear_set
+    send clear
+  end_procedure
+
+  procedure clear_all
+    send clear
+  end_procedure
+
+  procedure display
+    send entry_display 0 0
+  end_procedure
+
+  //
+  // override of SERVER.PKG procedure
+  //
+  procedure find_servers_to_watch integer tableFlag
+    local integer file# obj# srvr#
+    get Server to srvr#
+    if srvr# ne 0 begin
+      get target_file to file#
+      get which_data_set of srvr# file# to obj#
+      if (obj# <> 0 AND obj# <> srvr#) send add_Watched_server obj#
+    end
+  end_procedure
+
+  procedure End_Construct_Object
+    send Flag_Items // mark checkbox items
+    forward send End_Construct_Object
+  end_procedure
+
+  //  Augment to Support AutoLocate
+  //
+  Procedure Activating Returns Integer
+    local integer InvokingId RVal
+    Get Focus to InvokingId
+    If InvokingId le desktop Move 0 to InvokingId
+    forward get MSG_activating to rVal
+    If rVal Procedure_Return rVal
+    Set Invoking_object_id to InvokingId
+    //
+    If (Auto_Locate_State(Current_Object) ) ;
+       Send Auto_Locate InvokingId
+  End_Procedure
+
+  //
+  // Description
+  //
+  //   This procedure inserts a new item into the list before the specified
+  //   item#, using the specified message id (msg#) and value.
+  //
+  //   It ensures that the Entry_State of the new item is FALSE, and that
+  //   the Checkbox_Item_State of the new item is TRUE if this object's
+  //   Radio_State is TRUE.
+  //
+  // Assumptions/Preconditions
+  //
+  //   msg# should be a valid message id or 0.
+  //   item# should be a valid item index (between 0 and Item_Count-1).
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   After successful execution, the item index of the new item is the same
+  //   as the originally specified item#.
+  //
+  procedure insert_item integer msg# string value integer item#
+    forward send insert_item msg# value item#
+    set entry_state item item# to false
+    if (Radio_State(current_object)) ;
+        set Checkbox_Item_State item item# to true
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure adds a new item at the end of the list, using the
+  //   specified message id (msg#) and value.
+  //
+  //   It ensures that the Entry_State of the new item is FALSE, and that
+  //   the Checkbox_Item_State of the new item is TRUE if this object's
+  //   Radio_State is TRUE.
+  //
+  // Assumptions/Preconditions
+  //
+  //   msg# should be a valid message id or 0.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   After successful execution, the item index of the new item is
+  //   Item_Count-1.
+  //
+  procedure add_item integer msg# string value
+    local integer item# Oldst
+    //
+    //  Augmented to disallow change of change_state property.
+    //
+    get Change_Disabled_State to Oldst
+    set Change_Disabled_State to TRUE
+    forward send add_item msg# value
+    set Change_Disabled_State to Oldst
+    //
+    calc (item_count(current_object) - 1) to item#
+    set entry_state item item# to false
+    if (Radio_State(current_object)) ;
+        set Checkbox_Item_State item item# to true
+  end_procedure
+
+  // (JJT) from list.pkg
+  // Description
+  //
+  //   This procedure toggles the select_state of the current item unless the
+  //   select-mode of this object is no_select, in which case this procedure
+  //   mimics the pressing of the space-bar to generate a space character for
+  //   incremental search.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand the Key message as a method of character
+  //   input, and must also understand the Select_Toggling message as a method
+  //   of altering the select_state of an item.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Sent by kSpace.
+  //
+  procedure toggle_select
+    if (select_mode(current_object) = NO_SELECT) send key kSpace
+    else send select_toggling CURRENT TOGGLE_STATE
+  end_procedure
+
+  // If the list is radio all items should be checkbox. Since this is
+  // now based on list the entry-state is already set to false (no
+  // need to do that).
+  procedure Flag_Items
+    local integer count maxx
+    If (Radio_State(Current_Object)) Begin
+       Get Item_count to maxx
+       decrement maxx
+       for count from 0 to maxx
+           //set Entry_State of obj# item count to false
+           Set Checkbox_Item_State item count to true
+       loop
+    end
+  end_procedure
+
+end_class
+
+
+//
+// Support Commands
+//
+
+//
+// plStart <class> <image> { ACTION_BAR <actionbar#> } { POP_UP } { RING }
+//        { RADIO } { FOR <fieldName> } { USING <dataSetID> }
+//
+#COMMAND plStart R R
+  FORWARD_BEGIN_CONSTRUCT !1 !2 !3 !4 !5 !6 !7 !8 !9
+  Bind_Radio !3 !4 !5 !6 !7 !8 !9
+  Bind_Target !3 !4 !5 !6 !7 !8 !9
+  Bind_Using !3 !4 !5 !6 !7 !8 !9
+#ENDCOMMAND
+                                                  

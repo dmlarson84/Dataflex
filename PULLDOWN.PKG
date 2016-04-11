@@ -1,0 +1,298 @@
+// JJT Modified to Support Letter highlighting. Changes marked with *** JJT ***
+//
+// PULLDOWN.PKG
+// March 13, 1992
+// LS
+//
+// package for Pull_Down_Menu and Shadow_Text_Pull_Down_Menu classes (for use
+// with Action_Bar_Menu class); supports cascading pull-down menus
+//
+// 07/12/94 (LS) Added support for right justification of key labels; supports
+//          same convention used in DFWIN: "E&xit \aAlt+F4" means
+//          highlight "x" and right justify "Alt+F4". Assumes horz spacing
+//          as follows: "| ____ |"; border, space, item window, space, border.
+//          Also changed behavior of Escape key, now just backs up one level
+//          in menu, not all the way back to main client.
+// 07/20/94 (LS) Added Auto_Execute_State: choose item immediately if a
+//          highlighted char key is pressed.
+//
+// 05/18/95 Naveed  Hacked Redirect_Message to allow Extended_Help to fire
+//                  even if no Prior_Scope. Yuck!
+// 05/25/95 JJT - Moved auto_execute_state up to avoid compiler reference error.
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use UI
+
+define DEFAULT$TOTAL$BORDER$WIDTH for 4    // border, space, ... , space, border.
+
+Use hilitemx   // *** JJT ***
+
+register_function Action_Bar_Location returns integer
+register_function Action_Bar_Width returns integer
+register_procedure Extended_Help
+
+class Pull_Down_Menu is a MENU
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        object highlight_array is an array      // *** JJT ***
+        end_object                              // *** JJT ***
+        Send Define_HighLight_Mixin             // *** JJT ***
+
+        property integer Ignore_Exit_State  Public FALSE
+        property integer Total_Border_Width Public DEFAULT$TOTAL$BORDER$WIDTH
+
+        set highlight_ch_state to true
+
+        set Attach_Parent_State to True
+        set Exit_Msg            to Exit_Cascade
+        set Wrap_State          to True
+
+        on_key kAction_Bar    send Return_To_Prior_Scope Private
+
+// (LS) 07/12/94 changed to only back up one level
+//        on_key kCancel        send Return_To_Prior_Scope Private
+        on_key kCancel        send Exit                  Private
+
+        on_key kEnter         send Redirect_Message      Private
+        on_key kLeftArrow     send Pull_Left             Private
+        on_key kNext_Item     send None                  Private
+        on_key kPrevious_Item send None                  Private
+        on_key kRightArrow    send Pull_Right            Private
+    end_procedure
+
+    IMPORT_CLASS_PROTOCOL Highlight_Mixin     // *** JJT ***
+
+    procedure Activate
+        local integer Count Tot_Itms Itm Nxt_Lvl
+
+        move 0 to Count
+        delegate get Item_Count to Tot_Itms
+        delegate get Current_Item to Itm
+
+        while Count LT Tot_Itms
+            if (Aux_Value( Parent( Current_Object ), Count )) ;
+              EQ Current_Object move Count to Itm
+            increment Count
+        end
+
+        if Itm LT Tot_Itms delegate set Current_Item to Itm
+
+        delegate set Ignore_Exit_State to True // don't send Exit_Msg of parent
+        set Ignore_Exit_State to True                                // or self
+
+        send Adjust_Location
+
+        forward send Activate
+
+        delegate set Select_State to True    // leave parent's item as selected
+        set Ignore_Exit_State to False
+        delegate set Ignore_Exit_State to False
+        get Next_Level to Nxt_Lvl
+        if Nxt_Lvl NE 0 send Deactivate to Nxt_Lvl
+    end_procedure
+
+    procedure Activate_Pull_Down // special message that allows on_item
+        send Activate            // to activate a pull down menu object
+    end_procedure
+
+    procedure Pull_Left
+        send Pull_Menu kLeftArrow
+    end_procedure
+
+    procedure Pull_Right
+        send Pull_Menu kRightArrow
+    end_procedure
+
+    procedure Pull_Menu integer Key_Val
+        send Exit
+        send Process_Key to (Focus( Desktop )) Key_Val
+
+        if (Message( Focus( Desktop ), Current )) EQ ;
+          Msg_Activate_Pull_Down send Process_Key ;
+          to (Focus( Desktop )) kEnter
+
+        delegate set Auto_Pull_Down_State to True
+    end_procedure
+
+    procedure Entering returns integer
+        local integer Ret_Val
+        forward get Msg_Entering to Ret_Val
+        if not Ret_Val set Select_Count to 0                  // de-select item
+        procedure_return Ret_Val
+    end_procedure
+
+    procedure Exit_Area
+        delegate send Exit_Area
+    end_procedure
+
+    procedure Exit_Cascade
+        if (Ignore_Exit_State( Current_Object )) procedure_return
+        send Exit
+        if Not (Active_State( Current_Object )) delegate send Exit_Cascade
+    end_procedure
+
+    procedure Adjust_Location
+        local integer New_Row New_Col Row_Col Ht_Wd Scr_Ht Cur_Row Cur_Col
+        local integer Act_Col
+
+        if (Inverse_State( Parent( Current_Object ))) move -2 to New_Col // if action bar
+        else move 1 to New_Col
+        set Dynamic_Update_State to False
+        set Location to 1 New_Col Item_Relative // first try desired location
+
+        get Location to Row_Col
+        get Size to Ht_Wd
+        move (Hi( Size( Desktop ) )) to Scr_Ht
+        move (Low( Action_Bar_Location( Current_Object ) )) to Act_Col
+
+        move (Hi( Row_Col )) to New_Row
+        move (if( New_Row < 128, New_Row, New_Row - 256)) to Cur_Row
+        move (((Scr_Ht - Hi( Ht_Wd ) - 1) Min Cur_Row) Max 0) to New_Row
+
+        move (Low( Row_Col )) to New_Col
+        move (if( New_Col < 128, New_Col, New_Col - 256)) to Cur_Col
+        move (((Action_Bar_Width( Current_Object ) + Act_Col - Low( Ht_Wd )) ;
+          Min Cur_Col) Max Act_Col) to New_Col
+
+        if ((New_Row <> Cur_Row) Or (New_Col <> Cur_Col)) ;
+          set Location to New_Row New_Col Absolute  // reset to valid location
+        set Dynamic_Update_State to True
+    end_procedure
+
+    function Auto_Execute_State returns integer
+        local integer retVal
+
+        delegate get Auto_Execute_State to retVal
+        function_return retVaL
+    end_function
+
+    procedure Key integer Key_Val returns integer
+        local integer Ret_Val
+
+        set Last_Highlight_Key to 0
+
+        forward get Msg_Key Key_Val to Ret_Val
+
+        if (not(Ret_Val) and Auto_Execute_State(current_object) and ;
+                (Last_Highlight_Key(current_object) <> 0)) ;
+                get Msg_Process_Key kEnter to Ret_Val
+
+        if Ret_Val NE 0 procedure_return Ret_Val
+    end_procedure
+
+    procedure Redirect_Message returns integer
+        local integer Msg Obj Foc Act_Sco Ret_Val
+
+        if (Shadow_State( Current_Object, Current )) procedure_return
+
+        get Message to Msg
+        get Aux_Value to Obj
+
+        move 0 to Ret_Val
+
+        if Msg EQ Msg_Exit_Area move Current_Object to Obj
+        else begin
+            if Msg NE Msg_Activate_Pull_Down begin
+                get Current_Scope to Act_Sco
+                delegate send Return_To_Prior_Scope
+                get Focus of Desktop to Foc                  // if focus failed
+                if Foc EQ Current_Object procedure_return 0  // to move, quit
+
+                if Obj EQ 0 begin
+                    if Foc EQ Act_Sco begin
+                        if Msg ne Msg_Extended_Help ;
+                            procedure_return
+                    end
+
+                    move Foc to Obj
+                end
+            end
+        end
+
+        get Msg of Obj to Ret_Val
+
+        procedure_return Ret_Val
+    end_procedure
+
+    procedure Return_To_Prior_Scope
+        delegate send Return_To_Prior_Scope
+    end_procedure
+
+    procedure set Auto_Pull_Down_State integer Flag
+        delegate set Auto_Pull_Down_State to Flag
+    end_procedure
+
+// (LS) 07/12/94 added procedures to right justify key labels
+    procedure adjust_key_label integer itm# integer cpi
+        local integer stpos
+        local string val label
+
+        get value item itm# to val
+
+        pos "\a" in val to stpos
+        if stpos gt 0 begin
+            trim (mid(val,255,stpos+2)) to label
+            pad (left(val,stpos-1)) to val (cpi-length(label))
+            append val label
+            set value item itm# to val
+        end
+    end_procedure
+
+    function item_width integer itm# returns integer
+        function_return (low(size(current_object)) - ;
+                total_border_width(current_object))
+    end_function
+
+    procedure adjust_all_key_labels
+        local integer itm# cnt cpi // char-per-item
+
+        get item_width 0 to cpi
+
+        get item_count to cnt
+        decrement cnt
+
+        for itm# from 0 to cnt
+            send adjust_key_label itm# cpi
+        loop
+    end_procedure
+
+    function menu_system_object returns integer
+        function_return (true)
+    end_function
+
+    procedure end_construct_object
+        Send assign_highlight_information
+        Send assign_highlight_colors
+        send adjust_all_key_labels
+        forward send end_construct_object
+    end_procedure
+end_class
+
+// Shadow_text_Pull_Down_Menu class definition - shadows all items on
+// activation if the prior_scope is an edit class object.
+
+class Shadow_Text_Pull_Down_Menu is a Pull_Down_Menu
+    procedure Activate
+        local integer Obj Itm Shdw Tot_Itms Old_Mode
+
+        set_deferred 1
+        forward send Activate
+
+        get Prior_Scope to Obj
+        if Obj EQ 0 move Desktop to Obj
+        get Scope_Focus of Obj to Obj
+
+        move 1 to Shdw
+        if (Base_Class( Obj )) EQ Edit_Class move 0 to Shdw
+
+        move (Item_Count( Current_Object ) - 1) to Tot_Itms
+
+        for Itm from 0 to Tot_Itms
+          set Shadow_State item Itm to Shdw
+        loop
+
+        set_deferred 0
+    end_procedure
+end_class

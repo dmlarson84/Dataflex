@@ -1,0 +1,53 @@
+-----------------------------------------------------------------------------
+  DATE: 12/09/115      TIME: 15:54                                  PAGE:  1
+  FILE DEFINITION FOR FILE: RECHANGE (# 9)
+-----------------------------------------------------------------------------
+  DRIVER NAME               : DATAFLEX
+  FILE ROOT NAME            : RECHANGE
+  USER DISPLAY NAME         : Rechange
+  DATAFLEX FILE NAME        : RECHANGE
+-----------------------------------------------------------------------------
+  RECORD LENGTH             : 256       ( USED: 240 )
+  MAX NUMBER OF RECORDS     : 10000     ( USED: 14485 )
+  FILE COMPRESSION          : NONE
+  RE-USE DELETED SPACE      : YES
+  LOCKING TYPE              :   RE-USE DELETED SPACE      : %
+  HEADER INTEGRITY CHECKING : NO 
+  TRANSACTION TYPE          : CLIENT ATOMIC
+  RECORD IDENTITY INDEX     : 0 ( 0 , 0 )
+  FILE LOGIN PARAMETER      : 
+  SYSTEM FILE               : NO 
+-----------------------------------------------------------------------------
+
+NUM  FIELD NAME       TYPE SIZE  OFFST IX   RELATES TO FILE.FIELD
+---  ---------------  ---- ----- ----- --   ---------------------------------
+  1  OPERATOR         ASC      3     1  1   
+  2  DATE             DAT      3     4  1   
+  3  DESC1            ASC     55     7      
+  4  DESC2            ASC     55    62      
+  5  DESC3            ASC     55   117      
+  6  ID_NUMBER        NUM   10.0   172  1   
+  7  CONTROL_NUMBER   NUM   12.0   177  1   
+  8  OLD_DISPAMT      NUM    6.2   183      
+  9  NEW_DISPAMT      NUM    6.2   187      
+ 10  OLD_MFEE         NUM    6.2   191      
+ 11  NEW_MFEE         NUM    6.2   195      
+ 12  OLD_PFEE         NUM    6.2   199      
+ 13  NEW_PFEE         NUM    6.2   203      
+ 14  OLD_CKAMT        NUM    6.2   207      
+ 15  NEW_CKAMT        NUM    6.2   211      
+ 16  OLD_RESAMT       NUM    6.2   215      
+ 17  NEW_RESAMT       NUM    6.2   219      
+ 18  FILE             ASC     10   223      
+ 19  OLD_CREDIT       NUM    6.2   233      
+ 20  NEW_CREDIT       NUM    6.2   237      
+
+
+INDEX# FIELDS          DES U/C    LENGTH LEVELS SEGMENTS MODE
+------ --------------- --- ---    ------ ------ -------- -------
+  1    DATE            NO  NO       20     3       5     ON-LINE
+       OPERATOR        NO  NO 
+       ID_NUMBER       NO  NO 
+       CONTROL_NUMBER  NO  NO 
+       RECNUM          NO  NO 
+

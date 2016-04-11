@@ -1,0 +1,432 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\navigate.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: navigate.pkg,v $
+//Revision 2.3  1993/11/19  03:43:23  james
+//Fixed bug in Request_Cancel message.
+//
+//Revision 2.2  1993/09/28  21:51:47  lee
+//request_cancel now checks verify_data_loss. only a partial fix, though. real
+//fix rqeuires lots of messy code that will have to wait for item/focus movement
+//redesign.
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:07  james
+//Initial revision
+//
+//Revision 1.4  92/05/14  15:49:42  unknown
+//Updated Copyright slug - SWM.
+//
+//Revision 1.3  92/04/01  00:33:36  lee
+//removed navstart and liststart (unused), renamed bind_main_file and bind_index
+//in datalist to bind_list_main_file and bind_list_index to avoid conflict with
+//commands used by data_set, moved bind_static from sellist to datalist as it
+//only sets properties defined in datalist (not sellist).
+//
+//Revision 1.2  92/03/09  19:03:38  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:21:48  elsa
+//Initial revision
+//
+//************************************************************************/
+
+//************************************************************************
+//     File Name: Navigate.Inc
+// Creation Date: January 1, 1991
+// Modified Date: June 26, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module defines the basic data-entry object operations and
+// properties, collected in the abstract class Navigate_Mixin.
+//
+// This file should be USEd prior to and IMPORTed within the scope of the
+// class definition by any user-interface (esp. data-entry) class which
+// must support the data-entry object standards.
+//
+// This file is used by ENTRYFRM.PKG, WIDELIST.PKG, TEXT_WIN.PKG, and
+// ENCLIENT.PKG.
+//************************************************************************/
+
+
+//
+// Description
+//
+//   Defines the panel navigation keys if necessary.
+//
+// Assumptions/Preconditions
+//
+//   None.
+//
+// Exceptions
+//
+//   If kSwitch_Panel and kSwitch_Panel_Back are already defined, no
+//   action is taken.
+//
+// Notes
+//
+//   Used in on-key commands in define_navigation, below.
+//
+#IFDEF kSwitch_Panel
+#ELSE
+  #REPLACE kSwitch_Panel KEY_ALT+KEY_F6
+#ENDIF
+#IFDEF kSwitch_Panel_Back
+#ELSE
+  #REPLACE kSwitch_Panel_Back KEY_CTRL+KEY_F6
+#ENDIF
+
+
+//
+// Description
+//
+//   Define a synonym for Request_Cancel.
+//
+// Assumptions/Preconditions
+//
+//   None.
+//
+// Exceptions
+//
+//   If MSG_CANCEL_SCOPE is already defined, no action is taken.
+//
+// Notes
+//
+//   Defined for historical reasons.
+//
+#IFDEF MSG_CANCEL_SCOPE
+#ELSE
+  #REPLACE MSG_CANCEL_SCOPE MSG_REQUEST_CANCEL
+#ENDIF
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+register_function verify_data_loss returns integer
+
+class navigate_mixin is a message
+
+  //
+  // Description
+  //
+  //   This procedure defines the accelerator keys and properties required to
+  //   support the data-entry object navigation standard.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This procedure should only be invoked by the Construct_Object procedure
+  //   of a class definition.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Auto_Top_Panel_State determines if the Clear operation should rotate
+  //   to the first object/item in the current group.
+  //
+  //   Verify_Exit_Msg holds a message id (function) which is used to prompt
+  //   the user during exit confirmation.  If Verify_Exit_Msg is 0, the user
+  //   will not be prompted to confirm exit.  Verify_Exit_Msg is a private
+  //   property, but access operations are defined below to allow it to be
+  //   visible (public).
+  //
+  procedure define_navigation
+    on_key kBegin_of_Panel    SEND Beginning_of_Panel PRIVATE
+    on_key kCancel            SEND Request_Cancel     PRIVATE
+    on_key kEnd_of_Panel      SEND End_of_Panel       PRIVATE
+    on_key kExit_Function     SEND Exit_Function      PRIVATE
+    on_key kSwitch            SEND Switch             PRIVATE
+    on_key kSwitch_Back       SEND Switch_Back        PRIVATE
+    on_key kSwitch_Panel      SEND Switch_Next_Group  PRIVATE
+    on_key kSwitch_Panel_Back SEND Switch_Prior_Group PRIVATE
+    Property integer Auto_Top_Panel_State             PUBLIC  1
+    Property integer private.Verify_Exit_Msg          PUBLIC  0
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This function returns a message id to be used to prompt the user
+  //   during exit confirmation, or it returns 0.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand the Get_Component_State message (defined
+  //   in NESTING.PKG).
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   If this object's Verify_Exit_Msg is 0, this function returns the value
+  //   of the parent object's Verify_Exit_Msg, if this object has a parent
+  //   (indicated by Component_State = TRUE).
+  //
+  function verify_exit_msg returns integer
+    local integer msg#
+    get private.verify_exit_msg to msg#
+    if (msg# = 0 AND Component_State(current_object)) ;
+        delegate get verify_exit_msg to msg#
+    function_return msg#
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This procedure sets the value of the Verify_Exit_Msg property.
+  //
+  // Assumptions/Preconditions
+  //
+  //   msg# should be a vlid messaage id, or 0.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure SET verify_exit_msg integer msg#
+    set private.verify_Exit_Msg to msg#
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This function sends the message which this object uses to prompt the
+  //   user during exit confirmation.  The result of the message-send is
+  //   returned.  A return value of 0 means that exit should continue, a non-
+  //   zero return value means that exiting should be aborted.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   If this object has no message with which to prompt the user, this
+  //   function returns 0 to permit exit without confirmation.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  function verify_Exit returns integer
+    local integer msg#
+    get verify_Exit_msg to msg#
+    if msg# ne 0 get msg# to msg#
+    function_return msg#
+  end_function
+
+
+  #IFSUB 'AREA_FLAG'
+  #ELSE
+    #REPLACE AREA_FLAG 3  //scope AND popup
+  #ENDIF
+
+
+  //
+  // Description
+  //
+  //   This procedure deactivates this object and ensures that the focus after
+  //   deactivation is not an object which should be 'skipped' (in rotation,
+  //   e.g. an action-bar), if possible.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand the Deactivate, Component_State,
+  //   Changed_state, Focus, Verify_exit and Verify_data_loss messages.
+  //   The focus must understand the Skip_state and Switch messages.
+  //
+  // Exceptions
+  //
+  //   Deactivation may be cancelled by the user via the Verify_Exit function.
+  //
+  // Notes
+  //
+  //   The deactivate message-send passes AREA_FLAG, which means that we want
+  //   to deactivate the object in the focus tree which is either a scope
+  //   (i.e. Scope_State = TRUE) or a pop-up (i.e. PopUp_State = TRUE), and
+  //   which is closest to this object in an 'upward' direction (i.e.
+  //   client/parent, not child or sibling).
+  //
+  procedure Request_Cancel
+    local integer foc#
+    if (verify_exit(current_object) = 0) begin
+      send deactivate AREA_FLAG
+      get focus of desktop to foc#
+      if (foc# AND skip_State(foc#)) send switch to foc#
+    end
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure gives the focus to the first object/item in this group
+  //   (parent-child hierarchy).
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object understands Component_State, Scope_State, and Top_of_Panel.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   To find the first object in the panel, delegation is first used to
+  //   find the "parent-most" object, then Top_of_Panel is used to find the
+  //   first object/item within the "parent-most" object.
+  //
+  procedure Beginning_of_Panel
+    if (Component_State(current_object)) begin
+      if (Scope_State(current_object)) ;
+          send top_of_panel
+      else delegate send Beginning_of_Panel
+    end
+    else send Top_of_Panel
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure gives the focus to the last object/item in this group
+  //   (parent-child hierarchy).
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object understands Component_State, Scope_State, and
+  //   Bottom_of_Panel.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   To find the first object in the panel, delegation is first used to
+  //   find the "parent-most" object, then Bottom_of_Panel is used to find the
+  //   last object/item within the "parent-most" object.
+  //
+  procedure End_of_Panel
+    if (Component_State(current_object)) begin
+      if (Scope_State(current_object)) ;
+          send bottom_of_panel
+      else delegate send End_of_Panel
+    end
+    else send Bottom_Of_Panel
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure deactivates this object.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object understands Request_Cancel
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  procedure Exit_Function
+    send request_cancel
+  end_procedure
+
+end_class
+
+
+//
+// Description
+//
+//   This macro processes the POP_UP (or POPUP) option, if any, of an
+//   object-creation command line.  It sets the PopUp_State and Focus_Mode
+//   of this object as appropriate if the POPUP/POP_UP option is present.
+//
+// Assumptions/Preconditions
+//
+//   None.
+//
+// Exceptions
+//
+//   If POP_UP or POPUP does not appear on the command line, no action is
+//   taken.
+//
+// Notes
+//
+//   If POP_UP or POPUP appears, PopUp_State will be set to TRUE, and
+//   Focus_Mode will be set to NO_ACTIVATE.
+//
+#COMMAND bind_pop_up
+  #IF (!0>0)
+    #IFSAME !1 POP_UP POPUP
+      set PopUp_State to TRUE
+      set focus_mode to NO_ACTIVATE
+    #ELSE
+      bind_pop_up !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+
+//
+// Description
+//
+//   This macro processes the RING option, if any, of an object-creation
+//   command line.  It sets the Ring_State to TRUE if the option is present.
+//   
+//
+// Assumptions/Preconditions
+//
+//   None.
+//
+// Exceptions
+//
+//   If RING does not appear on the command line, no action is taken.
+//
+// Notes
+//
+//   None.
+//
+#COMMAND bind_ring
+  #IF (!0>0)
+    #IFSAME !1 RING
+      set Ring_State to TRUE
+    #ELSE
+      bind_ring !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND

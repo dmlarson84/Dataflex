@@ -1,0 +1,59 @@
+// MENU.PKG
+// December 21, 1990
+// LS
+//
+// package for creating action bar menus with pull down menus; supports
+// cascading pull down menus
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use UI
+use Action
+use Pulldown
+
+//
+// create_menu syntax for Action_Bar_Menu
+//
+//             !1     !2       !3       !4     !5       !6
+// CREATE_MENU Object
+// CREATE_MENU Object Image
+// CREATE_MENU Object Image    LOCATION Row    Column
+// CREATE_MENU Object Image    LOCATION Row    Column   RELATIVE
+// CREATE_MENU Object LOCATION Row      Column
+// CREATE_MENU Object LOCATION Row      Column RELATIVE
+
+// create_menu syntax for Pull_Down_Menu ( --FOR INTERNAL USE ONLY-- )
+//
+//             !1     !2           !3
+// CREATE_MENU Object SUB_LOCATION
+// CREATE_MENU Object SUB_LOCATION Img
+
+#COMMAND CREATE_MENU R
+  #IF (!0<4)
+    #IFSAME !2 SUB_LOCATION
+      object !1 is a Pull_Down_Menu !3
+    #ELSE
+      object !1 is an Action_Bar_Menu !2 !3
+    #ENDIF
+  #ELSE
+    #IFSAME !2 LOCATION
+      object !1 is an Action_Bar_Menu
+      #IF (!0>4)
+        set Location to !3 !4 !5
+      #ELSE
+        set Location to !3 !4 Absolute
+      #ENDIF
+    #ELSE
+      object !1 is an Action_Bar_Menu !2
+      #CHECK !3 LOCATION
+      #IF (!0>5)
+        set Location to !4 !5 !6
+      #ELSE
+        set Location to !4 !5 Absolute
+      #ENDIF
+    #ENDIF
+  #ENDIF
+  item_list
+#ENDCOMMAND
+
+#REPLACE END_MENU END_PULL_DOWN

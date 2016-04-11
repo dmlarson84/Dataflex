@@ -1,0 +1,293 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// ObjList2.Pkg
+// Version: 1.0
+//  01-04-1992 : Created
+//
+// Author: John J. Tuohy
+//
+//
+// This creates an object scanner. Place this package in your program
+// with a USE OBJLIST command. To invoke press CTRL+F10.
+// The F6 switches from object tree display to object list display.
+// Pressing CTRL+F10 inside of display prints the tree or list to
+// a disk file named (Objtree.trc or Objlist.trc). Pressing escape exits
+// display. You may access the list by sending the message:
+//     Send Process_Object_Scanner to DESKTOP
+//
+// 06-01-1992: Modified to get around a df bug that caused this program to
+//             loop forever. Code and comment in Process_Next_Object
+// 04-09-1993  Added logical key names for the toggle.
+//************************************************************************
+
+use ui
+
+Define KEY_OBJECT_TREE for KEY_CTRL+KEY_F10  
+
+// Get Object Id by its relative number (message sent by parent object). 
+// Return: Object Id, 0 if no object, if broadcaster return negative id 
+// Error handler must be set up to skip error but return ERR if a problem
+// exists.
+//
+Function Get_by_Id FOR DESKTOP integer itm# Returns Integer
+  Local integer id bs
+  Indicate Err False
+  Get object_id of (-itm#) to id
+  [Not Err] If id eq 0 Begin             // if no error but 0               
+    Get Broadcast_State of (-itm#) to bs // is it a broadcaster?
+    [Not Err] Begin                      // if no error yes it is
+       Set Broadcast_State of (-itm#) to FALSE  // shut off bs 
+       Get object_id of (-itm#) to id           // the real id
+       Set Broadcast_State of (-itm#) to bs     // restore
+       Move (id * -1) to id  // broadcaster returns negative (as flag)
+    End   
+  End
+  Indicate Err False   
+  function_return id
+End_function
+//
+//  Editor class that supports object tree and list display
+//
+//
+//
+Class Object_Scanner is an edit
+
+  Procedure Construct_Object
+     Forward Send Construct_Object
+    
+     Property Integer Tree_State Public TRUE
+     Property Integer Mem_Avail Public TRUE
+     
+     Set location to  6 2 absolute
+     Set Size     to 19 74
+     Set scope_state to true
+     Set block_mouse_state to true
+     Set read_only_state to true
+     Set Right_margin to 255
+   
+     On_key kswitch send Swap_Modes
+     On_key kcancel send Cancel_Scope
+     On_key KEY_CTRL+KEY_F10 Send Output_Tree
+   
+     Object Active_Levels is an array
+     End_object
+     
+     Object TitleLine is a vConsole     // Header display line
+       Set location to -1 0 Relative
+       Set Size to 1 75
+     End_Object
+       
+  End_Procedure  // Construct_Object
+  
+  Procedure Swap_Modes
+    if (Tree_State(Current_Object)) Send Process_Obj_List
+    Else                            Send Process_Obj_Tree
+  End_Procedure  // Swap_Modes
+
+  Procedure Output_Tree
+    if (Tree_State(Current_Object)) Send Write "ObjTree.Trc"
+    Else                            Send Write "ObjList.Trc"
+  End_Procedure
+
+  Procedure Cancel_Scope
+    Local integer Prior_Scope#
+    Get Prior_scope to Prior_Scope#
+    Set Current_scope to Prior_Scope#
+    // remove from screen
+    Send Deactivate to (TitleLine(Current_Object))
+    Send Deactivate
+    Procedure_Return 1
+  End_Procedure
+  
+  Procedure Process_Obj_Tree
+    Set Tree_State to TRUE
+    Send Page_Object to (TitleLine(Current_Object)) TRUE
+    Set Value of (TitleLine(Current_Object)) Item 0 to ;
+      'อออออออObject Treeออออออออ F6=Object List ออ Ctrl+F10=Write Objtree.trcออออ'
+    Send Activate
+    Set read_only_state to false
+    Send delete_data
+    Set Max_Lines to 1000
+    Set Dynamic_Update_State to False
+    //
+    Send Insert (Name(Desktop) * "  [id=" + String(Desktop)+ "]")
+    Send Insert ('       Memory = '+String(Mem_Avail(Current_Object)))
+    Send key kenter
+    //
+    Send Process_Next_Object DESKTOP '' 0
+    Send beginning_of_data
+    Set Max_Lines to (Line_Count(Current_Object))
+    Set Read_only_state to TRUE
+    Set Dynamic_Update_State to TRUE
+  End_procedure
+  
+  //
+  //  recursive procedure shows all children of an object
+  //
+  Procedure Process_Next_Object Integer Object# String CurName Integer Current_Level
+    Local integer Cnt j jj k id# Old_Err_Obj bs
+    Local String Nme Nme2
+
+    get child_count of Object# to cnt    // number of child objects
+    
+    Move Error_Object_Id to Old_err_Obj
+    
+    // Although we know how many child objects exist we do not know
+    // their relative numbers (-1,-2). So we keep looping through numbers
+    // until all items are found.
+    move 0 to jj          // jj is actual number we are checking  
+    for j from 1 to cnt   //  j is number objects actually found
+        //
+        // Mon  06-01-1992
+        // we have a 3.0 bug that causes two objects to get assigned the same
+        // relative Id number. This appears to be caused by pre-compiling
+        // combined with object creation in classes. It causes an infinite
+        // loop here because we the object will report more children than it
+        // has. As a compromise we will give up searching for a child object
+        // after TOO$DAMM$MANY passes and create a dummy (bug) object. When
+        // we no longer see this, the bug is fixed. It is conveivable that an
+        // object created and destroyed many, many times (TOO$DAMM$MANY times)
+        // will give up finding the relative ID before it really should.
+        // This is unlikely.
+        //
+        #REPLACE TOO$DAMM$MANY 1000
+        Repeat
+          increment jj
+          If jj gt TOO$DAMM$MANY Begin
+            Move -2 to Id# // -2 means a bug condition!!
+          End
+          Else Begin
+            Move Current_Object to Error_Object_id
+            Move (get_by_id(Object#,jj)) to id# // rets: Id, 0, or -1
+            Move Old_err_Obj to Error_Object_id // if 0, no object keep scanning
+          End  
+        until Id# ne 0  
+        If Id# eq -2 begin // if our bug condition
+           Send Add_Leaf 0 Current_Level j cnt "Unknown (DF bug)"
+        End
+        Else Begin
+          Move Current_Object to Error_Object_id
+          If id# lt 0 Begin     // if lt 0, broadcaster
+             Move (id# * -1) to Id#
+             Get Broadcast_State of Id# to bs // old state
+             Set Broadcast_State of Id# to FALSE
+             Get Name of Id# to Nme
+             Set Broadcast_State of Id# to bs     // restore
+          End
+          else Get Name of Id# to Nme              // if >1 process
+          Move (Replace(CurName+'.',Nme,'')) to Nme2 // remove parent name
+          Send Add_Leaf ID# Current_Level j cnt Nme2
+          Send Process_next_Object id# Nme (Current_Level+1) // recurse
+        End  
+     Loop
+
+   End_procedure
+
+  Procedure Draw_Levels Integer Level
+    Local integer Counter Active_State
+    For Counter From 0 to Level
+      Get array_value of (Active_Levels(Current_object)) Item Counter to Active_State
+      If Active_State eq 1 Send Insert "  ณ "
+      Else send insert "    "
+    Loop
+  End_procedure
+
+  Procedure Add_Leaf Integer Object# Integer Current_Level;
+                     Integer jCnt Integer Cnt String Nme
+
+    Send Draw_Levels (Current_Level-1)
+
+    If Cnt ne JCnt Begin
+      Send insert "  ร"
+      Set Array_value of (Active_Levels(Current_object)) item Current_Level to 1
+    End
+    Else if Object# NE desktop begin
+      Send Insert "  ภ"
+      Set array_value of (Active_Levels(Current_Object)) item Current_Level to 0
+    End
+    Send Insert "ฤฤ"
+
+    Send Insert (Nme * "  [id=" + String(Object#)+ "]")
+    Send key kenter
+
+  End_procedure
+  
+  // captures error. sets ERR TRUE
+  Procedure Error_Report integer Error_Info string ErrMsg
+    Indicate Err TRUE
+  End_Procedure   
+  
+  // This checks all possible object IDs. If they exist we print
+  // the object's id, name.
+  //
+  Procedure Process_Obj_List
+    Local Integer i Obj# Old_Err_Obj rVal Ob
+    local string st
+    Set Tree_State to FALSE
+    //
+    Send Page_Object to (TitleLine(Current_Object)) TRUE
+    Set Value of (TitleLine(Current_Object)) item 0 to ;
+       'อออออออObject Listออออออออ F6=Object Tree ออ Ctrl+F10=Write Objlist.trcออออ'
+    //
+    Set read_only_state to false
+    Send delete_data
+    Set Max_Lines to 1000
+    Set Dynamic_Update_State to False
+    Move Error_Object_Id to Old_err_Obj
+    Move Current_Object to Error_Object_Id // capture errors
+    For i from 1 to 512
+        Get Object_Id of i to Obj#
+        [Not Err] Begin
+           If Obj# eq 0 Begin
+              Get Broadcast_State of i to Ob
+              [Not Err] Begin
+                Set Broadcast_State of i to False
+                Get Object_Id of i to Obj#
+                get Name of i to st
+                Set Broadcast_State of i to ob
+              End
+           End
+           Else Get Name of i to St
+           If Obj# ne 0 Begin
+              Send Insert ( If(i<10,' ','') + if(i<100,' ','') + String(i) * st )
+              Send Key KEnter
+           End
+        End
+        Indicate Err FALSE
+    Loop       
+    Move Old_err_Obj to Error_Object_id
+    Send beginning_of_data
+    Set Max_Lines to (Line_Count(Current_Object))
+    Set read_only_state to true
+    Set Dynamic_Update_State to TRUE
+  End_procedure
+
+End_Class
+
+//
+//  Desktop Procedure to process object.
+//  it creates and enters the object.
+//
+Procedure Process_Object_Tree
+  Local Integer Obj i Mem
+  Memory Mem // get memory before we create object scanner.
+  Object Object_Scanner is an Object_Scanner
+    Move Current_Object to Obj
+    Set Mem_Avail to Mem
+  End_Object
+  Send Process_Obj_Tree to Obj
+  Start_UI // start a new UI..in case we don't have one already
+  // destroy entire object structure
+  Broadcast Recursive_Up Send Destroy_Object to Obj
+  Send Destroy_Object to Obj
+End_Procedure  // Process_Object_Tree
+
+ON_KEY KEY_OBJECT_TREE Send Process_Object_Tree to Desktop

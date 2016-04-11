@@ -1,0 +1,517 @@
+/HEADER 12       RESIDENT                               MCHECKS.rpt
+=======< Check Register >=====================================< mchecks >======
+  
+             _________________________________________________
+             _________________________________________________
+             _________________________________________________
+
+Date..{ __/__/____      From  __/__/____  Thru  __/__/____            Page.{ __.
+==============================================================================
+                                            Payee                     Merchant
+Check    Check       Check  |-------------Distribution----------|      Check
+  #       Date        Type      Restitution     Mfees    * Pfees       Amount
+-------------------------------------------------------------------------------
+/SUBHEADER1 6
+{ ____ }
+/body  5     RESIDENT
+
+______. __/__/____ _______________ ______________________________  ___,___.__
+                               ____,___.__ ____,___.__ ___,___.__
+/SUBTOTAL1 15
+                               ----------------------------------------------
+                                                                   ___,___.__
+Totals For Month of { _____  } ____,___.__ ____,___.__ ___,___.__
+                               ===================================
+                                 Journal Entries For Month         ___,___.__
+                                                                   -----------
+                           Total of All Disbursements For Month    ___,___.__
+==============================================================================
+Year To Date Totals            ____,___.__ ____,___.__ ___,___.__  ___,___.__
+                               ===================================
+                                 Journal Entries Y-T-D             ___,___.__
+                                                                   ----------
+                            Total of All Disbursements Y-T-D       ___,___.__
+                                                                   ===========
+/TOTAL       RESIDENT
+                                    =========================================
+                                                                 _,___,___.__
+T O T A L  F O R  R E P O R T  ____,___.__ ____,___.__ ___,___.__
+
+
+* Note that the merchant check does not include the prosecutor's fees listed
+  within the distribution amounts.
+
+/ERR1        RESIDENT
+  * * *   E R R O R  * * *  Restitution and Mfees are not equal check amount
+/ERR2        RESIDENT
+  * * *   E R R O R  * * *  Total Distribution  does not equal total of checks
+/SCRPRT
+อออออออ< Printing Check Registers >อออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+
+
+
+
+   Checks are printing between the dates of < __/__/____ > and < __/__/____ >
+
+            Drawn on the Bank of < ____________________________ >
+
+
+
+              Printing Check #...........{ __  ______.
+
+
+
+
+_________________________   ________________________________________  _
+
+/SCRPRT2
+ออออออออ< Print Check Register >อออออออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+
+
+
+
+
+
+
+
+
+           _________________________________________  _
+
+
+
+
+
+
+
+
+/SCRSELECT
+ออออออออ< Print Check Register >อออออออออออออออออออออออออออออออออออออออออออออออ
+
+
+
+
+
+               Start Date................{ __/__/____
+
+               End Date..................{ __/__/____
+
+               Bank Code.................{ __
+
+
+
+
+
+
+
+
+      Output To P)rinter,  C)onsole or A)bort.........{ _
+
+/info
+   changes made 06-08-91 by gary grooms
+        added year to date totals with accumulators and formatted
+        the $ fields with commas.
+        changed heading to read "check Type" instead of "ref"
+
+   change made 06-23-91 by Gary Grooms
+        added an indicator (do_tot) so that YTD totals will only
+        be printed if the begin date is 1/1/xx
+
+   Change 3-3-99 by Herta Jesse
+        Modified program to comply with y2k,4 digit years and changed
+        save routines to comply with v3.1d re-read, save, unlock etc.
+        edited the sysdate command to sysdate4.
+
+   change made 10/11/1999 by Jeff March
+        added direct_output to LPT1: for printing of check register.
+
+Recompiled 01-19-2000 by Jeff March
+        Recognize new backspace command in calcdate.inc
+          
+/*
+USE y2k.pkg
+Read_dfini "df23ini.cfg"
+//----------------- Cannot Run Program From Command Line (DOS)
+//IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+#include calcdate.inc
+#include macs.frm
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.USER_NUMB
+FIND EQ USERX BY INDEX.1
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+//*******< Program Variables >*************************************************
+
+
+STRING ANSW 1 LONG 50 SHORT 50
+
+INDICATOR PRT UPDATE newmon first_time ok_pros ok_sub one_month  do_tot
+
+INTEGER COUNT LCOUNT TIMER ADAY AMONTH AYEAR SEQ month_
+integer ck_day ck_mon ck_yr prior_mon
+
+number accum1 accum2 accum3 accum4 accum5 accum6 accum7 accum8
+number accum9 accum10
+
+DATE TODAY TEMPDAY
+//*******< Initialize Variables and Set Page Screens >*************************
+
+
+move 0 to ck_mon
+move 0 to ck_day
+move 0 to ck_yr
+move 0 to prior_mon
+MOVE 0 TO COUNT
+MOVE 0 TO LCOUNT
+move 0 to month_
+move (0) to accum10
+MOVE '' TO ANSW
+MOVE '' TO LONG
+MOVE '' TO SHORT
+
+
+SYSDATE4 TODAY
+//*******< Open Files >********************************************************
+
+MULTI$ OPEN CHECKS REF months RECON JOURNALS ledger
+OPEN BANK INDEX.1
+OPEN DISTRIB
+
+//*******< Main Program >******************************************************
+DATE_MACRO_INIT
+
+FORMAT SCRSELECT.3        {CAPSLOCK}
+FORMAT SCRSELECT.4        {CAPSLOCK}
+
+START:
+//gosub clear_accums
+CLEAR BANK
+CLEAR DISTRIB
+CLEAR CHECKS
+clear ledger
+  move (100) to ledger.number
+  move ref.district to ledger.district
+  move "20" to ledger.division
+  find eq ledger by index.1
+  [finderr] begin
+    clearxy 24 0
+    gotoxy 24 0
+    show " Ledger Account 100 could not be found"
+    inkey answ
+    clearscreen
+    abort
+  end
+
+
+CLEARFORM SCRSELECT.1 THRU SCRSELECT.4
+FIRST_DAY_OF_MONTH TODAY TO TEMPDAY
+DISPLAY TODAY TO SCRSELECT.1
+LAST_DAY_OF_MONTH TODAY TO TEMPDAY
+DISPLAY TODAY TO SCRSELECT.2
+PAGE SCRSELECT
+CHOICE:
+ACCEPT SCRSELECT.1
+ACCEPT SCRSELECT.2
+   DECOMPOSE_DATE SCRSELECT.1 TO ADAY AMONTH AYEAR
+   indicate do_tot as amonth eq (1)
+   [do_tot] indicate do_tot as aday eq (1)
+
+
+//REPEAT
+
+
+display "HC" to  SCRSELECT.3
+   MOVE SCRSELECT.3 TO BANK.CODE
+      FIND EQ BANK BY INDEX.1
+      [FINDERR] BEGIN
+        CLEARXY 24 0
+        GOTOXY 24 0
+        SHOW " Incorrect or Missing Bank Code !!"
+        FOR TIMER FROM 0 TO 600
+         LOOP
+        CLEARXY 24 0
+        CLEAR BANK
+        CLEARFORM SCRSELECT.3
+      END
+  [FINDERR] abort
+
+REPEAT
+ACCEPT SCRSELECT.4
+IF ~ SCRSELECT.4 IN 'PCA' LOOP       
+MOVE SCRSELECT.4 TO ANSW
+
+
+GOSUB SELECT_OUTPUT_REG
+
+
+
+MOVE 0 TO PAGECOUNT
+MOVE SCRSELECT.1 TO checks.JR_DATE
+MOVE SCRSELECT.3 TO checks.BANK_CODE
+  indicate first_time true
+
+
+REPORT checks BY INDEX.4 BREAK checks.seq_num
+INDICATE SELECT AS checks.JR_DATE GE SCRSELECT.1
+[SELECT] INDICATE SELECT AS checks.JR_DATE LE SCRSELECT.2
+[SELECT] INDICATE SELECT AS checks.BANK_CODE EQ SCRSELECT.3
+[~ select]  GOTO END.OF.REPORT
+
+decompose_date checks.jr_date to ck_day ck_mon ck_yr
+move ck_mon to fieldindex
+
+
+BLANKFORM SCRPRT.6 THRU SCRPRT.8
+[PRT] PAGE SCRPRT
+
+  DISPLAY SCRSELECT.1 TO SCRPRT.1
+  DISPLAY SCRSELECT.2 TO SCRPRT.2
+  DISPLAY BANK.NAME TO SCRPRT.3
+   display checks.bank_code to scrprt.4
+   display checks.check_num to scrprt.5
+
+
+SECTION HEADER 10
+
+GOSUB OUTHEAD
+[PRT]  OUTPUT HEADER
+[~ PRT] IF PAGECOUNT LE 1 OUTPUT HEADER
+
+SECTION SUBHEADER1 2
+
+  print months.month& to subheader1.1
+  move ck_mon to prior_mon
+output subheader1
+
+section body 3
+
+  PRINT CHECKS.CHECK_NUM   TO body.1
+  PRINT CHECKS.CK_DATE     TO body.2
+  PRINT CHECKS.REFERENCE   TO body.3
+  PRINT CHECKS.PAYEE       TO body.4
+  PRINT CHECKS.CHK_AMT     TO body.5
+    calc (accum1 + checks.chk_amt) to accum1
+    calc (accum5 + checks.chk_amt) to accum5
+  PRINT CHECKS.hc_amt      TO body.6
+    calc (accum2 + checks.hc_amt) to accum2
+    calc (accum6 + checks.hc_amt) to accum6
+  PRINT CHECKS.mfee        TO body.7
+    calc (accum3 + checks.mfee) to accum3
+    calc (accum7 + checks.mfee) to accum7
+  PRINT CHECKS.pfee        TO body.8
+    calc (accum4 + checks.pfee) to accum4
+    calc (accum8 + checks.pfee) to accum8
+OUTPUT BODY
+  if checks.hc_amt gt 0 if (checks.hc_amt + checks.mfee) ne ;
+                             checks.chk_amt output err1
+
+SECTION SUBTOTAL1 14
+
+   move prior_mon to fieldindex
+
+      move ledger.cd& to accum9
+      calc (ledger.cd& + accum10 ) to accum10
+
+
+   SUBTOTAL body.5        TO SUBTOTAL1.1
+   move ck_mon to fieldindex
+
+   print subheader1.1     to subtotal1.2
+   subtotal body.6        TO SUBTOTAL1.3
+   subtotal body.7        TO SUBTOTAL1.4
+   subtotal body.8        TO SUBTOTAL1.5
+     print accum9         to subtotal1.6
+     print (accum5 + accum9)  to subtotal1.7
+     print accum2         to subtotal1.8
+     print accum3         to subtotal1.9
+     print accum4         to subtotal1.10
+     print accum1         to subtotal1.11
+     print accum10        to subtotal1.12
+     print (accum10 + accum1) to subtotal1.13
+
+   output subtotal1
+     if (accum6 + accum7 + accum8) ne accum5 output err2
+     move (0) to accum5
+     move (0) to accum6
+     move (0) to accum7
+     move (0) to accum8
+     move (0) to accum9
+//   formfeed
+//   gosub newpage
+SECTION TOTAL
+
+  SUBTOTAL SUBTOTAL1.1    TO TOTAL.1
+  SUBTOTAL SUBTOTAL1.3    TO TOTAL.2
+  SUBTOTAL SUBTOTAL1.4    TO TOTAL.3
+  SUBTOTAL SUBTOTAL1.5    TO TOTAL.4
+     if (accum2 + accum3 + accum4) ne accum1 output err2
+  move (0) to accum10
+// OUTPUT TOTAL
+
+RETURN
+
+RPT.KEYPRESS:
+  [PRT] BEGIN
+        DISPLAY ' A KEY HAS BEEN PRESSED' TO SCRPRT.6
+        DISPLAY ' DO YOU WISH TO ABORT THE REPORT? (Y/N) ' TO SCRPRT.7
+        DISPLAY 'N' TO SCRPRT.8
+        REPEAT
+         ACCEPT SCRPRT.8 TO ANSW
+         uppercase answ
+         IF ~ ANSW IN 'YN' BLANKFORM SCRPRT.8
+         IF ~ ANSW IN 'YN' LOOP
+         IF ANSW EQ 'Y' RETURN END$OF$REPORT
+      END
+  [~ PRT] BEGIN
+      REPEAT
+        SHOWLN ' A KEY HAS BEEN PRESSED.'
+        INPUT ' DO YOU WISH TO ABORT TH REPORT? (Y/N)' ANSW
+        UPPERCASE ANSW
+        IF ~ ANSW IN 'YN' LOOP
+        IF ANSW EQ 'Y' RETURN END$OF$REPORT
+      END
+
+
+RETURN RPT.LOOP
+
+     indicate one_month true
+     REPORTEND
+     FORMFEED
+     [MULTIUSER] DESPOOL
+     CLOSE_OUTPUT
+
+     [PRT] BEGIN
+     BLANKFORM SCRPRT.1 THRU SCRPRT.8
+     DISPLAY '               Options:' TO SCRPRT.6
+     DISPLAY 'R)eprint report,   Q)uit' TO SCRPRT.7
+     REPEAT
+     CLEARFORM SCRPRT.8
+     DISPLAY 'Q' TO SCRPRT.8
+     ACCEPT SCRPRT.8 TO ANSW
+     UPPERCASE ANSW
+     IF ~ ANSW IN 'RQ' LOOP
+     IF ANSW EQ 'R' GOTO START
+
+     END
+
+
+     [~ PRT] BEGIN
+     DISPLAY 'PRINT ANOTHER REGISTER? (Y/N)' TO SCRPRT2.1
+     REPEAT
+     CLEARFORM SCRPRT2.2
+     DISPLAY 'N' TO SCRPRT2.2
+     ACCEPT SCRPRT2.2 TO ANSW
+     UPPERCASE ANSW
+     IF ~ ANSW IN 'YN' LOOP
+     IF ANSW EQ 'Y' GOTO START
+     END
+
+
+
+ ABORT
+
+
+
+
+
+
+
+
+
+
+
+
+////*******< Sub Routines >******************************************************
+
+SELECT_OUTPUT_REG:
+
+  IF ANSW EQ 'P' BEGIN
+     INDICATE PRT TRUE
+///     OUTFILE "LST:"
+     DIRECT_OUTPUT "MCHECKS.TXT"
+     MOVE 60 TO PAGEEND
+     MOVE 0 TO PAGEFEED
+     RETURN
+   END
+
+  IF ANSW EQ 'C' BEGIN
+     INDICATE PRT FALSE
+     OUTFILE "CON:"
+     MOVE 24 TO PAGEEND
+     MOVE -1 TO PAGEFEED
+     CLEARSCREEN
+     RETURN
+   END
+
+  IF ANSW EQ 'A' BEGIN
+      CLEARXY 24 0
+      GOTOXY 24 0
+      SHOW " Are You Sure You Want To Abort..(Y/N) "
+    REPEAT
+      GOTOXY 24 40
+      MOVE '' TO ANSW
+      INKEY ANSW
+      UPPERCASE ANSW
+      IF ~ ANSW IN 'YN' LOOP
+      IF ANSW EQ 'Y' ABORT
+      IF ANSW EQ 'N' RETURN START
+   END
+
+RETURN
+
+CENTER:
+   LENGTH SHORT TO LCOUNT
+   MOVE "" TO LONG
+    MOVE (50 - LCOUNT / 2 + (.5)) TO LCOUNT
+    FOR COUNT FROM 0 TO LCOUNT
+          APPEND LONG " "
+     LOOP
+    APPEND LONG SHORT
+RETURN
+
+OUTHEAD:
+
+    TRIM REF.PROSECUTOR TO SHORT
+       GOSUB CENTER
+    PRINT LONG  TO HEADER.1
+    TRIM REF.ADDRESS TO SHORT
+        GOSUB CENTER
+    PRINT LONG TO HEADER.2
+    TRIM REF.CITY_STATE TO  SHORT
+        GOSUB CENTER
+    PRINT LONG TO  HEADER.3
+    PRINT TODAY TO HEADER.4
+    PRINT SCRSELECT.1 TO HEADER.5
+    PRINT SCRSELECT.2 TO HEADER.6
+    PRINT PAGECOUNT TO HEADER.7
+RETURN
+
+clear_accums:
+  move (0) to accum1
+  move (0) to accum2
+  move (0) to accum3
+  move (0) to accum4
+  move (0) to accum5
+  move (0) to accum6
+  move (0) to accum7
+  move (0) to accum8
+  move (0) to accum9
+  move (0) to accum10
+return
+
+////////////////////////////////////////////

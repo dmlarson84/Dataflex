@@ -1,0 +1,459 @@
+//
+// Picture.Pkg
+// February 7, 1992
+// Steven A. Lowe
+//
+//Package: Picture
+//
+//Content: This package defines a subclass of Entry_Form which allows the use of
+//  mask-string "pictures" to control data-entry on a character-by-character
+//  basis.  Included in the package are:
+//
+//  * Picture_Item - this command declares an ITEM of the form
+//                   to be a picture-controlled editing window.
+//                   All items on a Picture_Form MUST be declared
+//                   using the Picture_Item command (i.e. do
+//                   not use the ITEM command within a Picture_Form).
+//
+//  * Picture_Form - this class is a subclass of Entry_Form which provides
+//                   procedures and attributes necessary to support
+//                   mask-mediated data entry in its windows.
+//
+//  Modifyed
+//  03/17/96   in 3.1 the default insert mode is true
+//  Scott-P    this effected the masking ,
+//             This change will capture the current value of insert mode
+//             on the way in and reset it on the way out
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+define CONST_POS_NONE for -1
+
+Use EntryFrm
+
+//
+//initialize picture element array (string)
+//
+string Picture_Elements       //picture element array-string
+move "#$" to Picture_Elements //index 0, position 1 and index 1, position 2
+
+//
+//Attribute: Picture_Actions
+//
+//Description: array of message numbers for picture-mask characters
+//
+//Representation: array of integers
+//
+object Picture_Actions is an ARRAY   //global picture action array
+end_object
+
+//
+//Class: Picture_Form
+//
+//SuperClass: Entry_Form
+//
+//Description: This class provides properties and operations necessary to
+//  support mask-mediated data-entry
+//
+//Usage: 
+//
+class Picture_Form is a Entry_Form
+
+  //
+  //Operation: FCT$
+  //
+  //Assumption(s): TERMCHAR contains the character code to check
+  //
+  //Goal(s): set TERMCHAR to 0 if its current value is non-alphanumeric
+  //
+  //Algorithm: if TERMCHAR < 32, TERMCHAR = 0
+  //
+  //Usage: used to validate "$" mask character
+  //
+  procedure Fct$
+    if TERMCHAR lt 32 move 0 to TERMCHAR  // < space not valid
+  end_procedure
+
+  //
+  //Operation: FCT#
+  //
+  //Assumption(s): TERMCHAR contains the character code to check
+  //
+  //Goal(s): set TERMCHAR to 0 if its current value is non-numeric
+  //
+  //Algorithm: if TERMCHAR < 48 or TERMCHAR > 57, TERMCHAR = 0
+  //
+  //Usage: used to validate "#" mask character
+  //
+  procedure Fct#
+    if (TERMCHAR < 48 OR TERMCHAR > 57) move 0 to TERMCHAR
+  end_procedure
+
+  //
+  //Operation: ADD_PICTURE
+  //
+  //Assumption(s): newCh is a one-character string, newFct is a message id
+  //
+  //Goal(s): add new mask character and associated function to mask set
+  //
+  //Algorithm: append newch to Picture_Elements, add newFct to
+  //             Picture_Actions array
+  //
+  //Usage: 
+  //
+  procedure Add_Picture string newCh integer newFct
+    left newCh to newCh 1
+    append Picture_Elements newCh
+    set array_value of Picture_Actions ;
+        item (item_count(Picture_Actions.obj)) to newFct
+  end_procedure
+
+  //
+  //initialize picture action array
+  //
+  set array_value of Picture_Actions item 0 to MSG_Fct#  //# -> Fct#
+  set array_value of Picture_Actions item 1 to MSG_Fct$  //$ -> Fct$
+
+  //
+  //Operation: CONSTRUCT_OBJECT
+  //
+  //Assumption(s): MyImg identifies an image
+  //
+  //Goal(s): define an instance containing an Item_Pictures array with
+  //  the integer properties Mask_Length, Last_Key, and Mask_Index, and the
+  //  string property Current_Mask.
+  //
+  //Algorithm: Augmented to define component Item_Pictures as array; also
+  //           defines Mask_Length, Current_Mask, Last_Key, and Mask_Index properties
+  //
+  //Usage: used internally
+  //
+  procedure CONSTRUCT_OBJECT integer myImg
+    Forward send construct_object myImg
+
+    // The default insert_mode is true insert starting with 3.1
+    // prior versions it was false overstrick
+    // change to set default mode to overstrike when in this class
+    
+    Property Integer Exit_insert_mode  public 0
+
+    
+    
+    
+    object Item_Pictures is an ARRAY 
+    end_object     //array of picture-strings for items
+    //
+    //Attribute: Mask_Length
+    //
+    //Description: length of current mask string
+    //
+    //Representation: integer
+    //
+    Property integer Mask_Length PUBLIC 0  //length of current mask string
+    //
+    //Attribute: Current_Mask
+    //
+    //Description: current mask string
+    //
+    //Representation: string
+    //
+    Property string  Current_Mask    PUBLIC "" //current mask string
+    //
+    //Attribute: Last_Key
+    //
+    //Description: last key pressed during data-entry
+    //
+    //Representation: integer
+    //
+    Property integer Last_Key    PUBLIC 0  //last key pressed during data entry
+    //
+    //Attribute: Mask_Index
+    //
+    //Description: last mask offset of data-entry
+    //
+    //Representation: integer
+    //
+    Property integer Mask_Index  PUBLIC 0  //last mask offset of data entry
+
+    Property integer Last_Const_Pos PUBLIC CONST_POS_NONE  // last position into which
+                                                           // a constant was placed
+    indicator Picture_Form.isautoclear
+    indicator Picture_Form.wascleared
+
+    indicator Picture_Form.isonlyconst
+
+  end_procedure
+    
+   
+   Procedure Entering
+      // get the current status on the way in
+     local integer imode
+      get insert_mode to imode
+      set exit_Insert_mode to imode
+      
+     Forward Send Entering
+   End_procedure 
+   
+   Procedure Entering_scope
+      // get the current status on the way in
+       
+      local integer imode
+      get insert_mode to imode
+      set exit_Insert_mode to imode
+      //set insert_mode to false
+     Forward Send Entering_scope
+   End_procedure 
+
+   Procedure Exiting
+     // reset it on the way out
+     local integer imode
+     get exit_insert_mode to imode
+     set insert_mode to imode  
+     
+     Forward Send Exiting
+   End_procedure 
+
+   Procedure Exiting_scope
+     // reset it on the way out
+     local integer imode
+     get exit_insert_mode to imode
+     set insert_mode to imode  
+         
+     Forward Send Exiting_scope
+   End_procedure 
+
+  //
+  //Operation: SET PICTURE_STRING
+  //
+  //Assumption(s): Item# is item index, InStr is valid picture mask string
+  //
+  //Goal(s): set element of Item_Pictures array corresponding to specified
+  //  item# to given mask (InStr) value
+  //
+  //Algorithm: sets array_value of Item_Pictures element Item# to InStr
+  //
+  //Usage: used by Picture_Item command
+  //
+  procedure Set Picture_String integer item# string inStr
+    local integer tot
+    get item_count of Picture_Form.Item_Pictures to tot
+    if item# gt tot begin // if you "skipped" some items, init them with ""
+        repeat
+          set array_value of Picture_Form.Item_Pictures item tot to ""
+          increment tot
+        until tot eq item#
+    end
+    set array_value of Picture_Form.Item_Pictures item item# to inStr
+  end_procedure
+
+  //
+  //Operation: PICTURE_STRING
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): return picture mask string for current item
+  //
+  //Algorithm: gets array value of Item_Pictures element equal to current item
+  //           and returns it
+  //
+  //Usage: 
+  //
+  function Picture_String RETURNS string
+    local integer item#
+    local string pStr
+    get current_item to item#
+    if item# ge (item_count(Picture_Form.Item_Pictures.obj)) ;
+      function_return "" // if there are non-picture-items at end, pretend
+                         // they are "".
+    get array_value of Picture_Form.Item_Pictures item item# to pStr
+    function_return pStr
+  end_function
+  
+  //
+  //Operation: ENTRY
+  //
+  //Assumption(s): none
+  //
+  //Goal(s): redefine the window editing routine to support mask-mediated
+  //  data-entry
+  //
+  //Algorithm: get picture mask string for current item
+  //           if string > "",
+  //             set Mask_Length to length of string
+  //             set Current_Mask to string
+  //             set Last_Key to 0
+  //             set Mask_Index to 0
+  //             set KBD_INPUT_MODE to False
+  //             forward get ENTRY
+  //             set KBD_INPUT_MODE to True
+  //           else forward get ENTRY
+  //           return TERMCHAR
+  //
+  //Usage: used internally
+  //
+  Function Entry returns integer
+    local integer msklen bits
+    local string mskstr
+    move (Picture_String(Current_Object)) to mskstr  //get current item's mask string
+    if mskstr gt "" begin
+      length mskstr to msklen                //get length of mask string
+      set Mask_Length to msklen               //init mask length
+      set Current_Mask to mskstr                  //set current maskstr
+      set Last_Key to 0                       //init Last_Key
+      set Mask_Index to 0                     //init Mask_Index
+
+      get autoclear_state of current_object item CURRENT to bits
+      if bits begin
+        indicate Picture_Form.isautoclear TRUE
+        indicate Picture_Form.wascleared  FALSE
+        set autoclear_state of current_object item CURRENT to FALSE //turn off
+      end
+      else indicate Picture_Form.isautoclear FALSE
+
+      indicate Picture_Form.isonlyconst TRUE
+
+      set kbd_input_mode to false
+      Forward get Entry to fieldindex        //invoke ACCEPT
+      set kbd_input_mode to true
+    end
+    else Forward get Entry to fieldindex     //use default method
+
+    [Picture_Form.isautoclear] set autoclear_state of current_object ;
+                                   item CURRENT to TRUE   //turn back on
+    function_return TERMCHAR
+  end_function
+
+  //
+  //Operation: SUPPLY_KEY
+  //
+  //Assumption(s): ndx is current mask offset
+  //
+  //Goal(s): if mask element at current index (ndx) is a constant, return
+  //  it, else accept keypress and validate using mask-character function if
+  //  it is not an accelerator key, and return character code.  Otherwise, if
+  //  an accelerator key was pressed, return its code
+  //
+  //Algorithm: get current mask character and search for it in Picture_Elements
+  //           if not found, and the last entry index > current entry index,
+  //             set TERMCHAR to last key pressed, else set TERMCHAR to mask
+  //             character
+  //           else
+  //             get mask character validation function message id
+  //             repeat
+  //               wait for keypress
+  //               if keypress was not accelerator key, execute validation
+  //                 function
+  //             until keypress is valid of accelerator
+  //           set Last_Key to TERMCHAR
+  //           set Mask_Index to ndx
+  //           return TERMCHAR
+  //
+  //Usage: used internally
+  //
+  procedure supply_key integer ndx returns integer
+    local string dd PictStr PictCh
+    local integer ChPos MsgVector ConstPos
+
+    move CONST_POS_NONE to ConstPos
+
+    // Masking only works if set false
+    // added to prevent the user from changing with insert key
+    
+    set insert_mode to false
+
+    if ndx ge (Mask_Length(current_object)) move KLEFTARROW to TERMCHAR // backup to last mask_char
+    else begin
+      get Current_Mask to PictStr
+      mid PictStr to pictCh 1 (ndx + 1)             //get picture element char
+      pos pictCh in Picture_Elements to ChPos        //find picture character
+      if ChPos lt 1 begin                            //constant character (not in pic elements)
+        get Mask_Index to MsgVector //get last entry position (Msg_Vector used as a temp var.)
+        if MsgVector gt ndx move (Last_Key(Current_Object)) to TERMCHAR  //return last key if left
+        else begin
+          get Last_Const_Pos to ChPos  // last constant position used
+          if ChPos eq ndx begin // last char of mask and window is a const
+            if [Picture_Form.isonlyconst] move 0 to TERMCHAR
+            else move KLEFTARROW to TERMCHAR // backup to non-constant
+          end
+          else begin
+            ascii PictCh to TERMCHAR                //not picture char - pass it
+            move ndx to ConstPos
+          end
+        end
+      end
+      else begin             //or accept keypress
+        indicate Picture_form.isonlyconst FALSE
+  
+        decrement chpos
+        get array_value of Picture_Actions item ChPos to MsgVector  //get msg#
+        repeat
+          set Kbd_Input_Mode to TRUE
+          inkey dd
+          set Kbd_Input_Mode to FALSE
+          if TERMCHAR lt 256 send MsgVector   //invoke PictElem procedure
+        until TERMCHAR gt 0                   //sets TERMCHAR > 0 if ok
+  
+        [Picture_Form.isautoclear NOT Picture_Form.wascleared] if TERMCHAR lt 256 begin
+          indicate Picture_Form.wascleared TRUE
+          if ndx gt 0 set value item current to (left(PictStr,ndx))
+          else set value item current to ""
+        end
+      end
+    end
+
+    set Last_Key to TERMCHAR                 //save last keypress
+    set Mask_Index to ndx                    //save last index#
+    set Last_Const_pos to ConstPos           //save last constant position
+    procedure_return TERMCHAR
+  end_procedure
+end_class
+
+//
+// support command
+//
+
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+//
+//   Command: PICTURE_ITEM <PictureString> <defaultValue> <Action>
+//
+//   Parameters:
+//      <PictureString> is the mask-string to be used to contol data-entry
+//                      for this window
+//      <defaultValue>  is the initial value of the window before editing
+//      <Action>        is the message to be executed after data-entry occurs
+//
+//   Description:
+//      PICTURE_ITEM declares an item on a Picture_Form and specifies its
+//      mask string.
+//
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+#COMMAND PICTURE_ITEM R 
+  #PUSH !u
+  #SET U$ (!Zg-1)
+  set Picture_String item |CI!u to !1
+  #POP U$
+  ON_ITEM !2 SEND !3
+#ENDCOMMAND
+
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+//
+//   Command: PICTURE_ENTRY_ITEM <PictureString>
+//                               <FieldName>|<Expr>|<Variable> <options>
+//
+//   Description:
+//      PICTURE_ENTRY_ITEM declares an entry_item on a Picture_Form and
+//      specifies its mask string.
+//
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+#COMMAND PICTURE_ENTRY_ITEM R R
+  ENTRY_ITEM !2 !3
+  #PUSH !u
+  #SET U$ (!Zg-1)
+  set Picture_String item |CI!u to !1
+  #POP U$
+#ENDCOMMAND
+
+
+

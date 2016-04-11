@@ -1,0 +1,26 @@
+        FILE DEFINITION LISTING FOR FILE #10
+*************************************************** 
+        FILE ROOT NAME     = MERCHANT
+        USER DISPLAY NAME  = HC Merchant Table
+        DATAFLEX FILE NAME = MERCHANT
+*************************************************** 
+        RECORD LENGTH = 170  (USED = 141)
+        MAX NUMBER OF RECORDS = 10000  (USED = 0)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       5   NUMERIC   0    1     0     0     IDNO
+   2       6      30   ASCII          2     0     0     NAME
+   3      36      30   ASCII          0     0     0     ADDR
+   4      66      25   ASCII          0     0     0     CITY
+   5      91       2   ASCII          0     0     0     ST
+   6      93      10   ASCII          0     0     0     ZIP
+   7     103      25   ASCII          0     0     0     SALUTATION
+   8     128      14   ASCII          0     0     0     PHONE
+ 
+INDEX 1:  FIELD SEGMENTS:  <1>   
+INDEX 2:  FIELD SEGMENTS:  <2>   <1>   
+

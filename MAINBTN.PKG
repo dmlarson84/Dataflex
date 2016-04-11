@@ -1,0 +1,49 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1995 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//************************************************************************
+
+//************************************************************************
+// Mainbtn.Pkg
+// Version: 1.0
+//  05/03/94 :Created
+//
+// Author: John J. Tuohy
+//
+// Object-package.
+// 
+// Provides global button support for DAF style programs. To use the you
+// must:
+//       Use MAINBTN // use this package
+//       Send Add_Focus to (Btn_Bar(Current_Object)) Desktop // activate it
+//       Send Activate  to (Main_Menu(Current_Object))
+//
+//       Make sure that the main_menu is activated *after* the button bar
+//
+// NOTE: This is an object package. You will probably want to change this
+//       to make it work the way you want. You can select you own buttons
+//       and text as desired. This is just a simple example.
+//
+// 09/18/94 shift+f5 changed to ctrl_f5
+//************************************************************************
+
+Use G_Btn // Global_Button_Bar class support
+
+/Btn_Bar
+ _________  _________________  ___________  __________  ___________________     
+/*
+// <F2=Save>  <Shift+F2=Delete>  <F4=Prompt>  <F5=Clear> <Ctrl+F5=Clear All>    
+
+Object Btn_Bar is a Global_Button_Bar Btn_Bar
+  Item_list
+     On_Item "<F2=Save>"           Send Request_Save
+     On_Item "<Shift+F2=Delete>"   Send Request_Delete
+     On_Item "<F4=Prompt>"         Send Prompt
+     On_Item "<F5=Clear>"          Send Request_Clear
+     On_Item "<Ctrl+F5=Clear All>" Send Request_Clear_All
+  End_Item_List
+End_Object

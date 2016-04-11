@@ -1,0 +1,341 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//
+//     $Source: k:\RCS\.\pkg\nesting.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+// Augmented Messages:
+//        Deactivate
+//
+//     $Log: nesting.pkg,v $
+//Revision 2.1  1993/08/25  17:49:22  james
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:07  james
+//Initial revision
+//
+//Revision 1.8  92/06/27  09:35:58  lee
+//changed inquire_first/last_deo to recurse into client_Areas. this keeps
+//child_wrapping from sending get_auto_save_state to clients (which may
+//not define auto_save_state property).
+//
+//Revision 1.7  92/05/29  14:06:09  lee
+//removed end_construct_* messages from mixins; now, classes that use the mixin
+//send the message that used to be sent by the end_construct_* message (for
+//efficiency).
+//
+//Revision 1.6  92/05/14  15:48:59  unknown
+//Updated Copyright slug - SWM.
+//
+//Revision 1.5  92/04/07  18:03:17  lee
+//added NO_STOP option for broadcasting to override default behavior of
+//stopping broadcast on a non-zero return value.
+//
+//Revision 1.4  92/04/03  18:00:16  lee
+//updated add_focus/activate/deactivate/release_focus overrides to use (new)
+//return value properly.
+//
+//Revision 1.3  92/03/29  18:45:05  lee
+//added MSG_END_CONSTRUCT_OBJECT, moved ENDMAC macro stuff into END_CONSTRUCT-
+//OBJECT procedures (in .pkgs). moved Flag_ITems to list.pkg after generalizing
+//it based on PROTOTYPE_OBJECT instead of Whether or not it is a table-oriented
+//object. Moved define_access_keys mechanism completely into actionbr.pkg.
+//fixed two typos: import_class_protocol used !# instead of !3, and register-
+//procedure used !1 instead of !2.
+//
+//Revision 1.2  92/03/09  19:03:42  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.1  91/10/23  10:21:51  elsa
+//Initial revision
+//
+//************************************************************************/
+// 12/16/94 - JJT Added stop_ui support (was in its own mixin)
+//                We need to look at deactivate
+//                Removed Add_focus which is called in server.pkg 
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+//************************************************************************/
+
+//************************************************************************
+//     File Name: Nesting.Inc
+// Creation Date: January 1, 1991
+// Modified Date: June 26, 1991
+//     Author(s): Steven A. Lowe
+//
+// This module defines the properties and operations required to support
+// nesting of data-entry objects, collected in the abstract class
+// Navigate_Mixin.
+//
+// This file should be USEd prior to and IMPORTed within the scope of the
+// class definition by any user-interface (esp. data-entry) class which
+// must support the data-entry object standards.
+//
+// This file is used by ENTRYFRM.PKG, WIDELIST.PKG, TEXT_WIN.PKG, and
+// ENCLIENT.PKG.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+class nesting_mixin is a message
+
+  //
+  // Description
+  //
+  //   This procedure defines the properties required to support the nesting
+  //   of data-entry objects.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This procedure should only be invoked from within the Construct_Object
+  //   procedure of a class definition.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Component_State indicates if this object has a parent object which is
+  //   also a data-entry object.
+  //
+  //   Has_Components_State indicates if this object has at least one child-
+  //   object which is also a data-entry object.
+  //
+  //   First_DEO and Last_DEO are used temporarily during the searches for
+  //   the first and last data-entry object children of this object (see
+  //   Find_First_DEO, Find_Last_DEO, Inquire_First_DEO and Inquire_Last_DEO).
+  //
+  procedure define_nesting
+    Property integer Component_State      PUBLIC  0
+    Property integer Has_Components_State PUBLIC  0
+    Property integer First_DEO            PUBLIC  0
+    Property integer Last_DEO             PUBLIC  0
+        
+    // Stop_ui support - Moved from its own mixin package.
+    property integer Stop_UI_State Public FALSE
+
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   If this object is focusable, set First_DEO to this object's id and
+  //   return a non-zero value to terminate the parent object's BROADCAST.
+  //
+  //   This procedure is used to locate the first data-entry object among
+  //   this object's siblings (its parent's children).
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   This procedure is typically invoked via the BROADCAST command from
+  //   the Find_First_DEO function of this object's parent.
+  //
+  procedure inquire_first_DEO integer obj# integer recurseClients
+    if (focus_mode(current_object)) eq FOCUSABLE begin
+      if (recurseClients AND client_area_state(current_object)) ;
+          broadcast_focus send inquire_first_DEO obj# recurseClients
+      else begin
+        set first_DEO of obj# to current_object
+        procedure_return 1  //to stop broadcast, since this object answered
+      end
+    end
+  end_procedure
+
+  //
+  // Description
+  //
+  //   If this object is focusable, set Lastt_DEO to this object's id.
+  //
+  //   This procedure is used to locate the last data-entry object among
+  //   this object's siblings (its parent's children).
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   This procedure is typically invoked via the BROADCAST command from
+  //   the Find_Last_DEO function of this object's parent.
+  //
+  procedure inquire_last_DEO integer obj# integer recurseClients
+    if (focus_mode(current_object)) eq FOCUSABLE begin
+      if (recurseClients AND client_area_state(current_object)) ;
+          broadcast_focus send inquire_last_DEO obj# recurseClients
+      else set last_DEO of obj# to current_object
+    end
+  end_procedure
+
+  //
+  // Description
+  //
+  //   This function returns the object id of the first data-entry object
+  //   which is a child of this object, or 0.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   This function 'searches' by broadcasting Inquire_First_DEO, which
+  //   returns a 1 to terminate the broadcast after the first data-entry
+  //   object has been located.
+  //
+  function find_first_DEO returns integer
+    set First_DEO to 0
+    broadcast_focus send inquire_first_DEO current_object FALSE //sets First_DEO property
+    function_return (first_deo(current_object))
+  end_function
+
+
+  //
+  // Description
+  //
+  //   This function returns the object id of the last data-entry object
+  //   which is a child of this object, or 0.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   This function 'searches' by broadcasting Inquire_Last_DEO, which sets
+  //   the property Last_DEO.  Thus, the last object reached by the broadcast
+  //   is the last value to be set into Last_DEO.
+  //
+  function find_last_DEO returns integer
+    set Last_DEO to 0
+    broadcast_focus send inquire_last_DEO current_object FALSE //sets Last_DEO property
+    function_return (Last_DEO(current_object))
+  end_function
+
+
+  //
+  // Description
+  //
+  //   Removes this object from the screen and focus-tree, and also removes
+  //   this object's children from the screen and focus-tree.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Client_Area_State.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   If no flag argument was passed, AREA_TYPE becomes the flag parameter.
+  //
+  //   Client-objects already automatically remove their children from the
+  //   focus-tree.
+  //
+  // 12/16/94 JJT- Altered so no param is not forwarded, Added stop_ui
+  procedure deactivate integer flag returns integer
+    local integer retval Fg
+    if NUM_ARGUMENTS gt 0 ;
+       Move Flag to Fg
+    Else ;
+       Move AREA_TYPE to Fg
+    Forward get msg_deactivate fg to retval
+
+    if ( not(retval) AND (fg = 0) ) Begin
+
+// (LS) this broadcast no_stop is probably not ever used, but would be if a
+// child was in the focus tree, but not as a focus-child. weird, but needs be here.
+       If ( client_Area_state(current_object)=0) ;
+           broadcast NO_STOP send deactivate 0
+
+       If ( Stop_UI_State(Current_Object) ) ;
+           send Stop_Ui
+    end
+    procedure_return retval
+  end_procedure
+
+  //
+  // Description
+  //
+  //   This procedure marks an object as a child data-entry object, and
+  //   attempts to use its parent's Server if this object has no Server.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Typically senbt via broadcast from parent DEO.
+  //
+  procedure Mark_As_Component
+    set Component_State to true
+    delegate set Has_Components_State to true
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure marks child data-entry objects as components.
+  //
+  // Assumptions/Preconditions
+  //
+  //   The child data-entry objects must understand Mark_As_Component as a
+  //   method of setting their Component_State to TRUE.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Invoked by the DEOEnd macro (which manages completion of an object
+  //   declaration).
+  //
+  procedure Mark_Components
+    set Component_State to false
+    broadcast send Mark_As_Component
+  end_procedure
+end_class

@@ -1,0 +1,389 @@
+// QRYVIEW.PKG
+// 04-15-1995
+// Standard_Report_Selection class; used by DFQuery-generated programs.
+// Data Access Corporation
+//
+// 06/08/1995 JJT - Converted to Query_View
+// 06-09-1995 LS  - Split into QRYVIEW and QRYSEL pkgs. Added error if no
+//                  query_selection_client.
+// 06/10/95   JJT - Added check for report object in end-construct
+
+Use RptView    // Report_View Class
+use errornum
+
+// Query_View
+//
+// Container class for reports and selection clients
+// It requires a query_selection_client and a standard_report object to be
+// nested inside of it; if not, an error will occur during End_Construct_Object.
+// The  FIRST  Standard_Report and the  FIRST  Selection_Client are
+// the objects that are used by default, the others are ignored. You can
+// manually set the Report_Object_Id and/or Selection_Object_ID to
+// override this behavior.
+//
+// The main functionality of this class is oriented toward copying settings
+// (output device and constraint values) between the selection client(s) and
+// the report(s).
+//
+// The two main messages that accomplish this are 1) Initialize_Selections
+// which is used to load the defaults values into the selection client,
+// 2) Initialize_Report_Settings which is used to initialize the report with the
+// settings chosen by the user..
+// 
+// Furthermore, when the selection have all been made the selection client
+// delegates the Run_Report to the query view, which merely sends it over
+// to the report object.
+// 
+// Load_Selection_Values and Load_Selection_Device are called by
+// Initialize_Selections during object activation while Load_Constraint_Values
+// and Load_Report_Device are called by Initialize_Report during
+// Run_Report.
+//
+// The public message protocol:
+//
+// Property Integer Report_Object_ID
+// Object ID of the Standard_Report object to communicate with.
+// If no such object exists, an error occurs during End_Construct_Object.
+//
+// Property Integer Selection_Object_ID
+// Object ID of the Query_Selection_Client object to communicate with.
+// If no such object exists, an error occurs during End_Construct_Object.
+//
+// Initialize_Report
+// Copies users selections from the selection client to the report.
+// By default, calls Load_Constraint_Values and Load_Report_Device.
+//
+// Initialize_Selections
+// Copies the initial report settings from the report to the selection client
+// to display the default values. By default, calls Load_Selection_Values
+// and Load_Selection_Device.
+//
+// Procedure Load_Constraint_Values
+// Meant for override/augmentation.
+// Used to set the constraint values in the report to the selection values
+// entered by the user.
+// It calls Load_Constraint_Value with identical From and To item args for a
+// total of Selection_Value_count items (which, by default, is the total number
+// of entry windows for all the selection form of the Selection_Client). If you
+// are using multiple reports or selection clients, or the ordering of the
+// items is not the same in both the report and the selection client, you
+// should override this message to manually copy the values from the
+// appropriate selection client/form items to the appropriate settings in the
+// report. Use Load_Constraint_Value From To, or Get Selection_Value of
+// <selection_client> <from_item> to Val and Set Constraint_Value of
+// <report> <to_item> to Val if appropriate.
+//
+// Procedure Load_Constraint_Value integer From_Item# integer To_Item#
+// This is used to copy a value entered by a user into a constraint value
+// for the report. It copies the Selection_Value for item From_Item# to
+// the Selection_Value for To_Item#.
+//
+// Procedure Set Constraint_Value integer Item# string Val
+// Function Selection_Value integer Item# returns string
+// These messages set/get the constraint value of the report.
+//
+// Procedure Load_Selection_Values
+// Meant for override/augmentation.
+// Used to copy the initial constraint values from the report to use as
+// default selection values in the the selection client.
+// It calls Load_Selection_Value with identical From and To item args for a
+// total of Selection_Value_count items (which, by default, is the number of
+// entry-windows in the selection form of the Selection_Client). If you are
+// using multiple reports or selection clients, or the ordering of the items
+// is not the same in both the report and the selection client, you should
+// override this message to manually copy the values from the appropriate
+// report to the appropriate selection_client. Use Load_Selection_Value_Value
+// From To, or Get Constraint_Value of <report> <from_item> to Val and Set
+// Selection_Value of <selection_client> <to_item> to Val.
+//
+// Procedure Load_Selection_Value integer From_Item# integer To_Item#
+// This is used to copy a default constraint values from the report into a
+// selection value in the selection client. It copies the Constraint_Value for
+// item From_Item# to the Selection_Value for To_Item#.
+//
+// Procedure Set Selection_Value integer Item# string Val
+// Function Selection_Value integer Item# returns string
+// These message set/get the selection value of the selection_client.
+//
+// Function Selection_Value_Count returns Integer
+// Returns the number of selection values in the selection client. By
+// default, this is the number of entry-windows in the selection form
+// of the selection client.
+//
+// Procedure Load_Report_Device
+// This is used to initialize the report with the user-selected device name.
+// You could override/augment this to "translate" the users setting.
+//
+// Procedure Set Report_Device string Val
+// Function Report_Device returns string
+// These messages set/get the output device of the report.
+//
+// Procedure Load_Selection_Device
+// This is used to establish the default output device for the selection client.
+// You could override/augment this to "translate" or override the default output
+// device for selection.
+
+// Procedure Set Selection_Device string Val
+// Function Selection_Device returns string
+// These messages set/get the output device of the selection client.
+//
+// For more advanced control, you might want to extend this to support arrays
+// to keep track of multiple reports and selection_clients, and mappings
+// between their constraint values and selection values. (This class was only
+// designed to handle selection for reports generated by DFQuery which have
+// just one report and one selection client.)
+
+class Query_View is a Report_View
+    register_function Output_Device returns string
+
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        property integer Selection_Object_Id PUBLIC 0
+    end_procedure
+
+    procedure Selection_Client_Callback integer Obj
+        if (Selection_Object_ID(Current_Object)) EQ 0 ;
+            set Selection_Object_ID to Obj
+    end_procedure
+
+    procedure End_Construct_Object
+        local integer Cur_Obj
+
+        // if the selection client object id, has not been set yet:
+        // ask the first selection client object to identify itself.
+        // if they aren't there, an error will occur.
+        // Note that the super_class does the same thing with report,
+        // but the error is generated here.
+
+        move Current_Object to Cur_Obj
+
+        if (Selection_Object_ID(Current_Object)) EQ 0 ;
+            broadcast send Calling_All_Selection_Clients Cur_Obj
+
+        if (Selection_Object_ID(Current_Object)) EQ 0 ;
+            error DFERR_UNRESOLVED_OBJ_REF "SELECTION_OBJECT_ID"
+
+        forward send End_Construct_Object
+
+        if (Report_Object_ID(Current_Object)) EQ 0 ;
+            error DFERR_UNRESOLVED_OBJ_REF "REPORT_OBJECT_ID"
+    end_procedure
+
+    procedure set Report_Device string Val
+        set Output_Device of (Report_Object_ID(Current_Object)) to Val
+    end_procedure
+
+    function Report_Device returns string
+        function_return (Output_Device(Report_Object_ID(Current_Object)))
+    end_function
+
+    procedure set Selection_Device string Val
+        set Output_Device of ;
+            (Selection_Object_ID(Current_Object)) to Val
+    end_procedure
+
+    function Selection_Device returns string
+        function_return ;
+            (Output_Device(Selection_Object_ID(Current_Object)))
+    end_function
+
+    procedure set Report_Ordering integer Idx
+        if Idx NE -2 ; // don't change from report default if = -2
+            set Ordering of (Report_Object_ID(Current_Object)) to Idx
+    end_procedure
+
+    procedure set Report_Find_Down_State integer Flag
+        if Flag NE -1 ; // don't change from report default if = -1
+            set Find_Down_State of ;
+                (Report_Object_ID(Current_Object)) to Flag
+    end_procedure
+
+    function Report_Ordering returns integer
+        function_return (Ordering(Report_Object_ID(Current_Object)))
+    end_function
+
+    function Report_Find_Down_State returns integer
+        function_return (Find_Down_State(Report_Object_ID(Current_Object)))
+    end_function
+
+    procedure set Selection_Ordering integer Idx
+        set Ordering of (Selection_Object_ID(Current_Object)) to Idx
+    end_procedure
+
+    procedure set Selection_Find_Down_State integer Flag
+        set Find_Down_State of ;
+            (Selection_Object_ID(Current_Object)) to Flag
+    end_procedure
+
+    function Selection_Ordering returns integer
+        function_return (Ordering(Selection_Object_ID(Current_Object)))
+    end_function
+
+    function Selection_Find_Down_State returns integer
+        function_return (Find_Down_State(Selection_Object_ID(Current_Object)))
+    end_function
+
+    procedure set Selection_Ordering integer Idx integer Dwn_Flag
+        set Ordering of (Selection_Object_ID(Current_Object)) to Idx
+
+        if (Num_Arguments > 1) ;
+            set Find_Down_State of ;
+                (Selection_Object_ID(Current_Object)) to Dwn_Flag
+        else ;
+            set Find_Down_State of ;
+                (Selection_Object_ID(Current_Object)) to (hi(Idx))
+    end_procedure
+
+    function Selection_Ordering returns integer
+        function_return (Ordering(Selection_Object_ID(Current_Object)))
+    end_function
+
+    procedure set Constraint_Value integer Itm string Val
+        set Constraint_Value of (Report_Object_ID(Current_Object)) Itm to Val
+    end_procedure
+
+    function Constraint_Value integer Itm returns string
+        function_return (Constraint_Value(Report_Object_ID(Current_Object), Itm))
+    end_function
+
+    function Output_Selection_State returns integer
+        function_return (Output_Selection_State(Selection_Object_ID(Current_Object)))
+    end_function        
+
+    function Ordering_Selection_State returns integer
+        function_return (Output_Selection_State(Selection_Object_ID(Current_Object)))
+    end_function        
+
+    function Find_Down_Selection_State returns integer
+        function_return (Find_Down_Selection_State(Selection_Object_ID(Current_Object)))
+    end_function        
+
+    function Selection_Values_State returns integer
+        function_return (Selection_Values_State(Selection_Object_ID(Current_Object)))
+    end_function
+
+    function Selection_Value_Count returns integer
+        function_return (Selection_Value_Count(Selection_Object_ID(Current_Object)))
+    end_function
+
+    procedure set Selection_Value integer Itm string Val
+        set Selection_Value of (Selection_Object_ID(Current_Object)) Itm to Val
+    end_function
+
+    function Selection_Value integer Itm returns string
+        function_return (Selection_Value(Selection_Object_ID(Current_Object), Itm))
+    end_function
+
+    procedure Load_Selection_Value integer From_Itm integer To_Itm
+        set Selection_Value To_Itm ;
+            to (Constraint_Value(Current_Object, From_Itm))
+    end_procedure
+
+    // Load_Selection_Values loads the constaint values from the report object
+    // into the Selection_Values items. It requires that 1) the number of
+    // constraint values is GE the number of selection values, 2) the
+    // constraint values used for selection appear first in the constraint
+    // value array and 3) the items are in the same order.
+    // If this is not the case, you can override this procedure in your query
+    // view object and do whatever you need to do.
+    procedure Load_Selection_Values
+        local integer Idx Count
+
+        if (Selection_Values_State(Current_Object)) begin
+            get Selection_Value_Count to Count
+            move 0 to Idx
+
+            while Idx LT Count
+                send Load_Selection_Value Idx Idx
+                increment Idx
+            end
+        end
+    end_procedure
+
+    procedure Load_Selection_Device
+        if (Output_Selection_State(Current_Object)) ;
+            set Selection_Device to (Report_Device(Current_Object))
+    end_procedure
+
+    procedure Load_Selection_Ordering
+        if (Ordering_Selection_State(Current_Object)) ;
+            set Selection_Ordering to (Report_Ordering(Current_Object))
+    end_procedure
+
+    procedure Load_Selection_Find_Down_State
+        if (Find_Down_Selection_State(Current_Object)) ;
+            set Selection_Find_Down_State to (Report_Find_Down_State(Current_Object))
+    end_procedure
+
+    procedure Initialize_Selections
+        send Load_Selection_Values
+//        send Load_Selection_Ordering
+//        send Load_Selection_Find_Down_State
+        send Load_Selection_Device
+    end_procedure
+
+    procedure Activating returns integer
+        local integer Ret_Val
+
+        forward get MSG_Activating to Ret_Val
+        if Ret_Val ;
+            procedure_return Ret_Val
+
+        send Initialize_Selections
+    end_procedure
+
+    procedure Load_Constraint_Value integer From_Itm integer To_Itm
+        set Constraint_Value To_Itm ;
+            to (Selection_Value(Current_Object, From_Itm))
+    end_procedure
+
+    // Load_Constraint_Values loads the items from the selection object
+    // into the report constraint values. It requires that 1) the number of
+    // constraint values is GE the number of selection values, 2) the
+    // constraint values used for selection appear first in the constraint
+    // value array and 3) the items are in the same order.
+    // If this is not the case, you can override this procedure in your query
+    // view object and do whatever you need to do.
+    procedure Load_Constraint_Values
+        local integer Idx Count
+
+        if (Selection_Values_State(Current_Object)) begin
+            get Selection_Value_Count to Count
+            move 0 to Idx
+
+            while Idx LT Count
+                send Load_Constraint_Value Idx Idx
+                increment Idx
+            end
+        end
+    end_procedure
+
+    procedure Load_Report_Device
+        if (Output_Selection_State(Current_Object)) ;
+            set Report_Device to (Selection_Device(Current_Object))
+    end_procedure
+
+    procedure Load_Report_Ordering
+        if (Ordering_Selection_State(Current_Object)) ;
+            set Report_Ordering to (Selection_Ordering(Current_Object))
+    end_procedure
+
+    procedure Load_Report_Find_Down_State
+        if (Find_Down_Selection_State(Current_Object)) ;
+            set Report_Find_Down_State to (Selection_Find_Down_State(Current_Object))
+    end_procedure
+
+    procedure Initialize_Report
+        send Load_Constraint_Values
+//        send Load_Report_Ordering
+//        send Load_Report_Find_Down_State
+        send Load_Report_Device
+    end_procedure
+
+    procedure Run_Report
+        send Initialize_Report
+        Forward Send Run_Report
+    end_procedure
+
+end_class

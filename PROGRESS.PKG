@@ -1,0 +1,161 @@
+//*************************************************************************
+//*
+//*  Copyright (c) 1996 Data Access Corporation, Miami Florida,
+//*  All rights reserved.
+//*  DataFlex is a registered trademark of Data Access Corporation.
+//*
+//*************************************************************************
+//*
+//*  Module Name: Progress.pkg
+//*
+//*
+//*  Creators: A. Scott Pond and John Kramel
+//*
+//*
+//*  Purpose: To create an easy-to-use Progress bar package using OOP
+//*           programing style.
+//*
+//*           A progress bar is used to display a mini graph as percent done.
+//*
+//*
+//*  First applied use dfimport in 3.1b
+//*
+//*  
+//*  Revisions:
+//*  Date       Author          Description
+//*
+//*
+//*
+//*
+//*************************************************************************
+
+use Allentry
+use dfmisc
+
+Class ProgressBar is a Title
+    procedure Construct_Object integer img
+        forward send Construct_Object img
+
+        //  The img needs to contain at least two lines: the title on one
+        //  and the progress bar on the other.
+        property integer Object_width       PUBLIC (low(size(current_object)))
+        property string  BarFillChr         PUBLIC ">"
+        Send Locate_in_Center_of_Screen
+    end_procedure
+
+    Function PercentDone integer Parm1 returns integer
+        Local Integer RetVal Fillpoint Tempcount Wide
+        Local string Thebar FillChr HoldChr BottomStatus Parm1str
+
+        get BarFillCHR to FillChr
+        If FillChr eq "." Move "X" to HoldChr // required for Overstike use
+        Else move "." to HoldChr              // and Replaces
+        move parm1 to parm1str
+        get Object_width to wide
+        calc ((parm1/100.0)*(wide -2.0)) to fillpoint
+        move "" to thebar
+        for tempcount from 1 to (wide -2)
+            if tempcount le fillpoint append thebar FillChr
+            else append thebar HoldChr
+        loop
+        move "" to bottomstatus
+        append bottomstatus (trim(parm1str)) "%"
+        move (Overstrike(bottomstatus,thebar, (wide -1 - (length(bottomstatus))) /2 )) to thebar
+        move (Replaces(HoldChr,thebar, " ")) to thebar
+        set value item 1 to thebar 
+        Function_Return RetVal
+    End_Function
+
+    Function Update_Title string topline returns integer
+        local integer retval
+        Set Value Item 0 to topline
+        function_return RetVal       
+    End_Function
+
+    Function ProgressOn string topline returns integer
+        local integer retval
+        local integer stub
+
+        Set Center_State item 0 to true
+        Set Value Item 0 to topline
+        send page_object true
+        move (PercentDone(current_object,0)) to RetVal
+        function_return RetVal
+    End_function
+    
+    Function ProgressOff integer nap returns integer
+        // max value for nap is 60 seconds
+        if ((nap gt 0) and (nap LE 60))  sleep nap
+        send page_object dffalse
+    End_function
+
+End_class
+
+// Example program using the class and its 4 functions.
+// Min image width is 4; Max is width of screen.
+// In your program, you would Use the progress.pkg,
+// create an object of the Progressbar class,
+// invoke the proper functions, passing them the values.
+// Just copy the lines below to a file (eg. Prog.Src), remove the
+// comments from the right 2 columns and compile to test:
+ 
+//Use Progress.pkg
+//
+///progress
+//ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+//³_______________________³
+//ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+//³_______________________³
+//ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+///*
+//
+//Object Progress is a Progressbar Progress
+//    Set Location to 5 10 // The default is the center of the screen.
+//                         // This will override that location.
+//End_object
+//
+///myform
+//ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+//³       Enter # of iterations _____.         ³
+//³                                            ³
+//³                                            ³
+//³                                            ³
+//³                                            ³
+//³                                            ³
+//³                                            ³
+//³                                            ³
+//³                                            ³
+//³                                            ³
+//ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+///*
+//Object Myform is a Form Myform ring
+//
+//  On_key Kcancel Send Cancel
+//
+//  Procedure Goloop
+//    local integer Timz Stub Counter
+//    Get Value item 0 to Timz
+//   
+//    Move (ProgressOn(Progress(current_object),("Iterated      0 Times") )) ;
+//            to stub // "stub" is a convenience for using the functions.
+//    For Counter from 1 to Timz
+//        If (mod(Counter,100)) eq 0 Begin // Using a mod function, we can
+//                                         // update the bar every n iterations
+//            Move (PercentDone(Progress(current_object), ;
+//                (Counter / Timz * 100.0000) )) to stub 
+//                // the .0000 above is for the necessary precision.
+//            Move (Update_Title(Progress(current_object), ;
+//                ("Iterated "+(pad(string(Counter),6))+" Times"))) to stub
+//        End
+//    Loop
+//    Move (ProgressOff(Progress(current_object), 2)) to stub
+//  End_Procedure
+//
+//  Item_list
+//    On_item "" Send Goloop
+//  End_item_list
+//
+//End_object
+//
+//Start_UI Myform
+//Abort

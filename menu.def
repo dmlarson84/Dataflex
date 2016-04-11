@@ -1,0 +1,58 @@
+        FILE DEFINITION LISTING FOR FILE #49
+*************************************************** 
+        FILE ROOT NAME     = MENU
+        USER DISPLAY NAME  = DF Menu
+        DATAFLEX FILE NAME = MENU
+*************************************************** 
+        RECORD LENGTH = 1408  (USED = 1235)
+        MAX NUMBER OF RECORDS = 100  (USED = 20)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1      30   ASCII          0     0     0     HEADER1
+   2      31      30   ASCII          0     0     0     HEADER2
+   3      61       2   NUMERIC   0    0     0     0     DEFAULT
+   4      63      30   ASCII          0     0     0     PR1
+   5      93      30   ASCII          0     0     0     AC1
+   6     123       1   NUMERIC   0    0     0     0     PW1
+   7     124      30   ASCII          0     0     0     PR2
+   8     154      30   ASCII          0     0     0     AC2
+   9     184       1   NUMERIC   0    0     0     0     PW2
+  10     185      30   ASCII          0     0     0     PR3
+  11     215      30   ASCII          0     0     0     AC3
+  12     245       1   NUMERIC   0    0     0     0     PW3
+  13     246      30   ASCII          0     0     0     PR4
+  14     276      30   ASCII          0     0     0     AC4
+  15     306       1   NUMERIC   0    0     0     0     PW4
+  16     307      30   ASCII          0     0     0     PR5
+  17     337      30   ASCII          0     0     0     AC5
+  18     367       1   NUMERIC   0    0     0     0     PW5
+  19     368      30   ASCII          0     0     0     PR6
+  20     398      30   ASCII          0     0     0     AC6
+  21     428       1   NUMERIC   0    0     0     0     PW6
+  22     429      30   ASCII          0     0     0     PR7
+  23     459      30   ASCII          0     0     0     AC7
+  24     489       1   NUMERIC   0    0     0     0     PW7
+  25     490      30   ASCII          0     0     0     PR8
+  26     520      30   ASCII          0     0     0     AC8
+  27     550       1   NUMERIC   0    0     0     0     PW8
+  28     551      30   ASCII          0     0     0     PR9
+  29     581      30   ASCII          0     0     0     AC9
+  30     611       1   NUMERIC   0    0     0     0     PW9
+  31     612      52   ASCII          0     0     0     QA1
+  32     664      52   ASCII          0     0     0     QB1
+  33     716      52   ASCII          0     0     0     QA2
+  34     768      52   ASCII          0     0     0     QB2
+  35     820      52   ASCII          0     0     0     QA3
+  36     872      52   ASCII          0     0     0     QB3
+  37     924      52   ASCII          0     0     0     QA4
+  38     976      52   ASCII          0     0     0     QB4
+  39    1028      52   ASCII          0     0     0     QA5
+  40    1080      52   ASCII          0     0     0     QB5
+  41    1132      52   ASCII          0     0     0     QA6
+  42    1184      52   ASCII          0     0     0     QB6
+ 
+

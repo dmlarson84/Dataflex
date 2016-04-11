@@ -1,0 +1,404 @@
+// QRYSEL.PKG
+// 04-15-1995
+// Query_Selection_Client and Query_Slection_Form classes; used by
+// DFQuery-generated programs.
+// Data Access Corporation
+//
+// 06/08/1995 JJT - Converted to Query_View
+// 06-09-1995 LS  - Split into QRYVIEW and QRYSEL pkgs.
+
+use clwindow
+use stdlogin
+use errornum
+
+// These must be same as item numbers in the Output_Selection object (below)
+enum_list
+    define OUTPUT_TYPE_PRINTER
+    define OUTPUT_TYPE_SCREEN
+    define OUTPUT_TYPE_OTHER
+end_enum_list
+
+// The classes defined in this pkg are meant to be used to define the user
+// interface portion for the selection criteria used within a Query_View
+// object. A Query_View requires a query_selection_client to be nested
+// inside of it; if not, an error will occur during End_Construct_Object.
+// The  FIRST  Query_Selection_Client is used by default, the others are
+// ignored. You can manually set the Selection_Object_ID to override this
+// behavior.
+//
+// When the selections have all been made, the selection client
+// delegates the Run_Report msg (to the Query_View), which merely sends it
+// over to the report object.
+
+/Query_Selection_Output
+Print to:  
+___________
+___________
+___________
+/Query_Selection_Other
+[________________________________________]
+/Query_Selection_Button
+   _________________     ______________     ____________     _________    
+/*
+
+class Query_Selection_Client is a Client_Window
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+        
+        send Locate_In_Center_Of_Screen
+
+        property integer Child_Row_Offset           PUBLIC 4
+        property integer Child_Col_Offset           PUBLIC 2
+        property integer Output_Selection_State     PUBLIC TRUE
+        property integer Ordering_Selection_State   PUBLIC FALSE
+        property integer Find_Down_Selection_State  PUBLIC FALSE
+        property integer Button_State               PUBLIC TRUE
+        property integer Selection_Value_Count      PUBLIC 0
+
+        object Selection_Form_Object_ID_List is an Array
+        end_object
+
+        object Selection_Form_Item_Count_List is an Array
+        end_object
+
+        object Selection_Form_Item_Object_Map is an Array
+        end_object
+
+        object Selection_Form_Item_Item_Map is an Array
+        end_object
+
+        on_key KSAVE_RECORD send Run_Report
+        on_key KEY_CTRL+KEY_L send Login
+        on_key KCANCEL send Close_Client
+    end_procedure
+
+    procedure Exit_Client
+        send Close_Client
+    end_procedure
+
+    procedure Selection_Form_Callback integer Obj
+        local integer Ary1 Ary2 Sz Idx Count
+
+        move (Selection_Form_Object_ID_List(Current_Object)) to Ary1
+        set Array_Value of Ary1 item (Item_Count(Ary1)) to Obj
+
+        move (Selection_Form_Item_Count_List(Current_Object)) to Ary1
+        get Display_Size of Obj to Sz
+        set Array_Value of Ary1 item (Item_Count(Ary1)) to Sz
+        set Selection_Value_Count ;
+            to (Selection_Value_Count(Current_Object) + Sz)
+
+        move (Selection_Form_Item_Object_Map(Current_Object)) to Ary1
+        get Item_Count of Ary1 to Count
+        move (Selection_Form_Item_Item_Map(Current_Object)) to Ary2
+        move 0 to Idx
+
+        while Idx LT Sz
+            set Array_Value of Ary1 item Count to Obj
+            set Array_Value of Ary2 item Count to Idx
+            increment Count
+            increment Idx
+        end
+    end_procedure
+
+    procedure End_Construct_Object
+        local integer Cur_Obj
+
+        // find out if this selection client has a selection form
+        move Current_Object to Cur_Obj
+        send Delete_Data to (Selection_Form_Object_ID_List(Current_Object))
+        set Selection_Value_Count to 0
+        broadcast send Calling_All_Selection_Forms Cur_Obj
+
+        if (Output_Selection_State(Current_Object)) begin
+            object Output_Selection is a Radio Query_Selection_Output
+                item_List
+                    on_item "Printer" send Next
+                    on_item "Screen" send Next
+                    on_item "Other:" send Next
+                end_item_list
+
+                set Current_Item to OUTPUT_TYPE_PRINTER
+            end_object
+
+            object Other_Device is a Form Query_Selection_Other
+                set Exit_Msg to Reset_Type
+
+                item_list
+                    on_item "" Send Next
+                    Set Autoclear_State to TRUE
+                end_item_list
+            end_object
+        end
+
+        if (Button_State(Current_Object)) begin
+            object Button is a Button Query_Selection_Button
+                item_list
+                    on_item "<F2=Begin Report>" send Run_Report
+                    on_item "<Ctrl+L=Login>" send Login
+                    on_item "<Esc=Cancel>" Send Request_Cancel
+                    on_item "<F1=Help>" Send Help
+                end_item_list
+            end_object
+        end
+
+        forward send End_Construct_Object
+    end_procedure
+
+    procedure Next_Selection_Form
+        local integer Obj
+    
+        move (Selection_Form_Object_ID_List(Current_Object)) to Obj
+        
+        if (Focus(Desktop)) NE (Integer_Value(Obj, Item_Count(Obj) - 1)) ;
+            send Switch to (focus(Desktop))
+    end_procedure
+
+    procedure Previous_Selection_Form
+        if (Focus(Desktop)) NE ;
+                (Integer_Value(Selection_Form_Object_ID_List(Current_Object), 0)) ;
+            send Switch_Back to (Focus(Desktop))
+    end_procedure
+
+    function Selection_Values_State returns integer
+        function_return ;
+            (Item_Count(Selection_Form_Object_ID_List(Current_Object)) > 0)
+    end_function
+
+    // Augment Add_Focus to (re)set locations in case images
+    // are shared in one program.
+    procedure Add_Focus integer Obj returns integer
+        local integer Ret_Val Row Col Sel
+
+        get Child_Row_Offset to Row
+        get Child_Col_Offset to Col
+
+        if (Selection_Values_State(Current_Object)) begin
+            broadcast set Selection_Form_Location to Row Col Relative
+
+            // all selection form images MUST be the same height.
+            get Integer_Value ;
+                of (Selection_Form_Object_ID_List(Current_Object)) ;
+                item 0 to Sel
+            move (Row + hi(Size(Sel)) + 1) to Row
+        end
+
+        if (Output_Selection_State(Current_Object)) begin
+            set Location of (Output_Selection(Current_Object)) to Row Col Relative
+
+            // the following hard coded constants are based on the images above.
+            set Location of (Other_Device(Current_Object)) to (Row + 3) (Col + 12) Relative
+            move (Row + 5) to Row
+        end
+
+        if (Button_State(Current_Object)) ;
+            set Location of (Button(Current_Object)) to Row Col Relative
+
+        forward get MSG_Add_Focus Obj to Ret_Val
+
+        procedure_return Ret_Val
+    end_procedure
+
+    procedure Activate returns integer
+        local integer Ret_Val
+
+        forward get MSG_Activate to Ret_Val
+
+        if Ret_Val ;
+            procedure_return Ret_Val
+
+        if (Selection_Values_State(Current_Object)) begin
+            get Integer_Value of (Selection_Form_Object_ID_List(Current_Object)) ;
+                item 0 to Ret_Val
+            send Activate to Ret_Val
+        end
+    end_procedure
+
+    procedure Reset_Type
+        local integer Obj
+
+        move (Other_Device(Current_Object)) to Obj
+
+        if (Item_Changed_State(Obj, 0)) ;
+            set Current_Item of (Output_Selection(Current_Object)) ;
+                to OUTPUT_TYPE_OTHER
+
+        set Item_Changed_State of Obj to FALSE
+    end_procedure
+
+    procedure set Output_Device string Val
+        local string UVal
+
+        uppercase Val to UVal
+
+        if ((UVal = "LST") or (UVal = "LST:")) ;
+            set Current_Item of (Output_Selection(Current_Object)) ;
+                to OUTPUT_TYPE_PRINTER
+        else if ((UVal = "CON") or (UVal = "CON:")) ;
+            set Current_Item of (Output_Selection(Current_Object)) ;
+                to OUTPUT_TYPE_SCREEN
+        else begin
+            set Current_Item of (Output_Selection(Current_Object)) ;
+                to OUTPUT_TYPE_OTHER
+            set Value of (Other_Device(Current_Object)) to Val
+        end
+    end_procedure
+
+    function Output_Device returns string
+        local integer OType
+
+        get Current_Item of (Output_Selection(Current_Object)) to OType
+
+        if OType EQ OUTPUT_TYPE_PRINTER ;
+            function_return "LST:"
+        else if OType EQ OUTPUT_TYPE_SCREEN ;
+            function_return "CON:"
+        else ;
+            function_return (Value(Other_Device(Current_Object), 0))
+    end_function
+
+    procedure set Output_Type integer OType
+        set Current_Item of (Output_Selection(Current_Object)) to OType
+    end_procedure
+
+    function Output_Type returns integer
+        function_return (Current_Item(Other_Device(Current_Object)))
+    end_function
+
+    // defaults for ordering and find_down_state;
+    // they say "don't change default report setting"
+    procedure set Ordering integer Idx
+    end_procedure
+
+    function Ordering returns integer
+        function_return -2 // use report's default
+    end_function
+
+    procedure set Find_Down_State integer Flag
+    end_procedure
+
+    function Find_Down_State returns integer
+        function_return -1 // use report's default
+    end_function
+
+    procedure set Selection_Value integer Itm string Val
+        local integer Obj Idx
+
+        get Integer_Value of (Selection_Form_Item_Object_Map(Current_Object)) ;
+            item Itm to Obj
+        get Integer_Value of (Selection_Form_Item_Item_Map(Current_Object)) ;
+            item Itm to Idx
+        set Value of Obj item Idx to Val
+    end_procedure
+
+    function Selection_Value integer Itm returns string
+        local integer Obj Idx
+
+        get Integer_Value of (Selection_Form_Item_Object_Map(Current_Object)) ;
+            item Itm to Obj
+        get Integer_Value of (Selection_Form_Item_Item_Map(Current_Object)) ;
+            item Itm to Idx
+        function_return (Value(Obj, Idx))
+    end_function
+
+    procedure set Constraint_Value integer Itm string Val
+        delegate set Constraint_Value Itm to Val
+    end_procedure
+
+    function Constraint_Value integer Itm returns string
+        local string Val
+        delegate get Constraint_Value Itm to Val
+        function_return Val
+    end_function
+
+    procedure Run_Report
+        if (Output_Device(Current_Object)) GT "" ;
+            delegate send Run_Report
+        else begin
+            error DFERR_ENTRY_REQUIRED
+            send Activate to (Other_Device(Current_Object))
+        end
+    end_procedure
+
+    procedure Calling_All_Selection_Clients integer Obj
+        local integer Cur_Obj
+        move Current_Object to Cur_Obj
+        send Selection_Client_Callback to Obj Cur_Obj
+    end_procedure
+end_class
+
+
+class Query_Selection_Form is a Form
+    procedure Construct_Object integer Img
+        forward send Construct_Object Img
+
+        property integer Autoclr PUBLIC TRUE
+        property integer Client_Object_ID PUBLIC 0
+
+        on_key KSCROLL_FORWARD send Next_Selection_Form
+        on_key KSCROLL_BACK send Previous_Selection_Form
+    end_procedure
+
+    procedure End_Construct_Object
+        set Autoclear_All_State to (Autoclr(Current_Object))
+        forward send End_Construct_Object
+    end_procedure
+
+//    procedure Entering
+//        local integer Ret_Val Obj Cur_Obj
+//
+//        forward get MSG_Entering to Ret_Val
+//        if Ret_Val ;
+//            procedure_return Ret_Val
+//
+//        get Client_Object_ID to Obj
+//        if Obj NE 0 begin
+//            move Current_Object to Cur_Obj
+//            send Entering_Selection_Form to Obj Cur_Obj
+//        end
+//    end_procedure
+
+    procedure Next_Selection_Form
+        local integer Obj
+
+        get Client_Object_ID to Obj
+        if Obj NE 0 ;
+            send Next_Selection_Form to Obj
+    end_procedure
+
+    procedure Previous_Selection_Form
+        local integer Obj
+
+        get Client_Object_ID to Obj
+        if Obj NE 0 ;
+            send Previous_Selection_Form to Obj
+    end_procedure
+
+    procedure set Selection_Form_Location integer Row integer Col integer Mode
+        set Location to Row Col Mode
+    end_procedure
+
+    procedure set Autoclear_All_State integer Flag
+        local integer Itm Count
+        get Item_Count to Count
+        move 0 to Itm
+
+        while Itm LT Count
+            set Autoclear_State item Itm to Flag
+            increment Itm
+        end
+
+        set Autoclr to Flag
+    end_procedure
+
+    function Autoclear_All_State returns integer
+        function_return (Autoclr(Current_Object))
+    end_function
+
+    procedure Calling_All_Selection_Forms integer Obj
+        local integer Cur_Obj
+        move Current_Object to Cur_Obj
+        send Selection_Form_Callback to Obj Cur_Obj
+        set Client_Object_ID to Obj
+    end_procedure
+end_class

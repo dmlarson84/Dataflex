@@ -1,0 +1,399 @@
+//************************************************************************
+//
+// Confidential Trade Secret.
+// Copyright 1987-1992 Data Access Corporation, Miami FL, USA
+// All Rights reserved
+// DataFlex is a registered trademark of Data Access Corporation.
+//
+//     $Source: k:\RCS\.\pkg\list.pkg,v $
+//     $Revision: 1 $
+//     $State: Exp $
+//     $Author: james $
+//     $Locker:  $
+//
+//     $Log: list.pkg,v $
+//Revision 2.3  1994/01/10  19:35:29  james
+//Removed code associated with verify_data_loss_msg function. It needs
+//to a stub ( according to Lee ).
+//
+//Revision 2.2  1993/11/09  17:19:46  lee
+//added verify_data_loss and verify_data_loss_msg functions as stubs
+//so that request_cancel can call these functions in selection lists
+//and pick lists w/o errors. (these classes don;'t suypport the verify
+//protocol so these messages must be stubbed out.).
+//
+//Revision 2.1  93/08/25  17:49:11  17:49:11  james (James Ricci)
+//Adding new main branch
+//
+//Revision 1.2  1993/04/28  00:20:34  james
+//Initializing 3.04 source code.
+//
+//Revision 1.1  1992/09/08  14:43:07  james
+//Initial revision
+//
+//Revision 1.9  92/06/06  01:57:36  lee
+//added register_procedure move_value_out
+//
+//Revision 1.8  92/05/29  14:06:13  lee
+//removed end_construct_* messages from mixins; now, classes that use the mixin
+//send the message that used to be sent by the end_construct_* message (for
+//efficiency).
+//
+//Revision 1.7  92/05/14  15:53:34  unknown
+//Updated Copyright slug - SWM.
+//
+//Revision 1.6  92/04/01  00:33:32  lee
+//removed navstart and liststart (unused), renamed bind_main_file and bind_index
+//in datalist to bind_list_main_file and bind_list_index to avoid conflict with
+//commands used by data_set, moved bind_static from sellist to datalist as it
+//only sets properties defined in datalist (not sellist).
+//
+//Revision 1.5  92/03/29  18:45:01  lee
+//added MSG_END_CONSTRUCT_OBJECT, moved ENDMAC macro stuff into END_CONSTRUCT-
+//OBJECT procedures (in .pkgs). moved Flag_ITems to list.pkg after generalizing
+//it based on PROTOTYPE_OBJECT instead of Whether or not it is a table-oriented
+//object. Moved define_access_keys mechanism completely into actionbr.pkg.
+//fixed two typos: import_class_protocol used !# instead of !3, and register-
+//procedure used !1 instead of !2.
+//
+//Revision 1.4  92/03/09  19:03:16  james
+//Added #CHKSUB directive to insure source
+//only compiled with correct revision of 
+//compiler.
+//
+//Revision 1.3  92/02/12  17:46:53  steve-l
+//Bind_Target corrected - was skipping arg !2 on recursion
+//
+//Revision 1.2  91/11/08  09:23:28  steve-l
+//it
+//
+//************************************************************************/
+
+//************************************************************************
+// list_mx0 extensions
+// Version: 1.0
+//  12-14-1992 : Created
+//
+// Author: John J. Tuohy
+//
+//
+// This module defines the properties and operations required to support
+// modified list classes pick_list0 and selection_list0. These support
+// Move_Value_Out_State property 
+//
+//************************************************************************/
+// 12/22/94 - JJT Merge changes
+//            Moved Move_value_out_state from list0_mx.
+//            Use OK from list0_mx with minor change of init_selected_item.
+//            Added public message init_selected_item. 
+//            removed Activating, popup and deactivating. They are replaced
+//            by an augmentation to set popup_state and Set
+//            Popup_side_effects (this makes the changes augmentable).
+//            Removed Insert_item, Add_item, Toggle_select and Flag_items
+//            (classes sellist and picklist are now responsible for making
+//            them work).
+// 03/10/95   (JJT) Made Move_value_out_state also set auto_fill_State.
+//            When used in move value out popups we want it false.
+//            This is done directly when the popup is set on the list
+//            (bind_SelList_popup - which we can now remove). We lose this
+//            when in a client. The logic for this can and should be
+//            improved.
+// 09/04/95 JJT - Code Clean up (removed dead commented code)
+//************************************************************************/
+
+//************************************************************************
+//     File Name: List.Pkg
+// Creation Date: January 1, 1991
+// Modified Date: Feb 12, 1992
+//     Author(s): Steven A. Lowe
+//
+// This module defines the properties and operations required to support
+// list-selection, collected in the abstract class List_Mixin.
+//
+// This file should be USEd prior to and IMPORTed within the scope of the
+// class definition by any user-interface (esp. data-entry) class which
+// must support the data-entry object standards.
+//
+// This file is used by PICKLIST.PKG and SELLIST.PKG.
+//************************************************************************/
+
+#CHKSUB 1 1 // Verify the UI subsystem.
+
+use ui
+
+register_procedure move_value_out
+Register_Function Move_value_Out_State Returns Integer
+
+class list_mixin is a message
+
+  //
+  // Description
+  //
+  //   This procedure defines the accelerator keys and properties required
+  //   to support the standard list-selection options.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This procedure should only be invoked from within the Construct_Object
+  //   procedure of a class.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Enumeration_Counter is used to scan selected items.
+  //  
+  //   Export_Item_State determines if the value of the selected item in a
+  //   single-select or auto-select list should be placed into the current
+  //   item of the object which 'invoked' the list (i.e. the object which
+  //   had the focus when this object was activated - see Invoking_Object_ID).
+  //
+  //   Invoking_Object_ID is the object id of the object which had the focus
+  //   when this object was activated.
+  //
+  //   Original_Selection is the item# (if batch) or record number (if virtual)
+  //   of the item which was selected when the list was activated.
+  //
+  //   Radio_State determines if the items in this list are radio-buttons.
+  //
+  //   Target_Field identifies the field (in the Target_File), if any, which
+  //   should receive the value of the currently selected item during a save
+  //   operation (i.e. when the Entry_Update message is received during a
+  //   save operation).  This only applies to single-select or auto-select
+  //   lists, not multi-select or no-select lists.
+  //
+  //   Target_File identifies the file, if any, which has a field that should
+  //   receive the value of the currently selected item during a save operation
+  //   (see Target_Field).
+  //
+  procedure define_list
+    set select_mode to SINGLE_SELECT
+    set search_mode to INCREMENTAL
+    on_key kCancel SEND CANCEL            PRIVATE
+    on_key kEnter  SEND OK                PRIVATE
+    on_key kSpace  SEND Toggle_Select     PRIVATE
+    Property integer Enumeration_Counter  PUBLIC  0
+    Property integer Export_Item_State    PUBLIC  0
+    Property integer Invoking_Object_ID   PUBLIC  0
+    Property integer Original_Selection   PUBLIC  0
+    Property integer Radio_State          PUBLIC  0
+    Property integer Target_Field         PUBLIC  0
+    Property integer Target_File          PUBLIC  0
+    Property integer Private.Move_Value_Out_State PUBLIC  False
+  end_procedure
+
+  //  Augment Popup_state to set other (side effect) properties
+  //
+  //  (JJT) This makes more sense than changing deactivating and
+  //        popup - I still don't like it!!!
+  procedure SET Popup_state Integer Fg
+    Forward Set Popup_state to Fg
+    Set Popup_Side_effects to Fg
+  End_Procedure
+
+  // Setting popup_state in lists (sel-list, pick-lists) etc must set other
+  // prorperties as well. We assume that a list popup is modal, scoped and
+  // will export it selection. Note that this does not get called when a
+  // popup client is used to contain a list. Usually in that case the
+  // block_mouse_state and scope_state should be set at the client while
+  // move_value_out_state still must be set in this object.
+  //
+  procedure SET Popup_Side_effects Integer Fg
+    // set any other properties you want based on this property
+    set Block_Mouse_State to Fg
+    set Scope_State to Fg
+    Set Move_Value_Out_State to Fg
+  end_procedure
+
+
+  //
+  // Description
+  //
+  //   This procedure accepts the selected item(s) in the list, and surrenders
+  //   the focus.
+  //
+  //   The incremental-search index is reset.
+  //
+  //   The value of the current item may be exported to the current item of the
+  //   invoking object, and this object deactivated, if this object is
+  //   move_value_out_state true, or the focus may be given to the next object
+  //   in the rotation order.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object (or one or its ancestor classes) must understand the
+  //   Move_Value_Out message as a method of exporting a value, the
+  //   Request_Cancel message as a method of deactivating this object, and
+  //   the Next message as a method of rotating to the next focusable object.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   Sent by kENTER.
+  //
+  procedure OK returns integer
+    local integer selMode
+    set search_mode to (search_mode(current_object))  //reset incr srch index
+    if (Move_Value_Out_state(current_object)) begin
+      get select_mode to selMode
+      //**jjt** set select_state item CURRENT to true
+      //if ((SelMode = SINGLE_SELECT OR SelMode = AUTO_SELECT) AND ;
+      //   Select_Count(current_object) > 0) send move_value_out
+      if SelMode ne MULTI_SELECT ;
+           send move_value_out
+      else send Init_selected_item //multi-select or none selected
+      send request_cancel
+    end
+    else send NEXT
+  end_procedure
+
+  // **jjt**
+  // public message to init the selected item counter. Enumeration_Counter
+  // is too cryptic
+  Procedure Init_Selected_Item
+    Set enumeration_counter to 0
+  End_Procedure
+
+
+  //
+  // Description
+  //
+  //   This function returns the message id to be used to verify an operation
+  //   which may cause the user to lose changes to the data in items. It is
+  //   overridden here to return 0 because (popup) lists do not support the
+  //   verification protocol.
+  //
+  // Assumptions/Preconditions
+  //
+  //   This object must understand Component_State.
+  //
+  // Exceptions
+  //
+  //   If this object's Verify_Data_Loss_Msg is 0, the value of this object's
+  //   parent's Verify_Data_Loss_Msg is returned, if any.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  function Verify_Data_Loss_Msg returns integer
+    function_return 0
+  end_function
+
+  //
+  // Description
+  //
+  //   This is a stub because for the proper operation of request_cancel.
+  //
+  // Assumptions/Preconditions
+  //
+  //   None.
+  //
+  // Exceptions
+  //
+  //   None.
+  //
+  // Notes
+  //
+  //   None.
+  //
+  function Verify_Data_Loss returns integer
+    function_return 0
+  end_function
+
+  // **JJT** Modified to also set auto_fill_State
+  //
+  //  I don't like this, but it is the best I can come up with. Popup
+  //  lists that are designed to selection items need to have auto-fill-
+  //  state set to true. This can not be tied to popup. It is most closely
+  //  tied to this property. If for some reason you don't want these set 
+  //  together you will need to set auto_fill_state AFTER you set 
+  //  move_value_out_state.
+  //
+  Procedure Set Move_value_out_State integer st
+     Set Private.Move_Value_out_State to St
+     Set Auto_Fill_State to (not(st))
+  End_Procedure // Set Move_value_out_State
+
+  // See above
+  Function Move_Value_Out_State Returns integer
+     function_return (Private.Move_Value_out_State(Current_Object))
+  End_Function // Move_Value_Out_State
+
+
+end_class
+
+
+//
+// Description
+//
+//   This macro processes the argument to the FOR option of the listStart
+//   macro, if any.
+//
+//   Target_File and Target_Field are set according to the argument.
+//
+// Assumptions/Preconditions
+//
+//   The argument to the FOR option (if there is a FOR option in the
+//   command line arguments) must be a file.field identifier.
+//
+// Exceptions
+//
+//   None.
+//
+// Notes
+//
+//   None.
+//
+#COMMAND Bind_Target
+  #IF (!0>1)
+    #IFSAME !1 FOR
+      #PUSH !u
+      #SET U$ !2  //get file#
+      set Target_File to |CI!u
+      #SET U$ %!2 //get field#
+      set Target_Field to |CI!u
+      #POP U$
+    #ELSE
+      Bind_Target !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+
+
+//
+// Description
+//
+//   This macro processes the RADIO option of the listStart macro.
+//
+//   Radio_State is set to TRUE, and Select_Mode is set to auto-select
+//   if the RADIO option appears in the command line arguments.
+//
+// Assumptions/Preconditions
+//
+//   None.
+//
+// Exceptions
+//
+//   None.
+//
+// Notes
+//
+//   None.
+//
+#COMMAND Bind_Radio
+  #IF (!0>0)
+    #IFSAME !1 RADIO
+      set Radio_State to true
+      set select_mode to AUTO_SELECT
+    #ELSE
+      Bind_Radio !2 !3 !4 !5 !6 !7 !8 !9
+    #ENDIF
+  #ENDIF
+#ENDCOMMAND
+

@@ -1,0 +1,44 @@
+/HEADER
+PROSECUTOR COORDINATOR'S OFFICE
+                
+ 
+CODE DESC                        
+ 
+/BODY RESIDENT
+__   _________________________   
+/TOTAL
+RECORDS PRINTED = ______.
+/*
+
+//----------------- Cannot Run Program From Command Line (DOS)
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+
+OPEN JRLIST INDEX.1
+OUTFILE
+REPORT JRLIST BY INDEX.1
+SECTION HEADER
+        OUTPUT HEADER
+SECTION BODY
+        PRINT JRLIST.CODE
+        PRINT JRLIST.DESC
+        OUTPUT BODY
+SECTION TOTAL
+        PRINT RECCOUNT TO TOTAL.1
+        OUTPUT TOTAL
+REPORTEND
+FORMFEED
+ABORT
+

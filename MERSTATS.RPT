@@ -1,0 +1,549 @@
+/DEBUG1                                  merstats.dfr
+ษออออออออออออออออออออออป                              ษอออออออออออออออออออออออป
+บ     MERSTATS.DFR     บ                              บ V 1.00 Dated:09/17/88 บ
+ฬออออออออออออออออออออออสออออออออออออออออออออออออออออออสอออออออออออออออออออออออน
+บ Purpose:                                                                    บ
+บ                                                                             บ
+บ Files Used:                                                                 บ
+บ                                                                             บ
+บ                                                                             บ
+ฬอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออน
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/HEADER RESIDENT
+                                                                      Page: ___
+Print Date: __/__/____      MERCHANT STATUS REPORT            Print Time: __:__
+===============================================================================
+/SUBHEADER1 RESIDENT
+MERCHANT...{ __0____. -  ______________________________
+                         ______________________________
+                         _________________________  __   __________
+
+LETTER   =  Collection Letter sent to Defendant 
+WARRANT  =  Warrant Issued for Defendant`s Arrest (Turned over to Sheriff)
+PAID     =  Defendant Has Paid 
+INACTIVE =  Restitution will not be forthcoming from this office 
+            (e.g. defendant died, sent to jail or declared bankruptcy.
+            Sometimes used if the restitution will be handled by 
+            the court.)
+===============================================================================
+Defendant                       Def Ck  Check Amt-Merchant Fee - Total-Def/PD
+  Letter    Warrant  Pros/Ck#   Number                                        
+-------------------------------------------------------------------------------
+/SUBHEADER2   RESIDENT
+MERCHANT...{ __0____. -  ______________________________
+===============================================================================
+                                        Check Amt-Merchant Fee - Total
+-------------------------------------------------------------------------------
+/SUBHEADER3   RESIDENT
+MERCHANT...{ __0____. -  ______________________________
+===============================================================================
+Defendant                       Def Ck
+  Letter     Warrant  Pros/Ck#/Date/EntDate    Check Amt-Merchant Fee - Total
+-------------------------------------------------------------------------------
+/BODY RESIDENT
+/DAT
+______________________________Z ______  _______.__  ___.__  ______.__ ________
+   _______  _______   _________ __/__/____  __/__/____       
+/NO_DAT
+______________________________ x ______ _______.__  ___.__  ______.__ ________
+/SUBTOTAL1 RESIDENT
+/SUB1
+    S U B - 1                           _______.__ ____.__  ______.__
+/SUB2
+-------------------------------------------------------------------------------
+Merchant Summary :    T O T A L S ...{ _______.__ _____.__  ______.__
+                                          ===============================
+  Total Amt Paid By Defendants To Prosecutor..................{ ______.__
+  Total Amt Which Warning Letters Issued (No Warrants)........{ ______.__
+  Total Amt Which Warrants Have Been Issued...................{ ______.__
+  Total Amt Pending Action (No Letters or Warrants)...........{ ______.__     
+                                                                ---------
+                                      Total Of Listings.......{ ______.__
+  Total Amt Which Have Been Set Inactive......................{ ______.__
+  Total Paid To Merchant By Prosecutor........................{ ______.__
+  Balance Due Merchant If All Checks Collected................{ ______.__
+===============================================================================
+/TOTAL RESIDENT
+/TOT1
+                                       _______.__ _____.__  ______.__
+/TOT2
+Report      T o t a l s                _______.__ _____.__  ______.__
+                        
+/FOOTER RESIDENT
+===============================================================================
+/FOOTER2  RESIDENT
+                              ********** Continued Next Page **********
+/FILLER
+
+
+
+
+/SEL1
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                             บ
+บ                            MERCHANT STATUS REPORT                           บ
+บ                           Record Selection Screen                           บ
+ฬอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออน
+บ                                                                             บ
+บ   Select records by MERCHANT NUMBER  greater than or equal to __________.   บ
+บ     ______________________________   ___________________________________    บ
+/SEL2
+บ   Select records by MERCHANT NUMBER  less than or equal to    __________.   บ
+บ     ______________________________   ___________________________________    บ
+ฬอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออน
+บ                             Press <F1> for Help                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+
+
+
+
+
+
+
+/FRM
+ษออออออออออออออออออออออป                              ษอออออออออออออออออออออออป
+บ REPORT STATUS SCREEN บ                              บ       MERSTATS.DFR    บ
+ฬออออออออออออออออออออออสออออออออออออออออออออออออออออออสอออออออออออออออออออออออน
+บ                                                                             บ
+บ                        This Report is being Printed.                        บ
+บ                                                                             บ
+บ                  There are _______.  records in this File.                  บ
+บ                  Currently reviewing record number _______.                 บ
+บ                  Number of records printed:        _______.                 บ
+บ                                                                             บ
+บ                        Press ANY KEY to Abort Report                        บ
+บ                                                                             บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ      _______________________  _______________________________________  _    บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/OUTSEL
+ษออออออออออออออออออออออป                              ษอออออออออออออออออออออออป
+บ OUTPUT SELECT SCREEN บ                              บ       MERSTATS.DFR    บ
+ฬออออออออออออออออออออออสออออออออออออออออออออออออออออออสอออออออออออออออออออออออน
+บ                                                                             บ
+บ     This report may be sent to the Printer or the Screen.                   บ
+บ     Please enter  <P>rinter, <S>creen  or  <A>bort  :  _                    บ
+บ                                                                             บ
+บ                                                                             บ
+บ                                                                             บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ                             Press <F1> for Help                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/HELP1 HELP
+ษออออออออออออออออออออออป                              ษอออออออออออออออออออออออป
+บ  REPORT HELP SCREEN  บ                              บ       MERSTATS.DFR    บ
+ฬออออออออออออออออออออออสออออออออออออออออออออออออออออออสอออออออออออออออออออออออน
+บ                                                                             บ
+บ     OUTPUT:  Specify by a single letter whether the output is to be sent    บ
+บ     to  the <P>rinter, or the <S>creen.                                     บ
+บ                                                                             บ
+บ     SELECTION:  Select the records to be printed by filling in the blanks.  บ
+บ                                                                             บ
+บ     HALTING THE REPORT:  The report may be temporarily halted by pressing   บ
+บ     any key.  The option of aborting the report or continuing will then     บ
+บ     be presented.                                                           บ
+วฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤถ
+บ                                                                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+/info
+
+     changes made on 10/11/1999 by Jeff March
+        added direct_output to LPT1: 
+
+Recompiled 01-19-2000 by Jeff March
+        Recognize new backspace command in calcdate.inc
+
+     CHANGES MADE ON 07/05/2000
+        ADDED F,B,C,P,M TO HANDLE IN ACTIVE CODE AS INACTIVE
+        HANDLE WHETHER THAT OFFENSE HAS BEEN SENT TO COURT
+		
+	 Change made on 5/20/2008 by Jeff March
+		Added 'D' to handle in active code for sent to district court
+          
+
+/*
+Use y2k.pkg
+Read_dfini "df23ini.cfg"
+//----------------- Cannot Run Program From Command Line (DOS)
+IF NEXT_MENU LE 0 ABORT
+INTEGER USER_NUMB USER$_ACCESS   //must be first integers defined in program
+STRING USER$ 30
+MOVE '' TO USER$
+MOVE 0 TO USER$_ACCESS
+//------------------------------------------------------------
+
+#include Calcdate.inc
+#include macs.frm
+
+// อออออออออออออออออออออออออออออออออออ required formatting
+format   frm.6 {capslock,check='YN'}
+// อออออออออออออออออออออออออออออออออออ required variables
+indicator     heads prt prt_dates  warrant active letter journal
+indicator     new_merchant same_merchant okdisb smallhead smallhead2
+integer       counter records tint1 offdex outdex next_merchant
+number        paid pcknum lett warr pend fwd inactive
+string        cmd1 1 pausekey 1 answ 1
+
+// อออออออออออออออออออออออออออออออออออ required variable initialization
+         gosub show_time
+         move 0 to counter
+         move 0 to records
+         move 0 to paid
+         move 0 to lett
+         move 0 to warr
+         move 0 to pend
+         move 0 to fwd
+         move 0 to inactive
+         gosub select_output
+
+OPEN SYSFILE
+OPEN MERCHANT
+OPEN DISBURSE INDEX.5
+OPEN OFFENSE INDEX.10                         
+         file_size OFFENSE to frm.1
+
+//-------------- Find Logged On User For Program Use
+OPEN USERX
+CLEAR USERX
+MOVE USER_NUMB TO USERX.RECNUM
+FIND EQ USERX BY RECNUM
+MOVE USERX.USER_NAME TO USER$
+MOVE USERX.ACCS_LEVL TO USER$_ACCESS
+//----------------------------------------------------
+PAGE SET SEL1 AT 0 0
+page set SEL2 at 8 0
+
+entergroup
+  PAGE SEL1 AT 0 0
+  AUTOPAGE SEL1
+  ENTRY MERCHANT.IDNO                {autofind}
+  entry merchant.name                {autofind}
+  entry merchant.addr                {skipfound}
+endgroup
+move SEL1.1 to OFFDEX
+MOVE SEL1.1 TO NEXT_MERCHANT
+  //ACCEPT SELECTION.1                 {REQUIRED}
+
+entergroup
+  PAGE SEL2 AT 8 0
+  autopage SEL2
+  ENTRY MERCHANT.IDNO                {autofind}
+  entry merchant.name                {autofind}
+  entry merchant.addr                {skipfound}
+endgroup
+MOVE SEL2.1 TO OUTDEX                         
+  //ACCEPT SELECTION.2                 {REQUIRED}
+
+         [prt] page frm 
+         [not prt]   clearscreen
+         [prt] begin
+              display 1 to frm.2
+              display 1 to frm.3
+              move 1 to pagecount
+              print pagecount to header.1
+              [heads]  output header
+          end
+
+TOP:
+    CLEAR OFFENSE
+    MOVE NEXT_MERCHANT TO OFFENSE.MERCHANT
+    FIND GE OFFENSE BY INDEX.10
+     [FOUND] RELATE OFFENSE
+     [FOUND] INDICATE SAME_MERCHANT TRUE
+     [FOUND] MOVE OFFENSE.MERCHANT TO NEXT_MERCHANT
+     [FOUND] [NEW_MERCHANT][HEADS] GOSUB DO_HEADER
+     [FOUND][HEADS] GOSUB DO_SUBHEAD1
+     [FINDERR] GOTO RPT_END
+     GOTO START
+             REPEAT
+              KEYCHECK 
+              [KEYPRESS] GOSUB KEYPRESSED
+              FIND GT OFFENSE BY INDEX.10
+              [FINDERR][HEADS] GOSUB MERCHANT_TOTAL
+              [FINDERR] GOTO RPT_END
+              [KEY.ESCAPE] ABORT
+              IF OFFENSE.MERCHANT NE NEXT_MERCHANT INDICATE SAME_MERCHANT FALSE
+START:
+             [SAME_MERCHANT] BEGIN
+             INDICATE OKDISB FALSE
+             GOSUB FIND_DISB
+              [JOURNAL] GOTO PASS_DETAIL
+             INDICATE LETTER AS OFFENSE.LETDT NE ''
+             [LETTER] INDICATE LETTER AS OFFENSE.ACTIVE NE 'L'
+             INDICATE WARRANT AS OFFENSE.WARR_DATE NE ''
+             INDICATE ACTIVE AS OFFENSE.ACTIVE IN 'NIFBPM'
+             INDICATE PRT_DATES GROUP ANY [LETTER WARRANT ACTIVE]
+             IF STATUS DISBURSE INDICATE PRT_DATES TRUE
+
+    [PRT_DATES] BEGIN
+           [HEADS] IF (PAGEEND - LINECOUNT) LE 4 OUTPUT FOOTER2
+           PAGECHECK 4  
+           [PAGEBREAK] INDICATE SMALLHEAD2 TRUE
+           [PAGEBREAK][HEADS] GOSUB NEXT_PAGE
+           INDICATE SMALLHEAD2 FALSE
+           AUTOPAGE DAT
+           PRINT OFFENSE.DEF_NAME                   TO DAT.1
+           PRINT OFFENSE.CKNO                       TO DAT.2
+           PRINT OFFENSE.CKAMT                      TO DAT.3
+           PRINT OFFENSE.MFEE                       TO DAT.4
+		   PRINT OFFENSE.ENTRY_DATE					TO DAT.11
+           [LETTER][NOT WARRANT][NOT ACTIVE] CALC ((DAT.3 + DAT.4) + LETT) TO LETT
+           [WARRANT][NOT ACTIVE] CALC ((DAT.3 + DAT.4) + WARR) TO WARR
+           PRINT (DAT.3 + DAT.4)                    TO DAT.5
+            IF OFFENSE.ACTIVE EQ 'N' PRINT 'PAID '  TO DAT.6
+            if offense.active eq 'I' print 'INACTIVE'        to dat.6
+            if offense.active eq 'F' print 'INACTIVE'        to dat.6
+            if offense.active eq 'B' print 'INACTIVE'        to dat.6
+            if offense.active eq 'P' print 'INACTIVE'        to dat.6
+            if offense.active eq 'M' print 'INACTIVE'        to dat.6
+            IF OFFENSE.ACTIVE EQ 'C' PRINT 'COURT'           TO DAT.6
+            IF OFFENSE.ACTIVE EQ 'D' PRINT 'DISTRICT'        TO DAT.6
+            IF OFFENSE.ACTIVE in 'L ' PRINT ' '              TO DAT.6
+            IF OFFENSE.ACTIVE EQ 'N' CALC (PAID + DAT.5)     TO PAID
+            if offense.active eq 'I' calc (inactive + dat.5) to inactive
+            if offense.active eq 'F' calc (inactive + dat.5) to inactive
+            if offense.active eq 'B' calc (inactive + dat.5) to inactive
+            if offense.active eq 'P' calc (inactive + dat.5) to inactive
+            IF offense.active eq 'M' calc (inactive + dat.5) to inactive
+            IF OFFENSE.LETDT NE '' PRINT 'Letter'            TO DAT.7
+            IF OFFENSE.LETDT EQ '' PRINT '      '            TO DAT.7
+            IF OFFENSE.WARR_DATE NE '' PRINT 'Warrant'       TO DAT.8
+            IF OFFENSE.WARR_DATE EQ '' PRINT ''              TO DAT.8
+            IF STATUS DISBURSE IF DISBURSE.CHKNO NE '';
+                                            PRINT DISBURSE.CHKNO TO DAT.9
+                                            PRINT DISBURSE.DISPDT TO DAT.10
+            IF STATUS DISBURSE IF DISBURSE.CHKNO EQ '' ;
+                                            PRINT '' TO DAT.9
+            IF NOT STATUS DISBURSE PRINT '' TO DAT.9
+            IF STATUS DISBURSE IF DISBURSE.CHKNO NE 0 ;
+                                            CALC ((DAT.3 + DAT.4)+FWD) TO FWD
+          [PRT] GOSUB ADD_ONE
+          INDICATE LETTER FALSE
+          INDICATE WARRANT FALSE
+          INDICATE ACTIVE  FALSE
+          OUTPUT DAT
+       END
+
+    [NOT PRT_DATES] BEGIN
+          [HEADS] IF (PAGEEND - LINECOUNT) LE 3 OUTPUT FOOTER2
+          PAGECHECK 3
+          INDICATE SMALLHEAD2 TRUE
+          [PAGEBREAK][HEADS] GOSUB NEXT_PAGE
+          INDICATE SMALLHEAD2 FALSE
+          AUTOPAGE NO_DAT
+          PRINT OFFENSE.DEF_NAME                     TO NO_DAT.1
+          PRINT OFFENSE.CKNO                         TO NO_DAT.2
+          PRINT OFFENSE.CKAMT                        TO NO_DAT.3
+          PRINT OFFENSE.MFEE                         TO NO_DAT.4
+          CALC ((NO_DAT.3 + NO_DAT.4) + PEND) TO PEND
+          PRINT (NO_DAT.3 + NO_DAT.4)                TO NO_DAT.5
+          IF OFFENSE.ACTIVE iN ' L'   PRINT ''       TO NO_DAT.6
+          OUTPUT NO_DAT
+          [PRT] GOSUB ADD_ONE
+          INDICATE LETTER FALSE
+          INDICATE WARRANT FALSE
+          INDICATE ACTIVE FALSE
+        END
+     END  
+PASS_DETAIL:
+    [SAME_MERCHANT]  LOOP
+    [NOT SAME_MERCHANT] BEGIN
+         [HEADS] IF (PAGEEND - LINECOUNT) LE 18 BEGIN
+                           OUTPUT FILLER
+                           OUTPUT FOOTER2
+                         END
+         [HEADS] GOSUB MERCHANT_TOTAL
+         MOVE OFFENSE.MERCHANT TO NEXT_MERCHANT
+         INDICATE NEW_MERCHANT TRUE
+         IF NEXT_MERCHANT LE OUTDEX GOTO TOP
+         IF NEXT_MERCHANT GT OUTDEX GOTO RPT_END
+       END
+
+
+MERCHANT_TOTAL:
+       PAGECHECK 18
+       [PAGEBREAK] INDICATE SMALLHEAD TRUE
+       [PAGEBREAK] GOSUB NEXT_PAGE
+          INDICATE SMALLHEAD FALSE
+       SUBTOTAL DAT.3 TO SUB1.1
+       SUBTOTAL DAT.4 TO SUB1.2
+       SUBTOTAL DAT.5 TO SUB1.3
+       SUBTOTAL NO_DAT.3 TO SUB2.1
+       SUBTOTAL NO_DAT.4 TO SUB2.2
+       SUBTOTAL NO_DAT.5 TO SUB2.3
+        CALC (SUB1.1 + SUB2.1) TO SUB2.1
+        CALC (SUB1.2 + SUB2.2) TO SUB2.2
+        CALC (SUB1.3 + SUB2.3) TO SUB2.3
+        PRINT PAID TO SUB2.4
+        PRINT LETT TO SUB2.5
+        PRINT WARR TO SUB2.6
+        PRINT PEND TO SUB2.7
+        CALC (SUB2.4 + SUB2.5 + SUB2.6 + SUB2.7) TO SUB2.8
+        print inactive to sub2.9
+        PRINT FWD TO SUB2.10
+        PRINT (SUB2.8 - SUB2.10) TO SUB2.11
+       MOVE 0 TO PAID
+       MOVE 0 TO WARR
+       MOVE 0 TO LETT
+       MOVE 0 TO PEND
+       move 0 to inactive
+       MOVE 0 TO FWD
+       OUTPUT SUB2
+RETURN
+
+ADD_ONE:
+     INCREMENT COUNTER
+     DISPLAY OFFENSE.RECNUM TO FRM.2
+     DISPLAY COUNTER TO FRM.3
+  RETURN
+
+
+FIND_DISB:
+      CLEAR DISBURSE
+      MOVE OFFENSE.IDNO TO DISBURSE.IDNO
+      MOVE OFFENSE.CTRLNO TO DISBURSE.SEQNO
+      FIND GE DISBURSE BY INDEX.5
+       [FINDERR] INDICATE OKDISB FALSE
+       [FOUND] BEGIN
+       IF OFFENSE.CTRLNO EQ DISBURSE.SEQNO IF OFFENSE.IDNO EQ DISBURSE.IDNO INDICATE OKDISB TRUE                    
+       END
+       [NOT OKDISB] CLEAR DISBURSE
+       IF STATUS DISBURSE INDICATE JOURNAL AS DISBURSE.MANUAL EQ 'J'
+       IF ~ STATUS DISBURSE INDICATE JOURNAL FALSE
+ RETURN
+
+show_time:
+         sysdate4 header.2 header.3 header.4
+         length header.3 to tint1
+         if tint1 ne 2 insert ' ' in header.3 at 1
+         length header.4 to tint1
+         if tint1 ne 2 insert '0' in header.4 at 1
+return
+
+// อออออออออออออออออออออออออออออออออออ halt report check
+     keypressed:   
+         [prt] begin
+              display 'A key has been pressed.' to frm.4
+              display 'Do you wish to abort the report? (Y/N)' to frm.5
+              display 'N' to frm.6
+              accept frm.6 to pausekey
+              blankform frm.4 thru frm.6
+              if pausekey eq 'Y' return rpt_end       
+         end
+         [not prt] begin
+              showln 'A Key has been pressed.'
+              input 'Do you wish to abort the Report? (Y/N) ' pausekey
+              if pausekey in 'Yy' return rpt_end        
+         end
+    return
+
+    rpt_end:       
+         [heads] output footer
+         [heads] formfeed
+//       [not prt] writeln
+//       [not prt] formfeed
+         [multiuser] despool
+         
+         
+         
+         
+         abort
+// อออออออออออออออออออออออออออออออออออ Select Output
+select_output:
+         cmdline cmd1
+         indicate prt false
+         page outsel
+         uppercase cmd1
+  resel: if cmd1 eq '' begin
+              accept outsel.1 {capslock,check='PSA'}
+              move outsel.1 to cmd1
+         end
+         if cmd1 eq 'S' begin
+              direct_output "CON:"
+              indicate heads true
+              move 24 to pageend
+              move -1 to pagefeed
+              goto endsel
+         end
+         if cmd1 eq 'P' begin
+              indicate prt true
+              indicate heads true
+///             outfile 'LST:'
+              direct_output "lpt1:"
+              move 60 to pageend
+              move  0 to pagefeed
+              blankform frm.4 thru frm.6
+              goto endsel
+         end
+
+          if cmd1 eq 'A' abort
+
+         goto resel
+ endsel: 
+return
+
+do_header:
+      formfeed
+      move 1 to pagecount
+      print pagecount to header.1
+      gosub show_time 
+      output header
+  return
+
+
+do_subhead1:
+     PAGECHECK 11
+     [PAGEBREAK] GOSUB NEXT_PAGE
+     PRINT OFFENSE.MERCHANT TO SUBHEADER1.1
+     PRINT OFFENSE.MERCHANT TO SUBHEADER2.1
+     PRINT OFFENSE.MERCHANT TO SUBHEADER3.1
+     PRINT OFFENSE.NAME TO SUBHEADER1.2
+     PRINT OFFENSE.NAME TO SUBHEADER2.2
+     PRINT OFFENSE.NAME TO SUBHEADER3.2
+     PRINT MERCHANT.ADDR TO SUBHEADER1.3
+     PRINT MERCHANT.CITY TO SUBHEADER1.4
+     PRINT MERCHANT.ST TO SUBHEADER1.5
+     PRINT MERCHANT.ZIP TO SUBHEADER1.6
+     OUTPUT SUBHEADER1
+return
+do_subhead2:
+     OUTPUT SUBHEADER2
+return
+ 
+next_page:
+    print pagecount to header.1
+    gosub show_time
+    output header
+    [not smallhead][not smallhead2] output subheader1
+    [smallhead] gosub do_subhead2 
+    [smallhead2] output subheader3
+  return
+// อออออออออออออออออออออออออออออออออออ Key Procedures
+keyproc key.help
+         help help1
+         entagain
+return
+
+keyproc key.up
+ entagain
+return
+
+keyproc key.down
+ entagain
+return
+
+keyproc key.escape
+   gotoxy 24 0
+   show "Are you sure you wish to quit ?"
+   gotoxy 24 40
+ repeat
+   inkey pausekey
+   uppercase pausekey
+   if ~ pausekey in 'YN' loop
+   if pausekey eq 'Y' abort
+return
+
+
+keyproc key.field
+ backfield
+return

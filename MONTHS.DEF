@@ -1,0 +1,29 @@
+        FILE DEFINITION LISTING FOR FILE #33
+*************************************************** 
+        FILE ROOT NAME     = MONTHS
+        USER DISPLAY NAME  = GL Months
+        DATAFLEX FILE NAME = MONTHS
+*************************************************** 
+        RECORD LENGTH = 36  (USED = 36)
+        MAX NUMBER OF RECORDS = 1  (USED = 1)
+        DELETED SPACE IS REUSED
+        MULTI-USER RE-READ ACTIVE
+*************************************************** 
+FIELD   FIELD   FIELD   FIELD  DEC  MAIN  RELATES--TO
+NMBR    OFFSET  LEN     TYPE   PTS  INDEX FILE  FIELD
+-----   ------  -----   -----  ---  ----- ----  -----
+   1       1       0   ASCII          0     0     0     MONTH
+   2       1       3   ASCII          0     0     0     JAN
+   3       4       3   ASCII          0     0     0     FEB
+   4       7       3   ASCII          0     0     0     MAR
+   5      10       3   ASCII          0     0     0     APR
+   6      13       3   ASCII          0     0     0     MAY
+   7      16       3   ASCII          0     0     0     JUN
+   8      19       3   ASCII          0     0     0     JUL
+   9      22       3   ASCII          0     0     0     AUG
+  10      25       3   ASCII          0     0     0     SEP
+  11      28       3   ASCII          0     0     0     OCT
+  12      31       3   ASCII          0     0     0     NOV
+  13      34       3   ASCII          0     0     0     DEC
+ 
+
